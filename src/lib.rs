@@ -1,3 +1,9 @@
+
+#[macro_use]
+extern crate serde_derive;
+
+pub mod rgb;
+
 #[cfg(test)]
 mod tests {
     #[test]
