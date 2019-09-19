@@ -10,3 +10,7 @@ edition = "2018"
 num = "0.2.0"
 serde = "1.0"
 serde_derive = "1.0"
+
+# TODO: change normalised_angles dependency when it goes public
+#normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
+normalised_angles = { path = "../rs_normalised_angles.git" }

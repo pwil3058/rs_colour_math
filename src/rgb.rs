@@ -2,7 +2,7 @@
 
 use std::ops::Index;
 
-use num::traits::Float;
+use ::num::traits::Float;
 
 pub trait RGBConstants: Sized {
     const RED: Self;
