@@ -158,48 +158,24 @@ mod test {
 
     #[test]
     fn from_rgb() {
-        assert_eq!(
-            HueAngle::<f64>::from(RGB::<f64>::RED)
-                .angle
-                .degrees()
-                .round(),
-            HueAngle::<f64>::RED_ANGLE.degrees().round()
-        );
-        assert_eq!(
-            HueAngle::<f64>::from(RGB::<f64>::GREEN)
-                .angle
-                .degrees()
-                .round(),
-            HueAngle::<f64>::GREEN_ANGLE.degrees().round()
-        );
-        assert_eq!(
-            HueAngle::<f64>::from(RGB::<f64>::BLUE)
-                .angle
-                .degrees()
-                .round(),
-            HueAngle::<f64>::BLUE_ANGLE.degrees().round()
-        );
-        assert_eq!(
-            HueAngle::<f64>::from(RGB::<f64>::CYAN)
-                .angle
-                .degrees()
-                .round(),
-            HueAngle::<f64>::CYAN_ANGLE.degrees().round()
-        );
-        assert_eq!(
-            HueAngle::<f64>::from(RGB::<f64>::MAGENTA)
-                .angle
-                .degrees()
-                .round(),
-            HueAngle::<f64>::MAGENTA_ANGLE.degrees().round()
-        );
-        assert_eq!(
-            HueAngle::<f64>::from(RGB::<f64>::YELLOW)
-                .angle
-                .degrees()
-                .round(),
-            HueAngle::<f64>::YELLOW_ANGLE.degrees().round()
-        );
+        assert!(HueAngle::<f64>::from(RGB::<f64>::RED)
+            .angle
+            .approx_eq(HueAngle::<f64>::RED_ANGLE));
+        assert!(HueAngle::<f64>::from(RGB::<f64>::GREEN)
+            .angle
+            .approx_eq(HueAngle::<f64>::GREEN_ANGLE));
+        assert!(HueAngle::<f64>::from(RGB::<f64>::BLUE)
+            .angle
+            .approx_eq(HueAngle::<f64>::BLUE_ANGLE));
+        assert!(HueAngle::<f64>::from(RGB::<f64>::CYAN)
+            .angle
+            .approx_eq(HueAngle::<f64>::CYAN_ANGLE));
+        assert!(HueAngle::<f64>::from(RGB::<f64>::MAGENTA)
+            .angle
+            .approx_eq(HueAngle::<f64>::MAGENTA_ANGLE));
+        assert!(HueAngle::<f64>::from(RGB::<f64>::YELLOW)
+            .angle
+            .approx_eq(HueAngle::<f64>::YELLOW_ANGLE));
         assert!(HueAngle::<f64>::from(RGB::<f64>::BLACK).angle.is_nan());
         assert!(HueAngle::<f64>::from(RGB::<f64>::WHITE).angle.is_nan());
     }
