@@ -1,100 +1,96 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use std::ops::Index;
+use std::{convert::From, ops::Index};
 
-use ::num::traits::Float;
+use num::traits::Float;
 
-pub trait RGBConstants: Sized {
-    const RED: Self;
-    const GREEN: Self;
-    const BLUE: Self;
-
-    const CYAN: Self;
-    const MAGENTA: Self;
-    const YELLOW: Self;
-
-    const WHITE: Self;
-    const BLACK: Self;
-
-    const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
-    const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
-    const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+pub trait ZeroOneEtc {
+    const ZERO: Self;
+    const ONE: Self;
+    const SIN_120: Self;
+    const COS_120: Self;
 }
 
-pub trait GRGB<T: PartialOrd + Copy + Sized>: Index<usize, Output=T> + Sized {
-    const I_RED: usize = 0;
-    const I_GREEN: usize = 1;
-    const I_BLUE: usize = 2;
+impl ZeroOneEtc for f32 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+    const SIN_120: Self = 0.86602_54037_844387;
+    const COS_120: Self = -0.5;
+}
 
-    fn red_component(self) -> T {
-        self[Self::I_RED]
+impl ZeroOneEtc for f64 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+    const SIN_120: Self = 0.86602_54037_844387;
+    const COS_120: Self = -0.5;
+}
+
+pub const I_RED: usize = 0;
+pub const I_GREEN: usize = 1;
+pub const I_BLUE: usize = 2;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RGB<F: Float + PartialOrd + ZeroOneEtc + Copy>([F; 3]);
+
+pub fn is_proportion<F: Float + PartialOrd + ZeroOneEtc + Copy>(f: F) -> bool {
+    f <= F::ONE && f >= F::ZERO
+}
+
+impl<F: Float + PartialOrd + ZeroOneEtc + Copy> RGB<F> {
+    pub const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);
+    pub const GREEN: Self = Self([F::ZERO, F::ONE, F::ZERO]);
+    pub const BLUE: Self = Self([F::ZERO, F::ZERO, F::ONE]);
+
+    pub const CYAN: Self = Self([F::ZERO, F::ONE, F::ONE]);
+    pub const MAGENTA: Self = Self([F::ONE, F::ZERO, F::ONE]);
+    pub const YELLOW: Self = Self([F::ONE, F::ONE, F::ZERO]);
+
+    pub const WHITE: Self = Self([F::ONE, F::ONE, F::ONE]);
+    pub const BLACK: Self = Self([F::ZERO, F::ZERO, F::ZERO]);
+
+    pub const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
+    pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
+    pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+
+    pub fn rgb(self) -> [F; 3] {
+        self.0
     }
 
-    fn green_component(self) -> T {
-        self[Self::I_GREEN]
+    pub fn rgba(self, alpha: F) -> [F; 4] {
+        debug_assert!(is_proportion(alpha));
+        [self.0[I_RED], self.0[I_GREEN], self.0[I_BLUE], alpha]
     }
 
-    fn blue_component(self) -> T {
-        self[Self::I_BLUE]
+    pub fn xy(self) -> (F, F) {
+        let x = self.0[I_RED] + (self.0[I_GREEN] + self.0[I_BLUE]) * F::COS_120;
+        let y = (self.0[I_GREEN] - self.0[I_BLUE]) * F::SIN_120;
+        (x, y)
     }
 
-    fn components(self) -> [T; 3] {
-        [self[Self::I_RED], self[Self::I_GREEN], self[Self::I_BLUE]]
-    }
-
-    fn indices_value_order(self) -> [usize; 3] {
-        if self[0] >= self[1] {
-            if self[0] >= self[2] {
-                if self[1] >= self[2] {
-                    [0, 1, 2]
+    pub fn indices_value_order(self) -> [usize; 3] {
+        if self[I_RED] >= self[I_GREEN] {
+            if self[I_RED] >= self[I_BLUE] {
+                if self[I_GREEN] >= self[I_BLUE] {
+                    [I_RED, I_GREEN, I_BLUE]
                 } else {
-                    [0, 2, 1]
+                    [I_RED, I_BLUE, I_GREEN]
                 }
             } else {
-                [2, 0, 1]
+                [I_BLUE, I_RED, I_GREEN]
             }
-        } else if self[1] >= self[2] {
-            if self[0] >= self[2] {
-                [1, 0, 2]
+        } else if self[I_GREEN] >= self[I_BLUE] {
+            if self[I_RED] >= self[I_BLUE] {
+                [I_GREEN, I_RED, I_BLUE]
             } else {
-                [1, 2, 0]
+                [I_GREEN, I_BLUE, I_RED]
             }
         } else {
-            [2, 1, 0]
+            [I_BLUE, I_GREEN, I_RED]
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PRGB<F: Float + PartialOrd>([F; 3]);
-
-impl RGBConstants for PRGB<f32> {
-    const RED: PRGB::<f32> = PRGB([1.0, 0.0, 0.0]);
-    const GREEN: PRGB::<f32> = PRGB([0.0, 1.0, 0.0]);
-    const BLUE: PRGB::<f32> = PRGB([0.0, 0.0, 1.0]);
-
-    const CYAN: PRGB::<f32> = PRGB([0.0, 1.0, 1.0]);
-    const MAGENTA: PRGB::<f32> = PRGB([1.0, 0.0, 1.0]);
-    const YELLOW: PRGB::<f32> = PRGB([1.0, 1.0, 0.0]);
-
-    const WHITE: PRGB::<f32> = PRGB([1.0, 1.0, 1.0]);
-    const BLACK: PRGB::<f32> = PRGB([0.0, 0.0, 0.0]);
-}
-
-impl RGBConstants for PRGB<f64> {
-    const RED: PRGB::<f64> = PRGB([1.0, 0.0, 0.0]);
-    const GREEN: PRGB::<f64> = PRGB([0.0, 1.0, 0.0]);
-    const BLUE: PRGB::<f64> = PRGB([0.0, 0.0, 1.0]);
-
-    const CYAN: PRGB::<f64> = PRGB([0.0, 1.0, 1.0]);
-    const MAGENTA: PRGB::<f64> = PRGB([1.0, 0.0, 1.0]);
-    const YELLOW: PRGB::<f64> = PRGB([1.0, 1.0, 0.0]);
-
-    const WHITE: PRGB::<f64> = PRGB([1.0, 1.0, 1.0]);
-    const BLACK: PRGB::<f64> = PRGB([0.0, 0.0, 0.0]);
-}
-
-impl<F: Float + PartialOrd> Index<usize> for PRGB<F> {
+impl<F: Float + PartialOrd + ZeroOneEtc + Copy> Index<usize> for RGB<F> {
     type Output = F;
 
     fn index(&self, index: usize) -> &F {
@@ -102,32 +98,12 @@ impl<F: Float + PartialOrd> Index<usize> for PRGB<F> {
     }
 }
 
-impl<F: Float + PartialOrd> GRGB<F> for PRGB<F> {}
-
-pub struct RGB24([u8; 3]);
-
-impl RGBConstants for RGB24 {
-    const RED: RGB24 = RGB24([255, 0, 0]);
-    const GREEN: RGB24 = RGB24([0, 255, 0]);
-    const BLUE: RGB24 = RGB24([0, 0, 255]);
-
-    const CYAN: RGB24 = RGB24([0, 255, 255]);
-    const MAGENTA: RGB24 = RGB24([255, 0, 255]);
-    const YELLOW: RGB24 = RGB24([255, 255, 0]);
-
-    const WHITE: RGB24 = RGB24([255, 255, 255]);
-    const BLACK: RGB24 = RGB24([0, 0, 0]);
-}
-
-impl Index<usize> for RGB24 {
-    type Output = u8;
-
-    fn index(&self, index: usize) -> &u8 {
-        &self.0[index]
+impl<F: Float + PartialOrd + ZeroOneEtc + Copy> From<[F; 3]> for RGB<F> {
+    fn from(array: [F; 3]) -> Self {
+        debug_assert!(array.iter().all(|x| is_proportion(*x)));
+        Self(array)
     }
 }
-
-impl GRGB<u8> for RGB24 {}
 
 #[cfg(test)]
 mod tests {
@@ -135,22 +111,37 @@ mod tests {
 
     #[test]
     fn indices_order() {
-        assert_eq!(PRGB::<f64>::WHITE.indices_value_order(), [0, 1, 2]);
-        assert_eq!(PRGB::<f64>::BLACK.indices_value_order(), [0, 1, 2]);
-        assert_eq!(PRGB::<f64>::RED.indices_value_order(), [0, 1, 2]);
-        assert_eq!(PRGB::<f64>::GREEN.indices_value_order(), [1, 0, 2]);
-        assert_eq!(PRGB::<f64>::BLUE.indices_value_order(), [2, 0, 1]);
-        assert_eq!(PRGB::<f64>::CYAN.indices_value_order(), [1, 2, 0]);
-        assert_eq!(PRGB::<f64>::MAGENTA.indices_value_order(), [0, 2, 1]);
-        assert_eq!(PRGB::<f64>::YELLOW.indices_value_order(), [0, 1, 2]);
-
-        assert_eq!(RGB24::WHITE.indices_value_order(), [0, 1, 2]);
-        assert_eq!(RGB24::BLACK.indices_value_order(), [0, 1, 2]);
-        assert_eq!(RGB24::RED.indices_value_order(), [0, 1, 2]);
-        assert_eq!(RGB24::GREEN.indices_value_order(), [1, 0, 2]);
-        assert_eq!(RGB24::BLUE.indices_value_order(), [2, 0, 1]);
-        assert_eq!(RGB24::CYAN.indices_value_order(), [1, 2, 0]);
-        assert_eq!(RGB24::MAGENTA.indices_value_order(), [0, 2, 1]);
-        assert_eq!(RGB24::YELLOW.indices_value_order(), [0, 1, 2]);
+        assert_eq!(
+            RGB::<f64>::WHITE.indices_value_order(),
+            [I_RED, I_GREEN, I_BLUE]
+        );
+        assert_eq!(
+            RGB::<f64>::BLACK.indices_value_order(),
+            [I_RED, I_GREEN, I_BLUE]
+        );
+        assert_eq!(
+            RGB::<f64>::RED.indices_value_order(),
+            [I_RED, I_GREEN, I_BLUE]
+        );
+        assert_eq!(
+            RGB::<f64>::GREEN.indices_value_order(),
+            [I_GREEN, I_RED, I_BLUE]
+        );
+        assert_eq!(
+            RGB::<f64>::BLUE.indices_value_order(),
+            [I_BLUE, I_RED, I_GREEN]
+        );
+        assert_eq!(
+            RGB::<f64>::CYAN.indices_value_order(),
+            [I_GREEN, I_BLUE, I_RED]
+        );
+        assert_eq!(
+            RGB::<f64>::MAGENTA.indices_value_order(),
+            [I_RED, I_BLUE, I_GREEN]
+        );
+        assert_eq!(
+            RGB::<f64>::YELLOW.indices_value_order(),
+            [I_RED, I_GREEN, I_BLUE]
+        );
     }
 }

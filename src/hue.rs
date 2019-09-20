@@ -3,17 +3,17 @@
 use normalised_angles::{Angle, AngleConst};
 use num::traits::{Float, NumAssign, NumOps};
 
-use crate::rgb::PRGB;
+use crate::rgb::{ZeroOneEtc, RGB};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct HueAngle<F: Float + NumAssign + NumOps + AngleConst> {
+pub struct HueAngle<F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc> {
     angle: Angle<F>,
-    max_chroma_rgb: PRGB<F>,
+    max_chroma_rgb: RGB<F>,
     chroma_correction: F,
 }
 
-impl<F: Float + NumAssign + NumOps + AngleConst> HueAngle<F> {
-    fn calc_other(abs_angle: Angle<F>) -> F {
+impl<F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc> HueAngle<F> {
+    pub fn calc_other(abs_angle: Angle<F>) -> F {
         if [Angle::<F>::DEG_0, Angle::<F>::DEG_120].contains(&abs_angle) {
             F::from(0.0).unwrap()
         } else if [Angle::<F>::DEG_60, Angle::<F>::DEG_180].contains(&abs_angle) {
