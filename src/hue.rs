@@ -1,6 +1,11 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use std::convert::From;
+use std::{
+    cmp::{Ordering, PartialEq, PartialOrd},
+    convert::From,
+    hash::{Hash, Hasher},
+    ops::{Add, Sub},
+};
 
 use normalised_angles::{Angle, AngleConst};
 use num::traits::{Float, NumAssign, NumOps};
@@ -124,6 +129,67 @@ where
     }
 }
 
+impl<F> Hash for HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    Angle<F>: Hash,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.angle.hash(state)
+    }
+}
+
+impl<F> PartialEq for HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+{
+    fn eq(&self, other: &HueAngle<F>) -> bool {
+        self.angle.eq(&other.angle)
+    }
+}
+
+impl<F> PartialOrd for HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+{
+    fn partial_cmp(&self, other: &HueAngle<F>) -> Option<Ordering> {
+        self.angle.partial_cmp(&other.angle)
+    }
+}
+
+impl<F> Add<Angle<F>> for HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+{
+    type Output = Self;
+
+    fn add(self, angle: Angle<F>) -> Self {
+        (self.angle + angle).into()
+    }
+}
+
+impl<F> Sub<Angle<F>> for HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+{
+    type Output = Self;
+
+    fn sub(self, angle: Angle<F>) -> Self {
+        (self.angle - angle).into()
+    }
+}
+
+impl<F> Sub<HueAngle<F>> for HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+{
+    type Output = Angle<F>;
+
+    fn sub(self, other: HueAngle<F>) -> Angle<F> {
+        self.angle - other.angle
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -178,5 +244,29 @@ mod test {
             .approx_eq(HueAngle::<f64>::YELLOW_ANGLE));
         assert!(HueAngle::<f64>::from(RGB::<f64>::BLACK).angle.is_nan());
         assert!(HueAngle::<f64>::from(RGB::<f64>::WHITE).angle.is_nan());
+    }
+
+    #[test]
+    fn rotation() {
+        assert!(
+            (HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE) + Angle::from_degrees(60.0))
+                .angle
+                .approx_eq(HueAngle::<f64>::GREEN_ANGLE)
+        );
+        assert!(
+            (HueAngle::<f64>::from(HueAngle::<f64>::MAGENTA_ANGLE) - Angle::from_degrees(60.0))
+                .angle
+                .approx_eq(HueAngle::<f64>::BLUE_ANGLE)
+        )
+    }
+
+    #[test]
+    fn difference() {
+        assert!((HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE)
+            - HueAngle::from(HueAngle::<f64>::GREEN_ANGLE))
+        .approx_eq(Angle::from_degrees(-60.0)));
+        assert!((HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE)
+            - HueAngle::from(HueAngle::<f64>::MAGENTA_ANGLE))
+        .approx_eq(Angle::from_degrees(120.0)));
     }
 }
