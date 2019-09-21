@@ -10,7 +10,7 @@ use std::{
 use normalised_angles::{Angle, AngleConst};
 use num::traits::{Float, NumAssign, NumOps};
 
-use crate::rgb::{ZeroOneEtc, RGB};
+use crate::rgb::{is_proportion, ZeroOneEtc, RGB};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct HueAngle<F>
@@ -79,7 +79,7 @@ where
             } else {
                 if angle >= Self::MAGENTA_ANGLE {
                     [F::ONE, F::ZERO, other].into()
-                } else if angle >= Self::CYAN_ANGLE {
+                } else if angle >= Self::BLUE_ANGLE {
                     [other, F::ZERO, F::ONE].into()
                 } else {
                     [F::ZERO, other, F::ONE].into()
@@ -189,13 +189,136 @@ where
         self.angle - other.angle
     }
 }
+impl<F> HueAngle<F>
+where
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+{
+    /// Returns `true` if this `HueAngle` is grey i.e. completely devoid of colour/chroma/hue
+    pub fn is_grey(&self) -> bool {
+        self.angle.is_nan()
+    }
+
+    pub fn angle(&self) -> Angle<F> {
+        self.angle
+    }
+
+    /// Returns an `RGB<F>` representing the colour with this hue, the maximum achievable chroma
+    /// and the highest achievable value.
+    pub fn max_chroma_rgb(&self) -> RGB<F> {
+        self.max_chroma_rgb
+    }
+
+    pub fn chroma_correction(&self) -> F {
+        self.chroma_correction
+    }
+
+    /// Returns the maximum chroma that can be achieved for this view and the given `value`.
+    /// 'value` must be in the range 0.0 to 1.0 inclusive
+    pub fn max_chroma_for_value(&self, value: F) -> F {
+        debug_assert!(is_proportion(value));
+        if self.is_grey() {
+            F::ZERO
+        } else {
+            let mcv = self.max_chroma_rgb.value();
+            // NB these will be safe because mcv will be between 1.0 / 3.0 and 2.0 / 3.0
+            if mcv > value {
+                value / mcv
+            } else {
+                (F::ONE - value) / (F::ONE - mcv)
+            }
+        }
+    }
+
+    /// Returns the range of `RGB` that can be created with this hue and the given `chroma`
+    /// returns `None` if no such range exists. `chroma` must be in range 0.0 to 1.0 inclusive.
+    pub fn rgb_range_with_chroma(&self, chroma: F) -> Option<(RGB<F>, RGB<F>)> {
+        debug_assert!(is_proportion(chroma));
+        if chroma == F::ZERO {
+            Some((RGB::BLACK, RGB::WHITE))
+        } else if self.is_grey() {
+            None
+        } else if chroma == F::ONE {
+            Some((self.max_chroma_rgb, self.max_chroma_rgb))
+        } else {
+            let darkest: [F; 3] = [
+                self.max_chroma_rgb[0] * chroma,
+                self.max_chroma_rgb[1] * chroma,
+                self.max_chroma_rgb[2] * chroma,
+            ];
+            let delta = F::ONE - chroma;
+            let lightest: [F; 3] = [darkest[0] + delta, darkest[1] + delta, darkest[2] + delta];
+            Some((darkest.into(), lightest.into()))
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::rgb::{I_BLUE, I_GREEN, I_RED};
+    use float_cmp::*;
+
+    const TEST_ANGLES: [Angle<f64>; 13] = [
+        Angle::NEG_DEG_180,
+        Angle::NEG_DEG_150,
+        Angle::NEG_DEG_120,
+        Angle::NEG_DEG_90,
+        Angle::NEG_DEG_60,
+        Angle::NEG_DEG_30,
+        Angle::DEG_0,
+        Angle::DEG_30,
+        Angle::DEG_60,
+        Angle::DEG_90,
+        Angle::DEG_120,
+        Angle::DEG_150,
+        Angle::DEG_180,
+    ];
+
+    const TEST_RATIOS: [f64; 10] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+
+    fn calculate_chroma(rgb: &RGB<f64>) -> f64 {
+        let (x, y) = rgb.xy();
+        x.hypot(y) * HueAngle::from(*rgb).chroma_correction
+    }
 
     #[test]
     fn from_angle() {
+        assert_eq!(
+            HueAngle::<f64>::from(Angle::NEG_DEG_150)
+                .max_chroma_rgb
+                .indices_value_order(),
+            [I_BLUE, I_GREEN, I_RED]
+        );
+        assert_eq!(
+            HueAngle::<f64>::from(Angle::NEG_DEG_90)
+                .max_chroma_rgb
+                .indices_value_order(),
+            [I_BLUE, I_RED, I_GREEN]
+        );
+        assert_eq!(
+            HueAngle::<f64>::from(Angle::NEG_DEG_30)
+                .max_chroma_rgb
+                .indices_value_order(),
+            [I_RED, I_BLUE, I_GREEN]
+        );
+        assert_eq!(
+            HueAngle::<f64>::from(Angle::DEG_30)
+                .max_chroma_rgb
+                .indices_value_order(),
+            [I_RED, I_GREEN, I_BLUE]
+        );
+        assert_eq!(
+            HueAngle::<f64>::from(Angle::DEG_90)
+                .max_chroma_rgb
+                .indices_value_order(),
+            [I_GREEN, I_RED, I_BLUE]
+        );
+        assert_eq!(
+            HueAngle::<f64>::from(Angle::DEG_150)
+                .max_chroma_rgb
+                .indices_value_order(),
+            [I_GREEN, I_BLUE, I_RED]
+        );
         assert_eq!(
             HueAngle::<f64>::from(HueAngle::<f64>::RED_ANGLE).max_chroma_rgb,
             RGB::<f64>::RED
@@ -268,5 +391,39 @@ mod test {
         assert!((HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE)
             - HueAngle::from(HueAngle::<f64>::MAGENTA_ANGLE))
         .approx_eq(Angle::from_degrees(120.0)));
+    }
+
+    #[test]
+    fn rgb_range_with_chroma() {
+        for angle in TEST_ANGLES.iter() {
+            let hue_angle: HueAngle<f64> = (*angle).into();
+            assert_eq!(
+                hue_angle.rgb_range_with_chroma(0.0).unwrap(),
+                (RGB::BLACK, RGB::WHITE)
+            );
+            println!(
+                "Angle: {} Hue: {} {:?}",
+                angle.degrees(),
+                hue_angle.angle.degrees(),
+                hue_angle.max_chroma_rgb,
+            );
+            for chroma in TEST_RATIOS.iter() {
+                let (shade_rgb, tint_rgb) = hue_angle.rgb_range_with_chroma(*chroma).unwrap();
+                assert!(shade_rgb.value() <= tint_rgb.value());
+                let shade_chroma = calculate_chroma(&shade_rgb);
+                assert!(approx_eq!(f64, shade_chroma, *chroma, ulps = 4));
+                let tint_chroma = calculate_chroma(&tint_rgb);
+                assert!(approx_eq!(f64, tint_chroma, *chroma, ulps = 4));
+                println!(
+                    "angle: {} chroma: {} : {}: {:?}",
+                    angle.degrees(),
+                    chroma,
+                    HueAngle::from(shade_rgb).angle.degrees(),
+                    shade_rgb,
+                );
+                assert!(angle.approx_eq(HueAngle::from(shade_rgb).angle));
+                assert!(angle.approx_eq(HueAngle::from(tint_rgb).angle));
+            }
+        }
     }
 }
