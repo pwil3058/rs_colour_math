@@ -401,12 +401,6 @@ mod test {
                 hue_angle.rgb_range_with_chroma(0.0).unwrap(),
                 (RGB::BLACK, RGB::WHITE)
             );
-            println!(
-                "Angle: {} Hue: {} {:?}",
-                angle.degrees(),
-                hue_angle.angle.degrees(),
-                hue_angle.max_chroma_rgb,
-            );
             for chroma in TEST_RATIOS.iter() {
                 let (shade_rgb, tint_rgb) = hue_angle.rgb_range_with_chroma(*chroma).unwrap();
                 assert!(shade_rgb.value() <= tint_rgb.value());
@@ -414,16 +408,17 @@ mod test {
                 assert!(approx_eq!(f64, shade_chroma, *chroma, ulps = 4));
                 let tint_chroma = calculate_chroma(&tint_rgb);
                 assert!(approx_eq!(f64, tint_chroma, *chroma, ulps = 4));
-                println!(
-                    "angle: {} chroma: {} : {}: {:?}",
-                    angle.degrees(),
-                    chroma,
-                    HueAngle::from(shade_rgb).angle.degrees(),
-                    shade_rgb,
-                );
                 assert!(angle.approx_eq(HueAngle::from(shade_rgb).angle));
                 assert!(angle.approx_eq(HueAngle::from(tint_rgb).angle));
             }
+        }
+        let hue_angle = HueAngle::<f64>::from(Angle::<f64>::from(std::f64::NAN));
+        assert_eq!(
+            hue_angle.rgb_range_with_chroma(0.0),
+            Some((RGB::BLACK, RGB::WHITE))
+        );
+        for chroma in TEST_RATIOS.iter() {
+            assert!(hue_angle.rgb_range_with_chroma(*chroma).is_none())
         }
     }
 }
