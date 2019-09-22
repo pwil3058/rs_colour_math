@@ -12,7 +12,7 @@ use num::traits::{Float, NumAssign, NumOps};
 
 use crate::rgb::{is_proportion, ZeroOneEtc, RGB};
 
-pub trait HueAngles {
+pub trait HueAngles: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc {
     const RED_ANGLE: Self;
     const GREEN_ANGLE: Self;
     const BLUE_ANGLE: Self;
@@ -43,27 +43,13 @@ impl HueAngles for f64 {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+pub struct Hue<F: HueAngles> {
     angle: Degrees<F>,
     max_chroma_rgb: RGB<F>,
     chroma_correction: F,
 }
 
-impl<F> Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
-    //    pub const RED_ANGLE: Degrees<F> = Degrees::<F>::DEG_0;
-    //    pub const GREEN_ANGLE: Degrees<F> = Degrees::<F>::DEG_120;
-    //    pub const BLUE_ANGLE: Degrees<F> = Degrees::<F>::NEG_DEG_120;
-    //
-    //    pub const CYAN_ANGLE: Degrees<F> = Degrees::<F>::DEG_180;
-    //    pub const YELLOW_ANGLE: Degrees<F> = Degrees::<F>::DEG_60;
-    //    pub const MAGENTA_ANGLE: Degrees<F> = Degrees::<F>::NEG_DEG_60;
-
+impl<F: HueAngles> Hue<F> {
     fn calc_other(abs_angle: Degrees<F>) -> F {
         if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
             F::ZERO
@@ -87,10 +73,7 @@ where
     }
 }
 
-impl<F> From<Degrees<F>> for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> From<Degrees<F>> for Hue<F> {
     fn from(angle: Degrees<F>) -> Self {
         if angle.is_nan() {
             Self {
@@ -128,10 +111,7 @@ where
     }
 }
 
-impl<F> From<RGB<F>> for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> From<RGB<F>> for Hue<F> {
     fn from(rgb: RGB<F>) -> Self {
         let (x, y) = rgb.xy();
         let angle: Degrees<F> = Degrees::atan2(x, y);
@@ -161,9 +141,8 @@ where
     }
 }
 
-impl<F> Hash for Hue<F>
+impl<F: HueAngles> Hash for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
     Degrees<F>: Hash,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -171,28 +150,19 @@ where
     }
 }
 
-impl<F> PartialEq for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> PartialEq for Hue<F> {
     fn eq(&self, other: &Hue<F>) -> bool {
         self.angle.eq(&other.angle)
     }
 }
 
-impl<F> PartialOrd for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> PartialOrd for Hue<F> {
     fn partial_cmp(&self, other: &Hue<F>) -> Option<Ordering> {
         self.angle.partial_cmp(&other.angle)
     }
 }
 
-impl<F> Add<Degrees<F>> for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> Add<Degrees<F>> for Hue<F> {
     type Output = Self;
 
     fn add(self, angle: Degrees<F>) -> Self {
@@ -200,10 +170,7 @@ where
     }
 }
 
-impl<F> Sub<Degrees<F>> for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> Sub<Degrees<F>> for Hue<F> {
     type Output = Self;
 
     fn sub(self, angle: Degrees<F>) -> Self {
@@ -211,20 +178,14 @@ where
     }
 }
 
-impl<F> Sub<Hue<F>> for Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> Sub<Hue<F>> for Hue<F> {
     type Output = Degrees<F>;
 
     fn sub(self, other: Hue<F>) -> Degrees<F> {
         self.angle - other.angle
     }
 }
-impl<F> Hue<F>
-where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
-{
+impl<F: HueAngles> Hue<F> {
     /// Returns `true` if this `Hue` is grey i.e. completely devoid of colour/chroma/hue
     pub fn is_grey(&self) -> bool {
         self.angle.is_nan()
