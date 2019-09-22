@@ -233,14 +233,64 @@ impl<F: HueAngles> Hue<F> {
         } else if chroma == F::ONE {
             Some((self.max_chroma_rgb, self.max_chroma_rgb))
         } else {
-            let darkest: [F; 3] = [
+            let shade: [F; 3] = [
                 self.max_chroma_rgb[0] * chroma,
                 self.max_chroma_rgb[1] * chroma,
                 self.max_chroma_rgb[2] * chroma,
             ];
             let delta = F::ONE - chroma;
-            let lightest: [F; 3] = [darkest[0] + delta, darkest[1] + delta, darkest[2] + delta];
-            Some((darkest.into(), lightest.into()))
+            let tint: [F; 3] = [shade[0] + delta, shade[1] + delta, shade[2] + delta];
+            Some((shade.into(), tint.into()))
+        }
+    }
+
+    /// Returns the range of `values` for which it is possible to construct an `RGB` with this hue
+    /// and the specified `chroma`.
+    pub fn value_range_with_chroma(&self, chroma: F) -> Option<(F, F)> {
+        assert!(is_proportion(chroma));
+        if chroma == F::ZERO {
+            Some((F::ZERO, F::ONE))
+        } else if self.is_grey() {
+            None
+        } else if chroma == F::ONE {
+            let val = self.max_chroma_rgb.value();
+            Some((val, val))
+        } else {
+            let shade = self.max_chroma_rgb.value() * chroma;
+            let tint = shade + (F::ONE - chroma);
+            Some((shade, tint))
+        }
+    }
+
+    /// Returns a `RGB` with the specified `chroma` and `value` if feasible and `None` otherwise.
+    pub fn rgb_with_chroma_and_value(&self, chroma: F, value: F) -> Option<RGB<F>> {
+        assert!(is_proportion(chroma));
+        assert!(is_proportion(value));
+        if let Some((min_value, max_value)) = self.value_range_with_chroma(chroma) {
+            if value < min_value || value > max_value {
+                None
+            } else {
+                let delta = value - min_value;
+                let rgb: RGB<F> = [
+                    self.max_chroma_rgb[0] * chroma + delta,
+                    self.max_chroma_rgb[1] * chroma + delta,
+                    self.max_chroma_rgb[2] * chroma + delta,
+                ]
+                .into();
+                // NB: because floats only approximate reals trying to
+                // set chroma too small (but non zero) results in a drift
+                // in the hue angle of the resulting RGB. When this
+                // happens we go straight to a zero chroma RGB
+                let (x, y) = rgb.xy();
+                let angle: Degrees<F> = Degrees::atan2(x, y);
+                if angle.approx_eq(self.angle) {
+                    Some(rgb)
+                } else {
+                    Some(RGB::from([value, value, value]))
+                }
+            }
+        } else {
+            None
         }
     }
 }
