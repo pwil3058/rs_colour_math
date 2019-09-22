@@ -7,59 +7,91 @@ use std::{
     ops::{Add, Sub},
 };
 
-use normalised_angles::{Angle, AngleConst};
+use normalised_angles::{AngleConst, Degrees};
 use num::traits::{Float, NumAssign, NumOps};
 
 use crate::rgb::{is_proportion, ZeroOneEtc, RGB};
 
+pub trait HueAngles {
+    const RED_ANGLE: Self;
+    const GREEN_ANGLE: Self;
+    const BLUE_ANGLE: Self;
+
+    const CYAN_ANGLE: Self;
+    const YELLOW_ANGLE: Self;
+    const MAGENTA_ANGLE: Self;
+}
+
+impl HueAngles for f32 {
+    const RED_ANGLE: Self = 0.0;
+    const GREEN_ANGLE: Self = 120.0;
+    const BLUE_ANGLE: Self = -120.0;
+
+    const CYAN_ANGLE: Self = 180.0;
+    const YELLOW_ANGLE: Self = 60.0;
+    const MAGENTA_ANGLE: Self = -60.0;
+}
+
+impl HueAngles for f64 {
+    const RED_ANGLE: Self = 0.0;
+    const GREEN_ANGLE: Self = 120.0;
+    const BLUE_ANGLE: Self = -120.0;
+
+    const CYAN_ANGLE: Self = 180.0;
+    const YELLOW_ANGLE: Self = 60.0;
+    const MAGENTA_ANGLE: Self = -60.0;
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct HueAngle<F>
+pub struct Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    angle: Angle<F>,
+    angle: Degrees<F>,
     max_chroma_rgb: RGB<F>,
     chroma_correction: F,
 }
 
-impl<F> HueAngle<F>
+impl<F> Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    pub const RED_ANGLE: Angle<F> = Angle::<F>::DEG_0;
-    pub const GREEN_ANGLE: Angle<F> = Angle::<F>::DEG_120;
-    pub const BLUE_ANGLE: Angle<F> = Angle::<F>::NEG_DEG_120;
+    //    pub const RED_ANGLE: Degrees<F> = Degrees::<F>::DEG_0;
+    //    pub const GREEN_ANGLE: Degrees<F> = Degrees::<F>::DEG_120;
+    //    pub const BLUE_ANGLE: Degrees<F> = Degrees::<F>::NEG_DEG_120;
+    //
+    //    pub const CYAN_ANGLE: Degrees<F> = Degrees::<F>::DEG_180;
+    //    pub const YELLOW_ANGLE: Degrees<F> = Degrees::<F>::DEG_60;
+    //    pub const MAGENTA_ANGLE: Degrees<F> = Degrees::<F>::NEG_DEG_60;
 
-    pub const CYAN_ANGLE: Angle<F> = Angle::<F>::DEG_180;
-    pub const YELLOW_ANGLE: Angle<F> = Angle::<F>::DEG_60;
-    pub const MAGENTA_ANGLE: Angle<F> = Angle::<F>::NEG_DEG_60;
-
-    fn calc_other(abs_angle: Angle<F>) -> F {
-        if [Angle::<F>::DEG_0, Angle::<F>::DEG_120].contains(&abs_angle) {
-            F::from(0.0).unwrap()
-        } else if [Angle::<F>::DEG_60, Angle::<F>::DEG_180].contains(&abs_angle) {
-            F::from(1.0).unwrap()
+    fn calc_other(abs_angle: Degrees<F>) -> F {
+        if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
+            F::ZERO
+        } else if [F::YELLOW_ANGLE, F::CYAN_ANGLE].contains(&abs_angle.degrees()) {
+            F::ONE
         } else {
-            fn f<F: Float + NumAssign + NumOps + AngleConst>(angle: Angle<F>) -> F {
+            fn f<F: Float + NumAssign + NumOps + AngleConst + ZeroOneEtc + HueAngles>(
+                angle: Degrees<F>,
+            ) -> F {
                 // Careful of float not fully representing reals
-                (angle.sin() / (Angle::<F>::DEG_120 - angle).sin()).min(F::from(1.0).unwrap())
+                (angle.sin() / (Degrees::from(F::GREEN_ANGLE) - angle).sin()).min(F::ONE)
             };
-            if abs_angle <= Angle::<F>::DEG_60 {
+            if abs_angle.degrees() <= F::YELLOW_ANGLE {
                 f(abs_angle)
-            } else if abs_angle <= Angle::<F>::DEG_120 {
-                f(Angle::<F>::DEG_120 - abs_angle)
+            } else if abs_angle.degrees() <= F::GREEN_ANGLE {
+                f(Degrees::from(F::GREEN_ANGLE) - abs_angle)
             } else {
-                f(abs_angle - Angle::<F>::DEG_120)
+                f(abs_angle - Degrees::from(F::GREEN_ANGLE))
             }
         }
     }
 }
 
-impl<F> From<Angle<F>> for HueAngle<F>
+impl<F> From<Degrees<F>> for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    fn from(angle: Angle<F>) -> Self {
+    fn from(angle: Degrees<F>) -> Self {
         if angle.is_nan() {
             Self {
                 angle,
@@ -68,18 +100,18 @@ where
             }
         } else {
             let other = Self::calc_other(angle.abs());
-            let max_chroma_rgb: RGB<F> = if angle >= Self::RED_ANGLE {
-                if angle <= Self::YELLOW_ANGLE {
+            let max_chroma_rgb: RGB<F> = if angle.degrees() >= F::RED_ANGLE {
+                if angle.degrees() <= F::YELLOW_ANGLE {
                     [F::ONE, other, F::ZERO].into()
-                } else if angle <= Self::GREEN_ANGLE {
+                } else if angle.degrees() <= F::GREEN_ANGLE {
                     [other, F::ONE, F::ZERO].into()
                 } else {
                     [F::ZERO, F::ONE, other].into()
                 }
             } else {
-                if angle >= Self::MAGENTA_ANGLE {
+                if angle.degrees() >= F::MAGENTA_ANGLE {
                     [F::ONE, F::ZERO, other].into()
-                } else if angle >= Self::BLUE_ANGLE {
+                } else if angle.degrees() >= F::BLUE_ANGLE {
                     [other, F::ZERO, F::ONE].into()
                 } else {
                     [F::ZERO, other, F::ONE].into()
@@ -96,16 +128,16 @@ where
     }
 }
 
-impl<F> From<RGB<F>> for HueAngle<F>
+impl<F> From<RGB<F>> for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
     fn from(rgb: RGB<F>) -> Self {
         let (x, y) = rgb.xy();
-        let angle: Angle<F> = Angle::atan2(x, y);
+        let angle: Degrees<F> = Degrees::atan2(x, y);
         if angle.is_nan() {
             // NB: float limitations make using ::from(angle) unwise for real angles
-            return HueAngle::from(angle);
+            return Hue::from(angle);
         }
         let io = rgb.indices_value_order();
         let mut parts: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
@@ -129,76 +161,76 @@ where
     }
 }
 
-impl<F> Hash for HueAngle<F>
+impl<F> Hash for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
-    Angle<F>: Hash,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
+    Degrees<F>: Hash,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.angle.hash(state)
     }
 }
 
-impl<F> PartialEq for HueAngle<F>
+impl<F> PartialEq for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    fn eq(&self, other: &HueAngle<F>) -> bool {
+    fn eq(&self, other: &Hue<F>) -> bool {
         self.angle.eq(&other.angle)
     }
 }
 
-impl<F> PartialOrd for HueAngle<F>
+impl<F> PartialOrd for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    fn partial_cmp(&self, other: &HueAngle<F>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Hue<F>) -> Option<Ordering> {
         self.angle.partial_cmp(&other.angle)
     }
 }
 
-impl<F> Add<Angle<F>> for HueAngle<F>
+impl<F> Add<Degrees<F>> for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
     type Output = Self;
 
-    fn add(self, angle: Angle<F>) -> Self {
+    fn add(self, angle: Degrees<F>) -> Self {
         (self.angle + angle).into()
     }
 }
 
-impl<F> Sub<Angle<F>> for HueAngle<F>
+impl<F> Sub<Degrees<F>> for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
     type Output = Self;
 
-    fn sub(self, angle: Angle<F>) -> Self {
+    fn sub(self, angle: Degrees<F>) -> Self {
         (self.angle - angle).into()
     }
 }
 
-impl<F> Sub<HueAngle<F>> for HueAngle<F>
+impl<F> Sub<Hue<F>> for Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    type Output = Angle<F>;
+    type Output = Degrees<F>;
 
-    fn sub(self, other: HueAngle<F>) -> Angle<F> {
+    fn sub(self, other: Hue<F>) -> Degrees<F> {
         self.angle - other.angle
     }
 }
-impl<F> HueAngle<F>
+impl<F> Hue<F>
 where
-    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc,
+    F: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc + HueAngles,
 {
-    /// Returns `true` if this `HueAngle` is grey i.e. completely devoid of colour/chroma/hue
+    /// Returns `true` if this `Hue` is grey i.e. completely devoid of colour/chroma/hue
     pub fn is_grey(&self) -> bool {
         self.angle.is_nan()
     }
 
-    pub fn angle(&self) -> Angle<F> {
+    pub fn angle(&self) -> Degrees<F> {
         self.angle
     }
 
@@ -258,145 +290,133 @@ mod test {
     use crate::rgb::{I_BLUE, I_GREEN, I_RED};
     use float_cmp::*;
 
-    const TEST_ANGLES: [Angle<f64>; 13] = [
-        Angle::NEG_DEG_180,
-        Angle::NEG_DEG_150,
-        Angle::NEG_DEG_120,
-        Angle::NEG_DEG_90,
-        Angle::NEG_DEG_60,
-        Angle::NEG_DEG_30,
-        Angle::DEG_0,
-        Angle::DEG_30,
-        Angle::DEG_60,
-        Angle::DEG_90,
-        Angle::DEG_120,
-        Angle::DEG_150,
-        Angle::DEG_180,
+    const TEST_ANGLES: [f64; 13] = [
+        -180.0, -150.0, -120.0, -90.0, -60.0, -30.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0,
     ];
 
     const TEST_RATIOS: [f64; 10] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
     fn calculate_chroma(rgb: &RGB<f64>) -> f64 {
         let (x, y) = rgb.xy();
-        x.hypot(y) * HueAngle::from(*rgb).chroma_correction
+        x.hypot(y) * Hue::from(*rgb).chroma_correction
     }
 
     #[test]
     fn from_angle() {
         assert_eq!(
-            HueAngle::<f64>::from(Angle::NEG_DEG_150)
+            Hue::<f64>::from(Degrees::from(-150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
             [I_BLUE, I_GREEN, I_RED]
         );
         assert_eq!(
-            HueAngle::<f64>::from(Angle::NEG_DEG_90)
+            Hue::<f64>::from(Degrees::from(-90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
             [I_BLUE, I_RED, I_GREEN]
         );
         assert_eq!(
-            HueAngle::<f64>::from(Angle::NEG_DEG_30)
+            Hue::<f64>::from(Degrees::from(-30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
             [I_RED, I_BLUE, I_GREEN]
         );
         assert_eq!(
-            HueAngle::<f64>::from(Angle::DEG_30)
+            Hue::<f64>::from(Degrees::from(30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
             [I_RED, I_GREEN, I_BLUE]
         );
         assert_eq!(
-            HueAngle::<f64>::from(Angle::DEG_90)
+            Hue::<f64>::from(Degrees::from(90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
             [I_GREEN, I_RED, I_BLUE]
         );
         assert_eq!(
-            HueAngle::<f64>::from(Angle::DEG_150)
+            Hue::<f64>::from(Degrees::from(150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
             [I_GREEN, I_BLUE, I_RED]
         );
         assert_eq!(
-            HueAngle::<f64>::from(HueAngle::<f64>::RED_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::<f64>::from(f64::RED_ANGLE)).max_chroma_rgb,
             RGB::<f64>::RED
         );
         assert_eq!(
-            HueAngle::<f64>::from(HueAngle::<f64>::GREEN_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::<f64>::from(f64::GREEN_ANGLE)).max_chroma_rgb,
             RGB::<f64>::GREEN
         );
         assert_eq!(
-            HueAngle::<f64>::from(HueAngle::<f64>::BLUE_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::<f64>::from(f64::BLUE_ANGLE)).max_chroma_rgb,
             RGB::<f64>::BLUE
         );
         assert_eq!(
-            HueAngle::<f64>::from(HueAngle::<f64>::CYAN_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::<f64>::from(f64::CYAN_ANGLE)).max_chroma_rgb,
             RGB::<f64>::CYAN
         );
         assert_eq!(
-            HueAngle::<f64>::from(HueAngle::<f64>::MAGENTA_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::<f64>::from(f64::MAGENTA_ANGLE)).max_chroma_rgb,
             RGB::<f64>::MAGENTA
         );
         assert_eq!(
-            HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE)).max_chroma_rgb,
             RGB::<f64>::YELLOW
         );
     }
 
     #[test]
     fn from_rgb() {
-        assert!(HueAngle::<f64>::from(RGB::<f64>::RED)
+        assert!(Hue::<f64>::from(RGB::<f64>::RED)
             .angle
-            .approx_eq(HueAngle::<f64>::RED_ANGLE));
-        assert!(HueAngle::<f64>::from(RGB::<f64>::GREEN)
+            .approx_eq(Degrees::<f64>::from(f64::RED_ANGLE)));
+        assert!(Hue::<f64>::from(RGB::<f64>::GREEN)
             .angle
-            .approx_eq(HueAngle::<f64>::GREEN_ANGLE));
-        assert!(HueAngle::<f64>::from(RGB::<f64>::BLUE)
+            .approx_eq(Degrees::<f64>::from(f64::GREEN_ANGLE)));
+        assert!(Hue::<f64>::from(RGB::<f64>::BLUE)
             .angle
-            .approx_eq(HueAngle::<f64>::BLUE_ANGLE));
-        assert!(HueAngle::<f64>::from(RGB::<f64>::CYAN)
+            .approx_eq(Degrees::<f64>::from(f64::BLUE_ANGLE)));
+        assert!(Hue::<f64>::from(RGB::<f64>::CYAN)
             .angle
-            .approx_eq(HueAngle::<f64>::CYAN_ANGLE));
-        assert!(HueAngle::<f64>::from(RGB::<f64>::MAGENTA)
+            .approx_eq(Degrees::<f64>::from(f64::CYAN_ANGLE)));
+        assert!(Hue::<f64>::from(RGB::<f64>::MAGENTA)
             .angle
-            .approx_eq(HueAngle::<f64>::MAGENTA_ANGLE));
-        assert!(HueAngle::<f64>::from(RGB::<f64>::YELLOW)
+            .approx_eq(Degrees::<f64>::from(f64::MAGENTA_ANGLE)));
+        assert!(Hue::<f64>::from(RGB::<f64>::YELLOW)
             .angle
-            .approx_eq(HueAngle::<f64>::YELLOW_ANGLE));
-        assert!(HueAngle::<f64>::from(RGB::<f64>::BLACK).angle.is_nan());
-        assert!(HueAngle::<f64>::from(RGB::<f64>::WHITE).angle.is_nan());
+            .approx_eq(Degrees::<f64>::from(f64::YELLOW_ANGLE)));
+        assert!(Hue::<f64>::from(RGB::<f64>::BLACK).angle.is_nan());
+        assert!(Hue::<f64>::from(RGB::<f64>::WHITE).angle.is_nan());
     }
 
     #[test]
     fn rotation() {
         assert!(
-            (HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE) + Angle::from_degrees(60.0))
+            (Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE)) + Degrees::from(60.0))
                 .angle
-                .approx_eq(HueAngle::<f64>::GREEN_ANGLE)
+                .approx_eq(Degrees::<f64>::from(f64::GREEN_ANGLE))
         );
         assert!(
-            (HueAngle::<f64>::from(HueAngle::<f64>::MAGENTA_ANGLE) - Angle::from_degrees(60.0))
+            (Hue::<f64>::from(Degrees::<f64>::from(f64::MAGENTA_ANGLE)) - Degrees::from(60.0))
                 .angle
-                .approx_eq(HueAngle::<f64>::BLUE_ANGLE)
+                .approx_eq(Degrees::<f64>::from(f64::BLUE_ANGLE))
         )
     }
 
     #[test]
     fn difference() {
-        assert!((HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE)
-            - HueAngle::from(HueAngle::<f64>::GREEN_ANGLE))
-        .approx_eq(Angle::from_degrees(-60.0)));
-        assert!((HueAngle::<f64>::from(HueAngle::<f64>::YELLOW_ANGLE)
-            - HueAngle::from(HueAngle::<f64>::MAGENTA_ANGLE))
-        .approx_eq(Angle::from_degrees(120.0)));
+        assert!((Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE))
+            - Hue::from(Degrees::<f64>::from(f64::GREEN_ANGLE)))
+        .approx_eq(Degrees::from(-60.0)));
+        assert!((Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE))
+            - Hue::from(Degrees::<f64>::from(f64::MAGENTA_ANGLE)))
+        .approx_eq(Degrees::from(120.0)));
     }
 
     #[test]
     fn rgb_range_with_chroma() {
-        for angle in TEST_ANGLES.iter() {
-            let hue_angle: HueAngle<f64> = (*angle).into();
+        for angle in TEST_ANGLES.iter().map(|x| Degrees::from(*x)) {
+            let hue_angle: Hue<f64> = angle.into();
             assert_eq!(
                 hue_angle.rgb_range_with_chroma(0.0).unwrap(),
                 (RGB::BLACK, RGB::WHITE)
@@ -408,11 +428,11 @@ mod test {
                 assert!(approx_eq!(f64, shade_chroma, *chroma, ulps = 4));
                 let tint_chroma = calculate_chroma(&tint_rgb);
                 assert!(approx_eq!(f64, tint_chroma, *chroma, ulps = 4));
-                assert!(angle.approx_eq(HueAngle::from(shade_rgb).angle));
-                assert!(angle.approx_eq(HueAngle::from(tint_rgb).angle));
+                assert!(angle.approx_eq(Hue::from(shade_rgb).angle));
+                assert!(angle.approx_eq(Hue::from(tint_rgb).angle));
             }
         }
-        let hue_angle = HueAngle::<f64>::from(Angle::<f64>::from(std::f64::NAN));
+        let hue_angle = Hue::<f64>::from(Degrees::<f64>::from(std::f64::NAN));
         assert_eq!(
             hue_angle.rgb_range_with_chroma(0.0),
             Some((RGB::BLACK, RGB::WHITE))
