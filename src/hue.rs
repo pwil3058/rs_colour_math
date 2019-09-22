@@ -305,7 +305,9 @@ mod test {
         -180.0, -150.0, -120.0, -90.0, -60.0, -30.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0,
     ];
 
-    const TEST_RATIOS: [f64; 10] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+    const NON_ZERO_TEST_RATIOS: [f64; 10] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+
+    const TEST_RATIOS: [f64; 11] = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
     fn calculate_chroma(rgb: &RGB<f64>) -> f64 {
         let (x, y) = rgb.xy();
@@ -427,13 +429,13 @@ mod test {
     #[test]
     fn rgb_range_with_chroma() {
         for angle in TEST_ANGLES.iter().map(|x| Degrees::from(*x)) {
-            let hue_angle: Hue<f64> = angle.into();
+            let hue: Hue<f64> = angle.into();
             assert_eq!(
-                hue_angle.rgb_range_with_chroma(0.0).unwrap(),
+                hue.rgb_range_with_chroma(0.0).unwrap(),
                 (RGB::BLACK, RGB::WHITE)
             );
-            for chroma in TEST_RATIOS.iter() {
-                let (shade_rgb, tint_rgb) = hue_angle.rgb_range_with_chroma(*chroma).unwrap();
+            for chroma in NON_ZERO_TEST_RATIOS.iter() {
+                let (shade_rgb, tint_rgb) = hue.rgb_range_with_chroma(*chroma).unwrap();
                 assert!(shade_rgb.value() <= tint_rgb.value());
                 let shade_chroma = calculate_chroma(&shade_rgb);
                 assert!(approx_eq!(f64, shade_chroma, *chroma, ulps = 4));
@@ -443,13 +445,94 @@ mod test {
                 assert!(angle.approx_eq(Hue::from(tint_rgb).angle));
             }
         }
-        let hue_angle = Hue::<f64>::from(Degrees::<f64>::from(std::f64::NAN));
+        let hue = Hue::<f64>::from(Degrees::<f64>::from(std::f64::NAN));
         assert_eq!(
-            hue_angle.rgb_range_with_chroma(0.0),
+            hue.rgb_range_with_chroma(0.0),
             Some((RGB::BLACK, RGB::WHITE))
         );
-        for chroma in TEST_RATIOS.iter() {
-            assert!(hue_angle.rgb_range_with_chroma(*chroma).is_none())
+        for chroma in NON_ZERO_TEST_RATIOS.iter() {
+            assert!(hue.rgb_range_with_chroma(*chroma).is_none())
+        }
+    }
+
+    #[test]
+    fn rgb_with_chroma_and_value() {
+        let mut count_a = 0;
+        let mut count_b = 0;
+        for angle in TEST_ANGLES.iter().map(|x| Degrees::from(*x)) {
+            let hue = Hue::<f64>::from(angle);
+            for chroma in NON_ZERO_TEST_RATIOS.iter() {
+                for value in NON_ZERO_TEST_RATIOS.iter() {
+                    match hue.rgb_with_chroma_and_value(*chroma, *value) {
+                        Some(rgb) => {
+                            assert!(approx_eq!(f64, calculate_chroma(&rgb), *chroma, ulps = 5));
+                            assert!(approx_eq!(f64, rgb.value(), *value, ulps = 4));
+                            assert!(hue.angle.approx_eq(Hue::from(rgb).angle));
+                        }
+                        None => {
+                            if let Some((min_value, max_value)) =
+                                hue.value_range_with_chroma(*chroma)
+                            {
+                                assert!(*value < min_value || *value > max_value);
+                            } else {
+                                panic!("File: {:?} Line: {:?} shouldn't get here", file!(), line!())
+                            }
+                        }
+                    }
+                }
+            }
+            // Check for handling of hue drift for small chroma values
+            for value in TEST_RATIOS.iter() {
+                for chroma in [0.000000001, 0.0000000001, 0.00000000001, 0.000000000001].iter() {
+                    match hue.rgb_with_chroma_and_value(*chroma, *value) {
+                        Some(rgb) => {
+                            let rgb_hue = Hue::from(rgb);
+                            if rgb_hue.is_grey() {
+                                assert!(approx_eq!(f64, rgb.value(), *value, ulps = 3));
+                                count_a += 1;
+                            } else {
+                                //assert!(approx_eq!(f64, calculate_chroma(&rgb), *chroma, ulps = 5));
+                                assert!(approx_eq!(f64, rgb.value(), *value, ulps = 3));
+                                assert!(hue.angle.approx_eq(rgb_hue.angle));
+                                count_b += 1;
+                            }
+                        }
+                        None => {
+                            if let Some((min_value, max_value)) =
+                                hue.value_range_with_chroma(*chroma)
+                            {
+                                assert!(*value < min_value || *value > max_value);
+                            } else {
+                                panic!("File: {:?} Line: {:?} shouldn't get here", file!(), line!())
+                            }
+                        }
+                    }
+                }
+            }
+            for value in TEST_RATIOS.iter() {
+                match hue.rgb_with_chroma_and_value(0.0, *value) {
+                    Some(rgb) => {
+                        assert!(approx_eq!(f64, calculate_chroma(&rgb), 0.0, ulps = 3));
+                        assert!(approx_eq!(f64, rgb.value(), *value, ulps = 3));
+                        assert!(Hue::from(rgb).is_grey());
+                    }
+                    None => (assert!(false)),
+                }
+            }
+        }
+        assert!(count_a > 0);
+        assert!(count_b > 0);
+        let hue = Hue::from(Degrees::from(std::f64::NAN));
+        for chroma in NON_ZERO_TEST_RATIOS.iter() {
+            for value in TEST_RATIOS.iter() {
+                assert_eq!(hue.rgb_with_chroma_and_value(*chroma, *value), None);
+            }
+        }
+        for value in TEST_RATIOS.iter() {
+            assert_eq!(
+                hue.rgb_with_chroma_and_value(0.0, *value),
+                Some([*value, *value, *value].into())
+            );
         }
     }
 }
