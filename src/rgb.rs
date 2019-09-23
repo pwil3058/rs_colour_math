@@ -7,6 +7,7 @@ use num::traits::Float;
 pub trait ZeroOneEtc {
     const ZERO: Self;
     const ONE: Self;
+    const TWO: Self;
     const THREE: Self;
     const SIN_120: Self;
     const COS_120: Self;
@@ -15,6 +16,7 @@ pub trait ZeroOneEtc {
 impl ZeroOneEtc for f32 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
+    const TWO: Self = 2.0;
     const THREE: Self = 3.0;
     const SIN_120: Self = 0.86602_54037_844387;
     const COS_120: Self = -0.5;
@@ -23,6 +25,7 @@ impl ZeroOneEtc for f32 {
 impl ZeroOneEtc for f64 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
+    const TWO: Self = 2.0;
     const THREE: Self = 3.0;
     const SIN_120: Self = 0.86602_54037_844387;
     const COS_120: Self = -0.5;
