@@ -10,53 +10,25 @@ use std::{
 use normalised_angles::{AngleConst, Degrees};
 use num::traits::{Float, NumAssign, NumOps};
 
-use crate::rgb::{ZeroOneEtc, RGB};
+use crate::rgb::RGB;
 
-pub trait HueAngles: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc {
-    const RED_ANGLE: Self;
-    const GREEN_ANGLE: Self;
-    const BLUE_ANGLE: Self;
-
-    const CYAN_ANGLE: Self;
-    const YELLOW_ANGLE: Self;
-    const MAGENTA_ANGLE: Self;
-}
-
-impl HueAngles for f32 {
-    const RED_ANGLE: Self = 0.0;
-    const GREEN_ANGLE: Self = 120.0;
-    const BLUE_ANGLE: Self = -120.0;
-
-    const CYAN_ANGLE: Self = 180.0;
-    const YELLOW_ANGLE: Self = 60.0;
-    const MAGENTA_ANGLE: Self = -60.0;
-}
-
-impl HueAngles for f64 {
-    const RED_ANGLE: Self = 0.0;
-    const GREEN_ANGLE: Self = 120.0;
-    const BLUE_ANGLE: Self = -120.0;
-
-    const CYAN_ANGLE: Self = 180.0;
-    const YELLOW_ANGLE: Self = 60.0;
-    const MAGENTA_ANGLE: Self = -60.0;
-}
+use crate::ColourComponent;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct Hue<F: HueAngles> {
+pub struct Hue<F: ColourComponent> {
     angle: Degrees<F>,
     max_chroma_rgb: RGB<F>,
     chroma_correction: F,
 }
 
-impl<F: HueAngles> Hue<F> {
+impl<F: ColourComponent> Hue<F> {
     fn calc_other(abs_angle: Degrees<F>) -> F {
         if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
             F::ZERO
         } else if [F::YELLOW_ANGLE, F::CYAN_ANGLE].contains(&abs_angle.degrees()) {
             F::ONE
         } else {
-            fn f<F: Float + NumAssign + NumOps + AngleConst + ZeroOneEtc + HueAngles>(
+            fn f<F: Float + NumAssign + NumOps + AngleConst + ColourComponent + ColourComponent>(
                 angle: Degrees<F>,
             ) -> F {
                 // Careful of float not fully representing reals
@@ -73,7 +45,7 @@ impl<F: HueAngles> Hue<F> {
     }
 }
 
-impl<F: HueAngles> From<Degrees<F>> for Hue<F> {
+impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
     fn from(angle: Degrees<F>) -> Self {
         if angle.is_nan() {
             Self {
@@ -111,7 +83,7 @@ impl<F: HueAngles> From<Degrees<F>> for Hue<F> {
     }
 }
 
-impl<F: HueAngles> From<RGB<F>> for Hue<F> {
+impl<F: ColourComponent> From<RGB<F>> for Hue<F> {
     fn from(rgb: RGB<F>) -> Self {
         let (x, y) = rgb.xy();
         let angle: Degrees<F> = Degrees::atan2(x, y);
@@ -141,7 +113,7 @@ impl<F: HueAngles> From<RGB<F>> for Hue<F> {
     }
 }
 
-impl<F: HueAngles> Hash for Hue<F>
+impl<F: ColourComponent> Hash for Hue<F>
 where
     Degrees<F>: Hash,
 {
@@ -150,19 +122,19 @@ where
     }
 }
 
-impl<F: HueAngles> PartialEq for Hue<F> {
+impl<F: ColourComponent> PartialEq for Hue<F> {
     fn eq(&self, other: &Hue<F>) -> bool {
         self.angle.eq(&other.angle)
     }
 }
 
-impl<F: HueAngles> PartialOrd for Hue<F> {
+impl<F: ColourComponent> PartialOrd for Hue<F> {
     fn partial_cmp(&self, other: &Hue<F>) -> Option<Ordering> {
         self.angle.partial_cmp(&other.angle)
     }
 }
 
-impl<F: HueAngles> Add<Degrees<F>> for Hue<F> {
+impl<F: ColourComponent> Add<Degrees<F>> for Hue<F> {
     type Output = Self;
 
     fn add(self, angle: Degrees<F>) -> Self {
@@ -170,7 +142,7 @@ impl<F: HueAngles> Add<Degrees<F>> for Hue<F> {
     }
 }
 
-impl<F: HueAngles> Sub<Degrees<F>> for Hue<F> {
+impl<F: ColourComponent> Sub<Degrees<F>> for Hue<F> {
     type Output = Self;
 
     fn sub(self, angle: Degrees<F>) -> Self {
@@ -178,14 +150,14 @@ impl<F: HueAngles> Sub<Degrees<F>> for Hue<F> {
     }
 }
 
-impl<F: HueAngles> Sub<Hue<F>> for Hue<F> {
+impl<F: ColourComponent> Sub<Hue<F>> for Hue<F> {
     type Output = Degrees<F>;
 
     fn sub(self, other: Hue<F>) -> Degrees<F> {
         self.angle - other.angle
     }
 }
-impl<F: HueAngles> Hue<F> {
+impl<F: ColourComponent> Hue<F> {
     /// Returns `true` if this `Hue` is grey i.e. completely devoid of colour/chroma/hue
     pub fn is_grey(&self) -> bool {
         self.angle.is_nan()
@@ -331,7 +303,7 @@ impl<F: HueAngles> Hue<F> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::rgb::{I_BLUE, I_GREEN, I_RED};
+    use crate::{I_BLUE, I_GREEN, I_RED};
     use float_cmp::*;
 
     const TEST_ANGLES: [f64; 13] = [

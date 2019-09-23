@@ -2,47 +2,12 @@
 
 use std::{convert::From, ops::Index};
 
-use num::traits::Float;
-
-pub trait ZeroOneEtc: Sized + PartialOrd {
-    const ZERO: Self;
-    const ONE: Self;
-    const TWO: Self;
-    const THREE: Self;
-    const SIN_120: Self;
-    const COS_120: Self;
-
-    fn is_proportion(self) -> bool {
-        self <= Self::ONE && self >= Self::ZERO
-    }
-}
-
-impl ZeroOneEtc for f32 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-    const TWO: Self = 2.0;
-    const THREE: Self = 3.0;
-    const SIN_120: Self = 0.86602_54037_844387;
-    const COS_120: Self = -0.5;
-}
-
-impl ZeroOneEtc for f64 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-    const TWO: Self = 2.0;
-    const THREE: Self = 3.0;
-    const SIN_120: Self = 0.86602_54037_844387;
-    const COS_120: Self = -0.5;
-}
-
-pub const I_RED: usize = 0;
-pub const I_GREEN: usize = 1;
-pub const I_BLUE: usize = 2;
+use crate::{ColourComponent, I_BLUE, I_GREEN, I_RED};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RGB<F: Float + PartialOrd + ZeroOneEtc + Copy>([F; 3]);
+pub struct RGB<F: ColourComponent>([F; 3]);
 
-impl<F: Float + PartialOrd + ZeroOneEtc + Copy> RGB<F> {
+impl<F: ColourComponent> RGB<F> {
     pub const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);
     pub const GREEN: Self = Self([F::ZERO, F::ONE, F::ZERO]);
     pub const BLUE: Self = Self([F::ZERO, F::ZERO, F::ONE]);
@@ -100,7 +65,7 @@ impl<F: Float + PartialOrd + ZeroOneEtc + Copy> RGB<F> {
     }
 }
 
-impl<F: Float + PartialOrd + ZeroOneEtc + Copy> Index<usize> for RGB<F> {
+impl<F: ColourComponent> Index<usize> for RGB<F> {
     type Output = F;
 
     fn index(&self, index: usize) -> &F {
@@ -108,7 +73,7 @@ impl<F: Float + PartialOrd + ZeroOneEtc + Copy> Index<usize> for RGB<F> {
     }
 }
 
-impl<F: Float + PartialOrd + ZeroOneEtc + Copy> From<[F; 3]> for RGB<F> {
+impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
     fn from(array: [F; 3]) -> Self {
         debug_assert!(array.iter().all(|x| (*x).is_proportion()));
         Self(array)
