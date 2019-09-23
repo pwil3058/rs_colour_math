@@ -4,13 +4,17 @@ use std::{convert::From, ops::Index};
 
 use num::traits::Float;
 
-pub trait ZeroOneEtc {
+pub trait ZeroOneEtc: Sized + PartialOrd {
     const ZERO: Self;
     const ONE: Self;
     const TWO: Self;
     const THREE: Self;
     const SIN_120: Self;
     const COS_120: Self;
+
+    fn is_proportion(self) -> bool {
+        self <= Self::ONE && self >= Self::ZERO
+    }
 }
 
 impl ZeroOneEtc for f32 {
@@ -38,10 +42,6 @@ pub const I_BLUE: usize = 2;
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB<F: Float + PartialOrd + ZeroOneEtc + Copy>([F; 3]);
 
-pub fn is_proportion<F: Float + PartialOrd + ZeroOneEtc + Copy>(f: F) -> bool {
-    f <= F::ONE && f >= F::ZERO
-}
-
 impl<F: Float + PartialOrd + ZeroOneEtc + Copy> RGB<F> {
     pub const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);
     pub const GREEN: Self = Self([F::ZERO, F::ONE, F::ZERO]);
@@ -63,7 +63,7 @@ impl<F: Float + PartialOrd + ZeroOneEtc + Copy> RGB<F> {
     }
 
     pub fn rgba(self, alpha: F) -> [F; 4] {
-        debug_assert!(is_proportion(alpha));
+        debug_assert!(alpha.is_proportion());
         [self.0[I_RED], self.0[I_GREEN], self.0[I_BLUE], alpha]
     }
 
@@ -110,7 +110,7 @@ impl<F: Float + PartialOrd + ZeroOneEtc + Copy> Index<usize> for RGB<F> {
 
 impl<F: Float + PartialOrd + ZeroOneEtc + Copy> From<[F; 3]> for RGB<F> {
     fn from(array: [F; 3]) -> Self {
-        debug_assert!(array.iter().all(|x| is_proportion(*x)));
+        debug_assert!(array.iter().all(|x| (*x).is_proportion()));
         Self(array)
     }
 }

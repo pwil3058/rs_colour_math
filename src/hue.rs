@@ -10,7 +10,7 @@ use std::{
 use normalised_angles::{AngleConst, Degrees};
 use num::traits::{Float, NumAssign, NumOps};
 
-use crate::rgb::{is_proportion, ZeroOneEtc, RGB};
+use crate::rgb::{ZeroOneEtc, RGB};
 
 pub trait HueAngles: Float + NumAssign + NumOps + AngleConst + Copy + ZeroOneEtc {
     const RED_ANGLE: Self;
@@ -208,7 +208,7 @@ impl<F: HueAngles> Hue<F> {
     /// Returns the maximum chroma that can be achieved for this view and the given `value`.
     /// 'value` must be in the range 0.0 to 1.0 inclusive
     pub fn max_chroma_for_value(&self, value: F) -> F {
-        debug_assert!(is_proportion(value));
+        debug_assert!(value.is_proportion());
         if self.is_grey() {
             F::ZERO
         } else {
@@ -225,7 +225,7 @@ impl<F: HueAngles> Hue<F> {
     /// Returns the range of `RGB` that can be created with this hue and the given `chroma`
     /// returns `None` if no such range exists. `chroma` must be in range 0.0 to 1.0 inclusive.
     pub fn rgb_range_with_chroma(&self, chroma: F) -> Option<(RGB<F>, RGB<F>)> {
-        debug_assert!(is_proportion(chroma));
+        debug_assert!(chroma.is_proportion());
         if chroma == F::ZERO {
             Some((RGB::BLACK, RGB::WHITE))
         } else if self.is_grey() {
@@ -247,7 +247,7 @@ impl<F: HueAngles> Hue<F> {
     /// Returns the range of `values` for which it is possible to construct an `RGB` with this hue
     /// and the specified `chroma`.
     pub fn value_range_with_chroma(&self, chroma: F) -> Option<(F, F)> {
-        debug_assert!(is_proportion(chroma));
+        debug_assert!(chroma.is_proportion());
         if chroma == F::ZERO {
             Some((F::ZERO, F::ONE))
         } else if self.is_grey() {
@@ -264,8 +264,8 @@ impl<F: HueAngles> Hue<F> {
 
     /// Returns a `RGB` with the specified `chroma` and `value` if feasible and `None` otherwise.
     pub fn rgb_with_chroma_and_value(&self, chroma: F, value: F) -> Option<RGB<F>> {
-        debug_assert!(is_proportion(chroma));
-        debug_assert!(is_proportion(value));
+        debug_assert!(chroma.is_proportion());
+        debug_assert!(value.is_proportion());
         if let Some((min_value, max_value)) = self.value_range_with_chroma(chroma) {
             if value < min_value || value > max_value {
                 None
@@ -296,7 +296,7 @@ impl<F: HueAngles> Hue<F> {
 
     /// Returns a `RGB` with the maximum feasible chroma for this hue and the given `value`
     pub fn max_chroma_rgb_with_value(&self, value: F) -> RGB<F> {
-        debug_assert!(is_proportion(value));
+        debug_assert!(value.is_proportion());
         let mcv = self.max_chroma_rgb.value();
         if mcv > value {
             if value == F::ZERO {
