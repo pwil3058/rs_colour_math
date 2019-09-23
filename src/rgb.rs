@@ -36,13 +36,23 @@ impl<F: ColourComponent> RGB<F> {
         ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
     }
 
-    pub fn xy(self) -> (F, F) {
-        let x = self.0[I_RED] + (self.0[I_GREEN] + self.0[I_BLUE]) * F::COS_120;
-        let y = (self.0[I_GREEN] - self.0[I_BLUE]) * F::SIN_120;
-        (x, y)
+    pub(crate) fn x(self) -> F {
+        self.0[I_RED] + (self.0[I_GREEN] + self.0[I_BLUE]) * F::COS_120
     }
 
-    pub fn indices_value_order(self) -> [usize; 3] {
+    pub(crate) fn y(self) -> F {
+        (self.0[I_GREEN] - self.0[I_BLUE]) * F::SIN_120
+    }
+
+    pub(crate) fn xy(self) -> (F, F) {
+        (self.x(), self.y())
+    }
+
+    pub(crate) fn hypot(self) -> F {
+        self.x().hypot(self.y())
+    }
+
+    pub(crate) fn indices_value_order(self) -> [usize; 3] {
         if self[I_RED] >= self[I_GREEN] {
             if self[I_RED] >= self[I_BLUE] {
                 if self[I_GREEN] >= self[I_BLUE] {

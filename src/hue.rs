@@ -7,8 +7,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use normalised_angles::{AngleConst, Degrees};
-use num::traits::{Float, NumAssign, NumOps};
+use normalised_angles::Degrees;
 
 use crate::rgb::RGB;
 
@@ -21,29 +20,27 @@ pub struct Hue<F: ColourComponent> {
     chroma_correction: F,
 }
 
-impl<F: ColourComponent> Hue<F> {
-    fn calc_other(abs_angle: Degrees<F>) -> F {
-        if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
-            F::ZERO
-        } else if [F::YELLOW_ANGLE, F::CYAN_ANGLE].contains(&abs_angle.degrees()) {
-            F::ONE
+//impl<F: ColourComponent> Hue<F> {
+fn calc_other<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
+    if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
+        F::ZERO
+    } else if [F::YELLOW_ANGLE, F::CYAN_ANGLE].contains(&abs_angle.degrees()) {
+        F::ONE
+    } else {
+        fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
+            // Careful of float not fully representing reals
+            (angle.sin() / (Degrees::from(F::GREEN_ANGLE) - angle).sin()).min(F::ONE)
+        };
+        if abs_angle.degrees() <= F::YELLOW_ANGLE {
+            f(abs_angle)
+        } else if abs_angle.degrees() <= F::GREEN_ANGLE {
+            f(Degrees::from(F::GREEN_ANGLE) - abs_angle)
         } else {
-            fn f<F: Float + NumAssign + NumOps + AngleConst + ColourComponent + ColourComponent>(
-                angle: Degrees<F>,
-            ) -> F {
-                // Careful of float not fully representing reals
-                (angle.sin() / (Degrees::from(F::GREEN_ANGLE) - angle).sin()).min(F::ONE)
-            };
-            if abs_angle.degrees() <= F::YELLOW_ANGLE {
-                f(abs_angle)
-            } else if abs_angle.degrees() <= F::GREEN_ANGLE {
-                f(Degrees::from(F::GREEN_ANGLE) - abs_angle)
-            } else {
-                f(abs_angle - Degrees::from(F::GREEN_ANGLE))
-            }
+            f(abs_angle - Degrees::from(F::GREEN_ANGLE))
         }
     }
 }
+//}
 
 impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
     fn from(angle: Degrees<F>) -> Self {
@@ -54,7 +51,7 @@ impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
                 chroma_correction: F::ONE,
             }
         } else {
-            let other = Self::calc_other(angle.abs());
+            let other = calc_other(angle.abs());
             let max_chroma_rgb: RGB<F> = if angle.degrees() >= F::RED_ANGLE {
                 if angle.degrees() <= F::YELLOW_ANGLE {
                     [F::ONE, other, F::ZERO].into()
@@ -99,12 +96,11 @@ impl<F: ColourComponent> From<RGB<F>> for Hue<F> {
             parts[io[1]] = F::ONE;
         } else if rgb[io[1]] != rgb[io[2]] {
             // Not Primary or Secondary
-            parts[io[1]] = Self::calc_other(angle.abs());
+            parts[io[1]] = calc_other(angle.abs());
         }
         let max_chroma_rgb: RGB<F> = parts.into();
-        let (x, y) = max_chroma_rgb.xy();
         // Be paranoid about fact floats only approximate reals
-        let chroma_correction = x.hypot(y).min(F::ONE).recip();
+        let chroma_correction = max_chroma_rgb.hypot().min(F::ONE).recip();
         Self {
             angle,
             max_chroma_rgb,
@@ -315,8 +311,7 @@ mod test {
     const TEST_RATIOS: [f64; 11] = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
     fn calculate_chroma(rgb: &RGB<f64>) -> f64 {
-        let (x, y) = rgb.xy();
-        x.hypot(y) * Hue::from(*rgb).chroma_correction
+        rgb.hypot() * Hue::from(*rgb).chroma_correction
     }
 
     #[test]
