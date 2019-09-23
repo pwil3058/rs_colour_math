@@ -20,7 +20,6 @@ pub struct Hue<F: ColourComponent> {
     chroma_correction: F,
 }
 
-//impl<F: ColourComponent> Hue<F> {
 fn calc_other<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
         F::ZERO
@@ -40,7 +39,12 @@ fn calc_other<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
         }
     }
 }
-//}
+
+fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
+    debug_assert!(other.is_proportion());
+    // Careful of fact floats only approximate real numbers
+    (F::ONE + other * other - other).sqrt().min(F::ONE).recip()
+}
 
 impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
     fn from(angle: Degrees<F>) -> Self {
@@ -69,8 +73,7 @@ impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
                     [F::ZERO, other, F::ONE].into()
                 }
             };
-            // Careful of fact floats only approximate real numbers
-            let chroma_correction = (F::ONE + other * other - other).sqrt().min(F::ONE).recip();
+            let chroma_correction = calc_chroma_correction(other);
             Self {
                 angle,
                 max_chroma_rgb,
@@ -99,8 +102,7 @@ impl<F: ColourComponent> From<RGB<F>> for Hue<F> {
             parts[io[1]] = calc_other(angle.abs());
         }
         let max_chroma_rgb: RGB<F> = parts.into();
-        // Be paranoid about fact floats only approximate reals
-        let chroma_correction = max_chroma_rgb.hypot().min(F::ONE).recip();
+        let chroma_correction = calc_chroma_correction(max_chroma_rgb[io[1]]);
         Self {
             angle,
             max_chroma_rgb,
@@ -379,6 +381,58 @@ mod test {
     }
 
     #[test]
+    fn chroma_correction_from_angle() {
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(f64::RED_ANGLE)).chroma_correction,
+            1.0
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(f64::GREEN_ANGLE)).chroma_correction,
+            1.0
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(f64::BLUE_ANGLE)).chroma_correction,
+            1.0
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(f64::CYAN_ANGLE)).chroma_correction,
+            1.0
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(f64::MAGENTA_ANGLE)).chroma_correction,
+            1.0
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(f64::YELLOW_ANGLE)).chroma_correction,
+            1.0
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(30.0)).chroma_correction,
+            2.0 / 3.0_f64.sqrt()
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(90.0)).chroma_correction,
+            2.0 / 3.0_f64.sqrt()
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(150.0)).chroma_correction,
+            2.0 / 3.0_f64.sqrt()
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(-150.0)).chroma_correction,
+            2.0 / 3.0_f64.sqrt()
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(-90.0)).chroma_correction,
+            2.0 / 3.0_f64.sqrt()
+        );
+        assert_eq!(
+            Hue::<f64>::from(Degrees::from(-30.0)).chroma_correction,
+            2.0 / 3.0_f64.sqrt()
+        );
+    }
+
+    #[test]
     fn from_rgb() {
         assert!(Hue::<f64>::from(RGB::<f64>::RED)
             .angle
@@ -400,6 +454,52 @@ mod test {
             .approx_eq(Degrees::<f64>::from(f64::YELLOW_ANGLE)));
         assert!(Hue::<f64>::from(RGB::<f64>::BLACK).angle.is_nan());
         assert!(Hue::<f64>::from(RGB::<f64>::WHITE).angle.is_nan());
+    }
+
+    #[test]
+    fn chroma_correction_from_rgb() {
+        assert_eq!(Hue::<f64>::from(RGB::RED).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(RGB::GREEN).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(RGB::BLUE).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(RGB::CYAN).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(RGB::MAGENTA).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(RGB::YELLOW).chroma_correction, 1.0);
+        assert!(approx_eq!(
+            f64,
+            Hue::<f64>::from(RGB::from([0.5, 0.25, 0.0])).chroma_correction,
+            2.0 / 3.0_f64.sqrt(),
+            ulps = 5
+        ));
+        assert!(approx_eq!(
+            f64,
+            Hue::<f64>::from(RGB::from([0.25, 0.5, 0.0])).chroma_correction,
+            2.0 / 3.0_f64.sqrt(),
+            ulps = 5
+        ));
+        assert!(approx_eq!(
+            f64,
+            Hue::<f64>::from(RGB::from([0.5, 0.0, 0.25])).chroma_correction,
+            2.0 / 3.0_f64.sqrt(),
+            ulps = 5
+        ));
+        assert!(approx_eq!(
+            f64,
+            Hue::<f64>::from(RGB::from([0.25, 0.0, 0.5])).chroma_correction,
+            2.0 / 3.0_f64.sqrt(),
+            ulps = 5
+        ));
+        assert!(approx_eq!(
+            f64,
+            Hue::<f64>::from(RGB::from([0.0, 0.5, 0.25])).chroma_correction,
+            2.0 / 3.0_f64.sqrt(),
+            ulps = 5
+        ));
+        assert!(approx_eq!(
+            f64,
+            Hue::<f64>::from(RGB::from([0.0, 0.25, 0.5])).chroma_correction,
+            2.0 / 3.0_f64.sqrt(),
+            ulps = 5
+        ));
     }
 
     #[test]
