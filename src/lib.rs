@@ -75,6 +75,70 @@ pub const I_RED: usize = 0;
 pub const I_GREEN: usize = 1;
 pub const I_BLUE: usize = 2;
 
+pub trait ColourInterface<F: ColourComponent> {
+    fn rgb(&self) -> RGB<F>;
+
+    fn hue(&self) -> Hue<F>;
+
+    fn is_grey(&self) -> bool {
+        self.hue().is_grey()
+    }
+
+    fn chroma(&self) -> F {
+        // Be paranoid about fact floats only approximate real numbers
+        (self.rgb().hypot() * self.hue().chroma_correction()).min(F::ONE)
+    }
+
+    fn greyness(&self) -> F {
+        // Be paranoid about fact floats only approximate real numbers
+        (F::ONE - self.rgb().hypot() * self.hue().chroma_correction()).max(F::ZERO)
+    }
+
+    fn value(&self) -> F {
+        self.rgb().value()
+    }
+
+    fn warmth(&self) -> F {
+        (self.rgb().x() + F::ONE) / F::TWO
+    }
+
+    fn best_foreground_rgb(&self) -> RGB<F> {
+        self.rgb().best_foreground_rgb()
+    }
+
+    fn monotone_rgb(&self) -> RGB<F> {
+        let value = self.rgb().value();
+        [value, value, value].into()
+    }
+
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        self.hue().max_chroma_rgb()
+    }
+
+    fn warmth_rgb(&self) -> RGB<F> {
+        let x = self.rgb().x();
+        let half = F::from(0.5).unwrap();
+        if x < F::ZERO {
+            let temp = x.abs() + (F::ONE + x) * half;
+            [F::ZERO, temp, temp].into()
+        } else if x > F::ZERO {
+            [x + (F::ONE - x) * half, F::ZERO, F::ZERO].into()
+        } else {
+            [half, half, half].into()
+        }
+    }
+}
+
+impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
+    fn rgb(&self) -> RGB<F> {
+        *self
+    }
+
+    fn hue(&self) -> Hue<F> {
+        (*self).into()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
 pub struct Colour<F: ColourComponent> {
     rgb: RGB<F>,
@@ -120,35 +184,13 @@ impl<F: ColourComponent> From<RGB<F>> for Colour<F> {
     }
 }
 
-impl<F: ColourComponent> Colour<F> {
-    pub fn rgb(&self) -> RGB<F> {
+impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
+    fn rgb(&self) -> RGB<F> {
         self.rgb
     }
 
-    pub fn hue(&self) -> Hue<F> {
+    fn hue(&self) -> Hue<F> {
         self.hue
-    }
-
-    pub fn is_grey(&self) -> bool {
-        self.hue.is_grey()
-    }
-
-    pub fn chroma(&self) -> F {
-        // Be paranoid about fact floats only approximate real numbers
-        (self.rgb.hypot() * self.hue.chroma_correction()).min(F::ONE)
-    }
-
-    pub fn greyness(&self) -> F {
-        // Be paranoid about fact floats only approximate real numbers
-        (F::ONE - self.rgb.hypot() * self.hue.chroma_correction()).max(F::ZERO)
-    }
-
-    pub fn value(&self) -> F {
-        self.rgb.value()
-    }
-
-    pub fn warmth(&self) -> F {
-        (self.rgb.x() + F::ONE) / F::TWO
     }
 }
 

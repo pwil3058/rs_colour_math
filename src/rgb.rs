@@ -23,7 +23,7 @@ impl<F: ColourComponent> RGB<F> {
     pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
     pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
 
-    pub fn rgb(self) -> [F; 3] {
+    pub fn raw(self) -> [F; 3] {
         self.0
     }
 
@@ -34,6 +34,18 @@ impl<F: ColourComponent> RGB<F> {
 
     pub fn value(self) -> F {
         ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
+    }
+
+    pub fn best_foreground_rgb(&self) -> Self {
+        if self[I_RED] * F::from(0.299).unwrap()
+            + self[I_GREEN] * F::from(0.587).unwrap()
+            + self[I_BLUE] * F::from(0.114).unwrap()
+            > F::from(0.5).unwrap()
+        {
+            Self::BLACK
+        } else {
+            Self::WHITE
+        }
     }
 
     pub(crate) fn x(self) -> F {
