@@ -40,7 +40,7 @@ impl<F: ColourComponent> RGB<F> {
         if self[I_RED] * F::from(0.299).unwrap()
             + self[I_GREEN] * F::from(0.587).unwrap()
             + self[I_BLUE] * F::from(0.114).unwrap()
-            > F::from(0.5).unwrap()
+            > F::HALF
         {
             Self::BLACK
         } else {
