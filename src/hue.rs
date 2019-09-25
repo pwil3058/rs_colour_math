@@ -10,39 +10,13 @@ use std::{
 use normalised_angles::Degrees;
 
 use crate::rgb::RGB;
-use crate::ColourComponent;
+use crate::{chroma, ColourComponent};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Hue<F: ColourComponent> {
     angle: Degrees<F>,
     max_chroma_rgb: RGB<F>,
     chroma_correction: F,
-}
-
-pub(crate) fn calc_other<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
-    if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
-        F::ZERO
-    } else if [F::YELLOW_ANGLE, F::CYAN_ANGLE].contains(&abs_angle.degrees()) {
-        F::ONE
-    } else {
-        fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
-            // Careful of float not fully representing reals
-            (angle.sin() / (Degrees::from(F::GREEN_ANGLE) - angle).sin()).min(F::ONE)
-        };
-        if abs_angle.degrees() <= F::YELLOW_ANGLE {
-            f(abs_angle)
-        } else if abs_angle.degrees() <= F::GREEN_ANGLE {
-            f(Degrees::from(F::GREEN_ANGLE) - abs_angle)
-        } else {
-            f(abs_angle - Degrees::from(F::GREEN_ANGLE))
-        }
-    }
-}
-
-fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
-    debug_assert!(other.is_proportion());
-    // Careful of fact floats only approximate real numbers
-    (F::ONE + other * other - other).sqrt().min(F::ONE).recip()
 }
 
 impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
@@ -54,7 +28,7 @@ impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
                 chroma_correction: F::ONE,
             }
         } else {
-            let other = calc_other(angle.abs());
+            let other = chroma::calc_other_from_angle(angle.abs());
             let max_chroma_rgb: RGB<F> = if angle.degrees() >= F::RED_ANGLE {
                 if angle.degrees() <= F::YELLOW_ANGLE {
                     [F::ONE, other, F::ZERO].into()
@@ -72,7 +46,7 @@ impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
                     [F::ZERO, other, F::ONE].into()
                 }
             };
-            let chroma_correction = calc_chroma_correction(other);
+            let chroma_correction = chroma::calc_chroma_correction(other);
             Self {
                 angle,
                 max_chroma_rgb,
@@ -98,10 +72,10 @@ impl<F: ColourComponent> From<RGB<F>> for Hue<F> {
             parts[io[1]] = F::ONE;
         } else if rgb[io[1]] != rgb[io[2]] {
             // Not Primary or Secondary
-            parts[io[1]] = calc_other(angle.abs());
+            parts[io[1]] = chroma::calc_other_from_angle(angle.abs());
         }
         let max_chroma_rgb: RGB<F> = parts.into();
-        let chroma_correction = calc_chroma_correction(max_chroma_rgb[io[1]]);
+        let chroma_correction = chroma::calc_chroma_correction(max_chroma_rgb[io[1]]);
         Self {
             angle,
             max_chroma_rgb,
@@ -313,53 +287,6 @@ mod test {
 
     fn calculate_chroma(rgb: &RGB<f64>) -> f64 {
         rgb.hypot() * Hue::from(*rgb).chroma_correction
-    }
-
-    #[test]
-    fn calc_other_from_angle() {
-        for (angle, expected) in &[
-            (f64::RED_ANGLE, 0.0),
-            (f64::GREEN_ANGLE, 0.0),
-            (f64::BLUE_ANGLE, 0.0),
-            (f64::CYAN_ANGLE, 1.0),
-            (f64::MAGENTA_ANGLE, 1.0),
-            (f64::YELLOW_ANGLE, 1.0),
-            (-180.0, 1.0),
-            (-165.0, 2.0 / (f64::SQRT_3 + 1.0)),
-            (-150.0, 0.5),
-            (-135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
-            (-120.0, 0.0),
-            (-105.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
-            (-90.0, 0.5),
-            (-75.0, 2.0 / (f64::SQRT_3 + 1.0)),
-            (-60.0, 1.0),
-            (-45.0, 2.0 / (f64::SQRT_3 + 1.0)),
-            (-30.0, 0.5),
-            (-15.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
-            (0.0, 0.0),
-            (15.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
-            (30.0, 0.5),
-            (45.0, 2.0 / (f64::SQRT_3 + 1.0)),
-            (60.0, 1.0),
-            (75.0, 2.0 / (f64::SQRT_3 + 1.0)),
-            (90.0, 0.5),
-            (105.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
-            (120.0, 0.0),
-            (135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
-            (150.0, 0.5),
-            (165.0, 2.0 / (f64::SQRT_3 + 1.0)),
-        ] {
-            let hue_angle = Degrees::<f64>::from(*angle);
-            let other = super::calc_other(hue_angle.abs());
-            assert!(other.is_proportion(), "other = {}", other);
-            assert!(
-                approx_eq!(f64, other, *expected, epsilon = 0.000000000000001),
-                "{} :: {} :: {}",
-                expected,
-                other,
-                angle
-            );
-        }
     }
 
     #[test]
