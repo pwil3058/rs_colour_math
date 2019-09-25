@@ -618,9 +618,15 @@ mod test {
                 } else {
                     if let Some((shade_value, tint_value)) = hue.value_range_with_chroma(max_chroma)
                     {
-                        assert!(shade_value > *value || tint_value < *value);
+                        panic!(
+                            "hue: {:?} value: {} max chroma: {} range: ({}..{}",
+                            angle, value, max_chroma, shade_value, tint_value
+                        );
                     } else {
-                        assert!(hue.is_grey());
+                        panic!(
+                            "hue: {:?} value: {} max chroma: {}",
+                            angle, value, max_chroma
+                        );
                     }
                 }
             }
