@@ -13,7 +13,7 @@ pub fn calc_other<F: ColourComponent + std::fmt::Debug>(xy: (F, F)) -> F {
             -(F::TWO * x + F::ONE)
         }
     } else {
-        F::HALF + xy.0 * F::SQRT_3 / F::TWO / xy.1.abs()
+        F::HALF + xy.0 * F::SIN_120 / xy.1.abs()
     }
 }
 
@@ -37,7 +37,7 @@ pub fn calc_other_alt<F: ColourComponent>(xy: (F, F)) -> F {
                 -(x * F::TWO + F::ONE)
             }
         } else if x_sqrt_3 < xy.1.abs() {
-            F::HALF + xy.0 * F::SQRT_3 / F::TWO / xy.1.abs()
+            F::HALF + xy.0 * F::SIN_120 / xy.1.abs()
         } else if xy.0 > F::ZERO {
             F::ONE // yellow or magenta
         } else {
