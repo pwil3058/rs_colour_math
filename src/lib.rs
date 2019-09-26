@@ -45,9 +45,9 @@ impl ColourComponent for f32 {
     const ONE: Self = 1.0;
     const TWO: Self = 2.0;
     const THREE: Self = 3.0;
-    const SIN_120: Self = 0.86602_54037_84438_7;
+    const SIN_120: Self = 0.86602_5404;
     const COS_120: Self = -0.5;
-    const SQRT_3: Self = 1.73205_08075_68877_4;
+    const SQRT_3: Self = 1.73205_0808;
     const HALF: Self = 0.5;
 
     const RED_ANGLE: Self = 0.0;
@@ -64,9 +64,9 @@ impl ColourComponent for f64 {
     const ONE: Self = 1.0;
     const TWO: Self = 2.0;
     const THREE: Self = 3.0;
-    const SIN_120: Self = 0.86602_54037_84438_7;
+    const SIN_120: Self = 0.86602_54037_84439;
     const COS_120: Self = -0.5;
-    const SQRT_3: Self = 1.732050807568877_4;
+    const SQRT_3: Self = 1.73205_08075_68878;
     const HALF: Self = 0.5;
 
     const RED_ANGLE: Self = 0.0;

@@ -11,7 +11,7 @@ pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -
         F::ONE
     } else {
         fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
-            // Careful of float not fully representing reals
+            // Careful of float not fully representing real numbers
             (angle.sin() / (Degrees::from(F::GREEN_ANGLE) - angle).sin()).min(F::ONE)
         };
         if abs_angle.degrees() <= F::YELLOW_ANGLE {
@@ -244,25 +244,18 @@ mod test {
             (135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
             (150.0, 0.5),
             (165.0, 2.0 / (f64::SQRT_3 + 1.0)),
+            (180.0, 1.0),
         ] {
             let hue_angle = Degrees::<f64>::from(*angle);
-            let other = super::calc_other_from_xy(hue_angle.xy());
-            assert!(other.is_proportion(), "other = {}", other);
-            assert!(
-                approx_eq!(f64, other, *expected, epsilon = 0.00000000001),
-                "{} :: {} :: {}",
-                expected,
-                other,
-                angle
-            );
+            let other_xy = super::calc_other_from_xy_alt(hue_angle.xy());
             let other_hue = super::calc_other_from_angle(hue_angle.abs());
             assert!(
-                approx_eq!(f64, other, other_hue, epsilon = 0.000000000000001),
-                "{} :: {} :: {} :: {}",
+                approx_eq!(f64, other_xy, other_hue, epsilon = 0.000000000000001),
+                "expected: {} :: fm y: {} :: fm hue: {} :: angle: {}",
                 expected,
-                other,
+                other_xy,
                 other_hue,
-                angle
+                angle,
             );
         }
     }
