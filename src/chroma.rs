@@ -24,7 +24,7 @@ pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -
     }
 }
 
-pub fn calc_other_from_xy<F: ColourComponent + std::fmt::Debug>(xy: (F, F)) -> F {
+pub fn calc_other_from_xy<F: ColourComponent>(xy: (F, F)) -> F {
     if xy.0.abs() * F::SQRT_3 > xy.1.abs() {
         let divisor = xy.0.abs() * F::SQRT_3 + xy.1.abs();
         debug_assert!(divisor != F::ZERO);
