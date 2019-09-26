@@ -4,6 +4,7 @@ extern crate serde_derive;
 use std::{
     cmp::{Ordering, PartialEq, PartialOrd},
     convert::From,
+    fmt::Debug,
 };
 
 use num::traits::{Float, NumAssign, NumOps};
@@ -17,7 +18,9 @@ pub mod rgb;
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 
-pub trait ColourComponent: Float + PartialOrd + Copy + NumAssign + NumOps + AngleConst {
+pub trait ColourComponent:
+    Float + PartialOrd + Copy + NumAssign + NumOps + AngleConst + Debug
+{
     const ZERO: Self;
     const ONE: Self;
     const TWO: Self;

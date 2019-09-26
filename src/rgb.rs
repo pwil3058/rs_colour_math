@@ -32,6 +32,10 @@ impl<F: ColourComponent> RGB<F> {
         [self.0[I_RED], self.0[I_GREEN], self.0[I_BLUE], alpha]
     }
 
+    pub(crate) fn sum(self) -> F {
+        self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]
+    }
+
     pub fn value(self) -> F {
         ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
     }
@@ -97,7 +101,7 @@ impl<F: ColourComponent> Index<usize> for RGB<F> {
 
 impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
     fn from(array: [F; 3]) -> Self {
-        debug_assert!(array.iter().all(|x| (*x).is_proportion()));
+        debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
         Self(array)
     }
 }
