@@ -77,10 +77,10 @@ pub(crate) fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
 pub fn sum_range_for_chroma<F: ColourComponent>(other: F, chroma: F) -> (F, F) {
     debug_assert!(other.is_proportion(), "other: {:?}", other);
     debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-    let temp = other * chroma;
     if chroma == F::ONE {
-        (chroma + temp, chroma + temp)
+        (F::ONE + other, F::ONE + other)
     } else {
+        let temp = other * chroma;
         (chroma + temp, F::THREE + temp - F::TWO * chroma)
     }
 }
@@ -91,7 +91,7 @@ pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
     if sum == F::ZERO || sum == F::THREE {
         F::ZERO
     } else if sum < F::ONE + other {
-        sum + sum * other
+        sum / (F::ONE + other)
     } else if sum > F::ONE + other {
         (F::THREE - sum) / (F::TWO - other)
     } else {
@@ -307,7 +307,7 @@ mod test {
                 let (shade, tint) = super::sum_range_for_chroma(*other, *chroma);
                 let max_chroma = super::max_chroma_for_sum(*other, shade);
                 assert!(
-                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.000001),
+                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.000000000000001),
                     "chroma {} == {} :: other: {} shade: {}",
                     max_chroma,
                     *chroma,
@@ -316,7 +316,7 @@ mod test {
                 );
                 let max_chroma = super::max_chroma_for_sum(*other, tint);
                 assert!(
-                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.0001),
+                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.000000000000001),
                     "chroma {} == {} :: other: {} tint: {}",
                     max_chroma,
                     *chroma,
