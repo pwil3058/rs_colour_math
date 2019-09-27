@@ -69,9 +69,34 @@ pub fn calc_other_from_xy_alt<F: ColourComponent>(xy: (F, F)) -> F {
 }
 
 pub(crate) fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
-    debug_assert!(other.is_proportion());
+    debug_assert!(other.is_proportion(), "other: {:?}", other);
     // Careful of fact floats only approximate real numbers
     (F::ONE + other * other - other).sqrt().min(F::ONE).recip()
+}
+
+pub fn sum_range_for_chroma<F: ColourComponent>(other: F, chroma: F) -> (F, F) {
+    debug_assert!(other.is_proportion(), "other: {:?}", other);
+    debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+    let temp = other * chroma;
+    if chroma == F::ONE {
+        (chroma + temp, chroma + temp)
+    } else {
+        (chroma + temp, F::THREE + temp - F::TWO * chroma)
+    }
+}
+
+pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
+    debug_assert!(other.is_proportion(), "other: {:?}", other);
+    debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+    if sum == F::ZERO || sum == F::THREE {
+        F::ZERO
+    } else if sum < F::ONE + other {
+        sum + sum * other
+    } else if sum > F::ONE + other {
+        (F::THREE - sum) / (F::TWO - other)
+    } else {
+        F::ONE
+    }
 }
 
 #[cfg(test)]
@@ -82,6 +107,9 @@ mod test {
     use normalised_angles::Degrees;
 
     const NON_ZERO_VALUES: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
+    const OTHER_VALUES: [f64; 13] = [
+        0.0, 0.0000001, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99999, 1.0,
+    ];
 
     #[test]
     fn calc_other_from_angle_from_angle() {
@@ -257,6 +285,45 @@ mod test {
                 other_hue,
                 angle,
             );
+        }
+    }
+
+    #[test]
+    fn max_chroma_and_sum_ranges() {
+        for other in OTHER_VALUES.iter() {
+            assert_eq!(
+                super::sum_range_for_chroma::<f64>(*other, 0.0),
+                (0.0, 3.0),
+                "other: {}",
+                other
+            );
+            assert_eq!(
+                super::sum_range_for_chroma::<f64>(*other, 1.0),
+                (1.0 + *other, 1.0 + *other),
+                "other: {}",
+                other
+            );
+            for chroma in NON_ZERO_VALUES.iter() {
+                let (shade, tint) = super::sum_range_for_chroma(*other, *chroma);
+                let max_chroma = super::max_chroma_for_sum(*other, shade);
+                assert!(
+                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.000001),
+                    "chroma {} == {} :: other: {} shade: {}",
+                    max_chroma,
+                    *chroma,
+                    other,
+                    shade
+                );
+                let max_chroma = super::max_chroma_for_sum(*other, tint);
+                assert!(
+                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.0001),
+                    "chroma {} == {} :: other: {} tint: {}",
+                    max_chroma,
+                    *chroma,
+                    other,
+                    tint
+                );
+            }
         }
     }
 }
