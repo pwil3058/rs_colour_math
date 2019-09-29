@@ -25,6 +25,7 @@ pub trait ColourComponent:
     const ONE: Self;
     const TWO: Self;
     const THREE: Self;
+    const FOUR: Self;
     const SIN_120: Self;
     const COS_120: Self;
     const SQRT_3: Self;
@@ -48,6 +49,7 @@ impl ColourComponent for f32 {
     const ONE: Self = 1.0;
     const TWO: Self = 2.0;
     const THREE: Self = 3.0;
+    const FOUR: Self = 3.0;
     const SIN_120: Self = 0.86602_5404;
     const COS_120: Self = -0.5;
     const SQRT_3: Self = 1.73205_0808;
@@ -67,6 +69,7 @@ impl ColourComponent for f64 {
     const ONE: Self = 1.0;
     const TWO: Self = 2.0;
     const THREE: Self = 3.0;
+    const FOUR: Self = 3.0;
     const SIN_120: Self = 0.86602_54037_84439;
     const COS_120: Self = -0.5;
     const SQRT_3: Self = 1.73205_08075_68878;

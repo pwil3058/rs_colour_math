@@ -2,7 +2,7 @@
 
 use normalised_angles::Degrees;
 
-use crate::ColourComponent;
+use crate::{rgb::RGB, ColourComponent};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
@@ -99,8 +99,53 @@ pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
     }
 }
 
+pub fn max_chroma_rgb_for_sum<F: ColourComponent>(other: F, sum: F, io: &[usize; 3]) -> RGB<F> {
+    debug_assert!(other.is_proportion(), "other: {:?}", other);
+    debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+    let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+    if sum == F::ZERO {
+        // Nothing to do
+    } else if sum == F::THREE {
+        array = [F::ONE, F::ONE, F::ONE];
+    } else if other == F::ZERO {
+        // pure red, green or blue
+        if sum <= F::ONE {
+            array[io[0]] = sum;
+        } else {
+            array[io[0]] = F::ONE;
+            array[io[1]] = ((sum - F::ONE) / F::TWO).min(F::ONE);
+            array[io[2]] = array[io[1]];
+        }
+    } else if other == F::ONE {
+        // pure cyan, magenta or yellow
+        if sum <= F::TWO {
+            array[io[0]] = (sum / F::TWO).min(F::ONE);
+            array[io[1]] = array[io[0]];
+        } else {
+            array[io[0]] = F::ONE;
+            array[io[1]] = F::ONE;
+            array[io[2]] = (sum - F::TWO).min(F::ONE);
+        }
+    } else if sum < F::ONE + other {
+        let divisor = F::ONE + other;
+        array[io[0]] = (sum / divisor).min(F::ONE);
+        array[io[1]] = sum * other / divisor;
+    } else if sum > F::ONE + other {
+        let chroma = (F::THREE - sum) / (F::TWO - other);
+        let oc = other * chroma;
+        array[io[0]] = ((sum + F::TWO * chroma - oc) / F::THREE).min(F::ONE);
+        array[io[1]] = (sum + F::TWO * oc - chroma) / F::THREE;
+        array[io[2]] = (sum - oc - chroma) / F::THREE;
+    } else {
+        array[io[0]] = F::ONE;
+        array[io[1]] = other;
+    };
+    array.into()
+}
+
 #[cfg(test)]
 mod test {
+    use crate::chroma::max_chroma_rgb_for_sum;
     use crate::rgb::*;
     use crate::ColourComponent;
     use float_cmp::*;
@@ -179,6 +224,40 @@ mod test {
                 ] {
                     let rgb = RGB::<f64>::from(*array);
                     let other = super::calc_other_from_xy(rgb.xy());
+                    assert!(other.is_proportion(), "other = {}", other);
+                    assert!(
+                        approx_eq!(f64, other, *expected, epsilon = 0.00000000001),
+                        "{} :: {} :: {:?}",
+                        expected,
+                        other,
+                        rgb
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn calc_other_from_xy_from_rgb_alt() {
+        for val in NON_ZERO_VALUES.iter() {
+            for ratio in NON_ZERO_VALUES.iter() {
+                let mod_val = val * *ratio;
+                for (array, expected) in &[
+                    ([*val, 0.0, 0.0], 0.0),
+                    ([0.0, *val, 0.0], 0.0),
+                    ([0.0, 0.0, *val], 0.0),
+                    ([*val, *val, 0.0], 1.0),
+                    ([0.0, *val, *val], 1.0),
+                    ([*val, 0.0, *val], 1.0),
+                    ([*val, mod_val, 0.0], *ratio),
+                    ([0.0, *val, mod_val], *ratio),
+                    ([*val, 0.0, mod_val], *ratio),
+                    ([mod_val, *val, 0.0], *ratio),
+                    ([0.0, mod_val, *val], *ratio),
+                    ([mod_val, 0.0, *val], *ratio),
+                ] {
+                    let rgb = RGB::<f64>::from(*array);
+                    let other = super::calc_other_from_xy_alt(rgb.xy());
                     assert!(other.is_proportion(), "other = {}", other);
                     assert!(
                         approx_eq!(f64, other, *expected, epsilon = 0.00000000001),
@@ -275,7 +354,7 @@ mod test {
             (180.0, 1.0),
         ] {
             let hue_angle = Degrees::<f64>::from(*angle);
-            let other_xy = super::calc_other_from_xy_alt(hue_angle.xy());
+            let other_xy = super::calc_other_from_xy(hue_angle.xy());
             let other_hue = super::calc_other_from_angle(hue_angle.abs());
             assert!(
                 approx_eq!(f64, other_xy, other_hue, epsilon = 0.000000000000001),
@@ -323,6 +402,92 @@ mod test {
                     other,
                     tint
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn primary_max_chroma_rgbs() {
+        for io in [[0_usize, 1_usize, 2_usize], [0_usize, 2_usize, 1_usize]].iter() {
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 1.0, io), RGB::RED);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 0.0, io), RGB::BLACK);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 3.0, io), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 0.9999].iter() {
+                let expected: RGB<f64> = [*sum, 0.0, 0.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, *sum, io), expected);
+            }
+            for sum in [1.0001, 1.5, 2.0, 2.5, 2.9999].iter() {
+                let expected: RGB<f64> = [1.0, (sum - 1.0) / 2.0, (sum - 1.0) / 2.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, *sum, io), expected);
+            }
+        }
+        for io in [[1_usize, 0_usize, 2_usize], [1_usize, 2_usize, 0_usize]].iter() {
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 1.0, io), RGB::GREEN);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 0.0, io), RGB::BLACK);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 3.0, io), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 0.9999].iter() {
+                let expected: RGB<f64> = [0.0, *sum, 0.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, *sum, io), expected);
+            }
+            for sum in [1.0001, 1.5, 2.0, 2.5, 2.9999].iter() {
+                let expected: RGB<f64> = [(sum - 1.0) / 2.0, 1.0, (sum - 1.0) / 2.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, *sum, io), expected);
+            }
+        }
+        for io in [[2_usize, 0_usize, 1_usize], [2_usize, 1_usize, 0_usize]].iter() {
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 1.0, io), RGB::BLUE);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 0.0, io), RGB::BLACK);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, 3.0, io), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 0.9999].iter() {
+                let expected: RGB<f64> = [0.0, 0.0, *sum].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, *sum, io), expected);
+            }
+            for sum in [1.0001, 1.5, 2.0, 2.5, 2.9999].iter() {
+                let expected: RGB<f64> = [(sum - 1.0) / 2.0, (sum - 1.0) / 2.0, 1.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(0.0, *sum, io), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn secondary_max_chroma_rgbs() {
+        for io in [[2_usize, 1_usize, 0_usize], [1_usize, 2_usize, 0_usize]].iter() {
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 2.0, io), RGB::CYAN);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 0.0, io), RGB::BLACK);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 3.0, io), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 1.0, 1.5, 1.9999].iter() {
+                let expected: RGB<f64> = [0.0, sum / 2.0, sum / 2.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, *sum, io), expected);
+            }
+            for sum in [2.0001, 2.25, 2.5, 2.75, 2.9999].iter() {
+                let expected: RGB<f64> = [sum - 2.0, 1.0, 1.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, *sum, io), expected);
+            }
+        }
+        for io in [[2_usize, 0_usize, 1_usize], [0_usize, 2_usize, 1_usize]].iter() {
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 2.0, io), RGB::MAGENTA);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 0.0, io), RGB::BLACK);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 3.0, io), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 1.0, 1.5, 1.9999].iter() {
+                let expected: RGB<f64> = [sum / 2.0, 0.0, sum / 2.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, *sum, io), expected);
+            }
+            for sum in [2.0001, 2.25, 2.5, 2.75, 2.9999].iter() {
+                let expected: RGB<f64> = [1.0, sum - 2.0, 1.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, *sum, io), expected);
+            }
+        }
+        for io in [[1_usize, 0_usize, 2_usize], [0_usize, 1_usize, 2_usize]].iter() {
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 2.0, io), RGB::YELLOW);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 0.0, io), RGB::BLACK);
+            assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, 3.0, io), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 1.0, 1.5, 1.9999].iter() {
+                let expected: RGB<f64> = [sum / 2.0, sum / 2.0, 0.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, *sum, io), expected);
+            }
+            for sum in [2.0001, 2.25, 2.5, 2.75, 2.9999].iter() {
+                let expected: RGB<f64> = [1.0, 1.0, sum - 2.0].into();
+                assert_eq!(max_chroma_rgb_for_sum::<f64>(1.0, *sum, io), expected);
             }
         }
     }
