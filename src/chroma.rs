@@ -143,10 +143,71 @@ pub fn max_chroma_rgb_for_sum<F: ColourComponent>(other: F, sum: F, io: &[usize;
     array.into()
 }
 
+pub fn rgb_for_sum_and_chroma<F: ColourComponent>(
+    other: F,
+    sum: F,
+    chroma: F,
+    io: &[usize; 3],
+) -> Option<RGB<F>> {
+    debug_assert!(other.is_proportion(), "other: {:?}", other);
+    debug_assert!(chroma.is_proportion(), "other: {:?}", other);
+    debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+    let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+    if sum == F::ZERO {
+        if chroma > F::ZERO {
+            return None;
+        }
+    } else if sum == F::THREE {
+        if chroma > F::ZERO {
+            return None;
+        } else {
+            array = [F::ONE, F::ONE, F::ONE];
+        }
+    } else if chroma == F::ZERO {
+        let value = sum / F::THREE;
+        array = [value, value, value];
+    } else if other == F::ZERO {
+        // pure red, green or blue
+        array[io[0]] = (sum + F::TWO * chroma) / F::THREE;
+        array[io[1]] = (sum - chroma) / F::THREE;
+        array[io[2]] = array[io[1]];
+    } else if other == F::ONE {
+        // pure cyan, magenta or yellow
+        array[io[0]] = (sum + chroma) / F::THREE;
+        array[io[1]] = array[io[0]];
+        array[io[2]] = (sum - F::TWO * chroma) / F::THREE;
+    } else {
+        let oc = other * chroma;
+        array[io[0]] = (sum + F::TWO * chroma - oc) / F::THREE;
+        array[io[1]] = (sum + F::TWO * oc - chroma) / F::THREE;
+        array[io[2]] = (sum - oc - chroma) / F::THREE;
+    };
+    if array[io[0]] > F::ONE || array[io[2]] < F::ZERO {
+        None
+    } else {
+        // NB: because floats only approximate real numbers trying to
+        // set chroma too small (but non zero) results in a drift
+        // in the hue angle of the resulting RGB. When this
+        // happens we go straight to a zero chroma RGB
+        if chroma < F::from(0.00001).unwrap() && chroma > F::ZERO {
+            let rgb: RGB<F> = array.into();
+            let xy: (F, F) = rgb.xy();
+            let rgb_other = calc_other_from_xy_alt(xy);
+            // deviation "other" indicates a drift in the hue
+            if (rgb_other - other).abs() / rgb_other > F::from(0.0000000001).unwrap() {
+                let value = sum / F::THREE;
+                array = [value, value, value];
+            }
+        };
+        Some(array.into())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::chroma::{
         calc_chroma_correction, calc_other_from_xy, max_chroma_for_sum, max_chroma_rgb_for_sum,
+        rgb_for_sum_and_chroma,
     };
     use crate::rgb::*;
     use crate::ColourComponent;
@@ -587,6 +648,109 @@ mod test {
                             io,
                             rgb
                         );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn general_rgb_for_sum_and_chroma() {
+        let ios: [[usize; 3]; 6] = [
+            [0, 1, 2],
+            [0, 2, 1],
+            [1, 0, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+            [2, 1, 0],
+        ];
+        for io in ios.iter() {
+            for other in OTHER_VALUES.iter() {
+                assert_eq!(
+                    rgb_for_sum_and_chroma::<f64>(*other, 0.0, 0.0, io),
+                    Some(RGB::BLACK)
+                );
+                assert_eq!(
+                    rgb_for_sum_and_chroma::<f64>(*other, 3.0, 0.0, io),
+                    Some(RGB::WHITE)
+                );
+                assert!(rgb_for_sum_and_chroma::<f64>(*other, 0.0, 1.0, io).is_none());
+                assert!(rgb_for_sum_and_chroma::<f64>(*other, 3.0, 1.0, io).is_none());
+                for chroma in NON_ZERO_VALUES.iter() {
+                    for sum in NON_ZERO_SUMS.iter() {
+                        if let Some(rgb) = rgb_for_sum_and_chroma::<f64>(*other, *sum, *chroma, io)
+                        {
+                            assert!(
+                                approx_eq!(f64, rgb.sum(), *sum, epsilon = 0.000000000000001),
+                                "{} == {}:: chroma: {} other: {} io: {:?} rgb: {:?}",
+                                rgb.sum(),
+                                *sum,
+                                *chroma,
+                                other,
+                                io,
+                                rgb
+                            );
+                            let xy = rgb.xy();
+                            if xy.0 == 0.0 && xy.1 == 0.0 {
+                                assert!(
+                                    approx_eq!(f64, rgb[0], rgb[1], epsilon = 0.000000000000001)
+                                        && approx_eq!(
+                                            f64,
+                                            rgb[0],
+                                            rgb[2],
+                                            epsilon = 0.000000000000001
+                                        ),
+                                    "sum: {} chroma: {} other: {} io: {:?} rgb: {:?}",
+                                    *sum,
+                                    *chroma,
+                                    other,
+                                    io,
+                                    rgb
+                                );
+                            } else {
+                                let rgb_other = calc_other_from_xy(xy);
+                                assert!(
+                                    approx_eq!(f64, rgb_other, *other, epsilon = 0.0000000001),
+                                    "{} == {}:: sum: {} chroma: {} io: {:?} rgb: {:?}",
+                                    rgb_other,
+                                    *other,
+                                    sum,
+                                    *chroma,
+                                    io,
+                                    rgb
+                                );
+                                let rgb_io = rgb.indices_value_order();
+                                assert!(
+                                    *io == rgb_io
+                                        || rgb[io[1]] == rgb[io[2]]
+                                        || rgb[io[0]] == rgb[io[1]],
+                                    "{:?} == {:?} :: sum: {} chroma: {} other: {} {:?}",
+                                    *io,
+                                    rgb_io,
+                                    *sum,
+                                    *chroma,
+                                    *other,
+                                    rgb
+                                );
+                                let chroma_correction = calc_chroma_correction(rgb_other);
+                                let rgb_chroma = xy.0.hypot(xy.1) * chroma_correction;
+                                assert!(
+                                    approx_eq!(
+                                        f64,
+                                        rgb_chroma,
+                                        *chroma,
+                                        epsilon = 0.000000000000001
+                                    ),
+                                    "{} == {}:: sum: {} other: {} io: {:?} rgb: {:?}",
+                                    rgb_chroma,
+                                    *chroma,
+                                    sum,
+                                    *other,
+                                    io,
+                                    rgb
+                                );
+                            }
+                        }
                     }
                 }
             }
