@@ -166,6 +166,13 @@ pub fn rgb_for_sum_and_chroma<F: ColourComponent>(
     } else if chroma == F::ZERO {
         let value = sum / F::THREE;
         array = [value, value, value];
+    } else if chroma == F::ONE {
+        if sum == F::ONE + other {
+            array[io[0]] = F::ONE;
+            array[io[1]] = other;
+        } else {
+            return None;
+        }
     } else if other == F::ZERO {
         // pure red, green or blue
         array[io[0]] = (sum + F::TWO * chroma) / F::THREE;
@@ -207,7 +214,7 @@ pub fn rgb_for_sum_and_chroma<F: ColourComponent>(
 mod test {
     use crate::chroma::{
         calc_chroma_correction, calc_other_from_xy, max_chroma_for_sum, max_chroma_rgb_for_sum,
-        rgb_for_sum_and_chroma,
+        rgb_for_sum_and_chroma, sum_range_for_chroma,
     };
     use crate::rgb::*;
     use crate::ColourComponent;
@@ -750,6 +757,18 @@ mod test {
                                     rgb
                                 );
                             }
+                        } else {
+                            let (shade_sum, tint_sum) = sum_range_for_chroma(*other, *chroma);
+                            assert!(
+                                *sum < shade_sum || *sum > tint_sum,
+                                "{} < {} < {} :: chroma: {} other: {} io: {:?}",
+                                shade_sum,
+                                *sum,
+                                tint_sum,
+                                chroma,
+                                *other,
+                                *io
+                            );
                         }
                     }
                 }
