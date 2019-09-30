@@ -89,7 +89,7 @@ pub const I_GREEN: usize = 1;
 pub const I_BLUE: usize = 2;
 
 pub trait ColourInterface<F: ColourComponent> {
-    fn rgb(&self) -> RGB<F>;
+    fn rgb(&self) -> [F; 3];
 
     fn hue(&self) -> Hue<F>;
 
@@ -97,59 +97,23 @@ pub trait ColourInterface<F: ColourComponent> {
         self.hue().is_grey()
     }
 
-    fn chroma(&self) -> F {
-        // Be paranoid about fact floats only approximate real numbers
-        (self.rgb().hypot() * self.hue().chroma_correction()).min(F::ONE)
-    }
+    fn chroma(&self) -> F;
 
-    fn greyness(&self) -> F {
-        // Be paranoid about fact floats only approximate real numbers
-        (F::ONE - self.rgb().hypot() * self.hue().chroma_correction()).max(F::ZERO)
-    }
+    fn greyness(&self) -> F;
 
-    fn value(&self) -> F {
-        self.rgb().value()
-    }
+    fn value(&self) -> F;
 
-    fn warmth(&self) -> F {
-        (self.rgb().x() + F::ONE) / F::TWO
-    }
+    fn warmth(&self) -> F;
 
-    fn best_foreground_rgb(&self) -> RGB<F> {
-        self.rgb().best_foreground_rgb()
-    }
+    fn best_foreground_rgb(&self) -> RGB<F>;
 
-    fn monotone_rgb(&self) -> RGB<F> {
-        let value = self.rgb().value();
-        [value, value, value].into()
-    }
+    fn monotone_rgb(&self) -> RGB<F>;
 
     fn max_chroma_rgb(&self) -> RGB<F> {
         self.hue().max_chroma_rgb()
     }
 
-    fn warmth_rgb(&self) -> RGB<F> {
-        let x = self.rgb().x();
-        let half = F::HALF;
-        if x < F::ZERO {
-            let temp = x.abs() + (F::ONE + x) * half;
-            [F::ZERO, temp, temp].into()
-        } else if x > F::ZERO {
-            [x + (F::ONE - x) * half, F::ZERO, F::ZERO].into()
-        } else {
-            [half, half, half].into()
-        }
-    }
-}
-
-impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
-    fn rgb(&self) -> RGB<F> {
-        *self
-    }
-
-    fn hue(&self) -> Hue<F> {
-        (*self).into()
-    }
+    fn warmth_rgb(&self) -> RGB<F>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
@@ -198,12 +162,40 @@ impl<F: ColourComponent> From<RGB<F>> for Colour<F> {
 }
 
 impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
-    fn rgb(&self) -> RGB<F> {
-        self.rgb
+    fn rgb(&self) -> [F; 3] {
+        self.rgb.rgb()
     }
 
     fn hue(&self) -> Hue<F> {
         self.hue
+    }
+
+    fn chroma(&self) -> F {
+        self.rgb.greyness()
+    }
+
+    fn greyness(&self) -> F {
+        self.rgb.greyness()
+    }
+
+    fn value(&self) -> F {
+        self.rgb.value()
+    }
+
+    fn warmth(&self) -> F {
+        self.rgb.warmth()
+    }
+
+    fn best_foreground_rgb(&self) -> RGB<F> {
+        self.rgb.best_foreground_rgb()
+    }
+
+    fn monotone_rgb(&self) -> RGB<F> {
+        self.rgb.monotone_rgb()
+    }
+
+    fn warmth_rgb(&self) -> RGB<F> {
+        self.rgb.warmth_rgb()
     }
 }
 

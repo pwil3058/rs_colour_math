@@ -2,7 +2,7 @@
 
 use std::{convert::From, ops::Index};
 
-use crate::{ColourComponent, I_BLUE, I_GREEN, I_RED};
+use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB<F: ColourComponent>([F; 3]);
@@ -38,18 +38,6 @@ impl<F: ColourComponent> RGB<F> {
 
     pub fn value(self) -> F {
         ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
-    }
-
-    pub fn best_foreground_rgb(&self) -> Self {
-        if self[I_RED] * F::from(0.299).unwrap()
-            + self[I_GREEN] * F::from(0.587).unwrap()
-            + self[I_BLUE] * F::from(0.114).unwrap()
-            > F::HALF
-        {
-            Self::BLACK
-        } else {
-            Self::WHITE
-        }
     }
 
     pub(crate) fn x(self) -> F {
@@ -103,6 +91,93 @@ impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
     fn from(array: [F; 3]) -> Self {
         debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
         Self(array)
+    }
+}
+
+impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
+    fn rgb(&self) -> [F; 3] {
+        self.0
+    }
+
+    fn hue(&self) -> Hue<F> {
+        (*self).into()
+    }
+
+    fn is_grey(&self) -> bool {
+        self.hypot() == F::ZERO
+    }
+
+    fn chroma(&self) -> F {
+        let xy = self.xy();
+        let hypot = xy.0.hypot(xy.1);
+        if hypot == F::ZERO {
+            F::ZERO
+        } else {
+            let second = chroma::calc_other_from_xy(xy);
+            (hypot * chroma::calc_chroma_correction(second)).min(F::ONE)
+        }
+    }
+
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        let xy = self.xy();
+        if xy.0 == F::ZERO && xy.1 == F::ZERO {
+            Self::WHITE
+        } else {
+            let io = self.indices_value_order();
+            let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+            array[io[0]] = F::ONE;
+            array[io[1]] = chroma::calc_other_from_xy_alt(xy);
+            array.into()
+        }
+    }
+
+    fn greyness(&self) -> F {
+        let xy = self.xy();
+        let hypot = xy.0.hypot(xy.1);
+        if hypot == F::ZERO {
+            F::ONE
+        } else {
+            let second = chroma::calc_other_from_xy(xy);
+            (F::ONE - hypot * chroma::calc_chroma_correction(second)).max(F::ZERO)
+        }
+    }
+
+    fn value(&self) -> F {
+        ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
+    }
+
+    fn monotone_rgb(&self) -> RGB<F> {
+        let value = self.value();
+        [value, value, value].into()
+    }
+
+    fn warmth(&self) -> F {
+        ((self.x() + F::ONE).max(F::ZERO) / F::TWO).min(F::ONE)
+    }
+
+    fn warmth_rgb(&self) -> RGB<F> {
+        let x = self.x();
+        let half = F::HALF;
+        if x < F::ZERO {
+            let temp = x.abs() + (F::ONE + x) * half;
+            [F::ZERO, temp, temp].into()
+        } else if x > F::ZERO {
+            [x + (F::ONE - x) * half, F::ZERO, F::ZERO].into()
+        } else {
+            [half, half, half].into()
+        }
+    }
+
+    fn best_foreground_rgb(&self) -> Self {
+        if self[I_RED] * F::from(0.299).unwrap()
+            + self[I_GREEN] * F::from(0.587).unwrap()
+            + self[I_BLUE] * F::from(0.114).unwrap()
+            > F::HALF
+        {
+            Self::BLACK
+        } else {
+            Self::WHITE
+        }
     }
 }
 
