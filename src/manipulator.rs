@@ -78,5 +78,7 @@ mod test {
         }
         assert!(manipulator.rgb.is_grey());
         assert_eq!(manipulator.chroma, 0.0);
+        assert_eq!(manipulator.sum, 2.0);
+        assert_eq!(manipulator.hue_data, saved_hue_data);
     }
 }
