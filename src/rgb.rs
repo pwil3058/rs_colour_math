@@ -36,10 +36,6 @@ impl<F: ColourComponent> RGB<F> {
         self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]
     }
 
-    pub fn value(self) -> F {
-        ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
-    }
-
     pub(crate) fn x(self) -> F {
         self.0[I_RED] + (self.0[I_GREEN] + self.0[I_BLUE]) * F::COS_120
     }

@@ -10,7 +10,7 @@ use std::{
 use normalised_angles::Degrees;
 
 use crate::rgb::RGB;
-use crate::{chroma, ColourComponent};
+use crate::{chroma, ColourComponent, ColourInterface};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Hue<F: ColourComponent> {

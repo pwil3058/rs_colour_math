@@ -13,6 +13,7 @@ use normalised_angles::AngleConst;
 
 pub mod chroma;
 pub mod hue;
+pub mod manipulator;
 pub mod rgb;
 
 pub use crate::hue::Hue;
