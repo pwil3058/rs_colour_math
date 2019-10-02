@@ -72,6 +72,29 @@ impl<F: ColourComponent> RGBManipulator<F> {
             cur_chroma != self.chroma
         }
     }
+
+    pub fn decr_value(&mut self, delta: F) -> bool {
+        debug_assert!(delta.is_proportion());
+        if self.sum == F::ZERO {
+            false
+        } else {
+            let cur_sum = self.sum;
+            let new_sum = (cur_sum - F::THREE * delta).max(F::ZERO);
+            if let Some((second, io)) = self.hue_data {
+                if let Some(rgb) = chroma::rgb_for_sum_and_chroma(second, new_sum, self.chroma, &io)
+                {
+                    self.rgb = rgb
+                } else {
+                    self.rgb = chroma::min_sum_rgb_for_chroma(second, self.chroma, &io);
+                };
+            } else {
+                let new_value = new_sum / F::THREE;
+                self.rgb = [new_value, new_value, new_value].into();
+            }
+            self.sum = self.rgb.sum();
+            cur_sum != self.sum
+        }
+    }
 }
 
 #[cfg(test)]
@@ -79,14 +102,14 @@ mod test {
     use crate::ColourInterface;
     use float_cmp::*;
 
-    fn approx_equal(rgb1: crate::rgb::RGB<f64>, rgb2: crate::rgb::RGB<f64>) -> bool {
-        for i in [0_usize, 1, 2].iter() {
-            if !approx_eq!(f64, rgb1[*i], rgb2[*i], epsilon = 0.00000000001) {
-                return false;
-            }
-        }
-        true
-    }
+    //    fn approx_equal(rgb1: crate::rgb::RGB<f64>, rgb2: crate::rgb::RGB<f64>) -> bool {
+    //        for i in [0_usize, 1, 2].iter() {
+    //            if !approx_eq!(f64, rgb1[*i], rgb2[*i], epsilon = 0.00000000001) {
+    //                return false;
+    //            }
+    //        }
+    //        true
+    //    }
 
     #[test]
     fn decr_chroma() {

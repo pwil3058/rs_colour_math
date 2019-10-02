@@ -85,6 +85,27 @@ pub fn sum_range_for_chroma<F: ColourComponent>(other: F, chroma: F) -> (F, F) {
     }
 }
 
+pub fn min_sum_rgb_for_chroma<F: ColourComponent>(second: F, chroma: F, io: &[usize; 3]) -> RGB<F> {
+    debug_assert!(second.is_proportion(), "second: {:?}", second);
+    debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+    let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+    if chroma == F::ZERO {
+        // do nothing
+    } else if chroma == F::ONE {
+        array[io[0]] = F::ONE;
+        array[io[1]] = second;
+    } else if second == F::ZERO {
+        array[io[0]] = chroma;
+    } else if second == F::ONE {
+        array[io[0]] = chroma;
+        array[io[1]] = chroma;
+    } else {
+        array[io[0]] = chroma;
+        array[io[1]] = chroma * second;
+    };
+    array.into()
+}
+
 pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
     debug_assert!(other.is_proportion(), "other: {:?}", other);
     debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
