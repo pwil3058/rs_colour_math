@@ -45,7 +45,6 @@ impl<F: ColourComponent> RGBManipulator<F> {
             self.rgb = chroma::rgb_for_sum_and_chroma(second, self.sum, new_chroma, &io)
                 .expect("smaller chroma always possible");
             self.chroma = self.rgb.chroma();
-            self.sum = self.rgb.sum();
             cur_chroma != self.chroma
         }
     }
@@ -70,7 +69,6 @@ impl<F: ColourComponent> RGBManipulator<F> {
                 self.rgb = chroma::max_chroma_rgb_for_sum(second, self.sum, &io);
             };
             self.chroma = self.rgb.chroma();
-            self.sum = self.rgb.sum();
             cur_chroma != self.chroma
         }
     }
@@ -154,6 +152,6 @@ mod test {
         while manipulator.decr_chroma(0.01) {}
         assert!(manipulator.rgb.is_grey());
         while manipulator.incr_chroma(0.01) {}
-        assert!(approx_equal(manipulator.rgb, crate::rgb::RGB::CYAN));
+        assert_eq!(manipulator.rgb, crate::rgb::RGB::CYAN);
     }
 }
