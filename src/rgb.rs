@@ -2,7 +2,7 @@
 
 use std::{convert::From, ops::Index};
 
-use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
+pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB<F: ColourComponent>([F; 3]);

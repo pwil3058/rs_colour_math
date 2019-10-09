@@ -106,6 +106,31 @@ pub fn min_sum_rgb_for_chroma<F: ColourComponent>(second: F, chroma: F, io: &[us
     array.into()
 }
 
+pub fn max_sum_rgb_for_chroma<F: ColourComponent>(second: F, chroma: F, io: &[usize; 3]) -> RGB<F> {
+    debug_assert!(second.is_proportion(), "second: {:?}", second);
+    debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+    let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+    if chroma == F::ZERO {
+        array = [F::ONE, F::ONE, F::ONE];
+    } else if chroma == F::ONE {
+        array[io[0]] = F::ONE;
+        array[io[1]] = second;
+    } else if second == F::ZERO {
+        array[io[0]] = F::ONE;
+        array[io[1]] = F::ONE - chroma;
+        array[io[2]] = array[io[1]];
+    } else if second == F::ONE {
+        array[io[0]] = F::ONE;
+        array[io[1]] = F::ONE;
+        array[io[2]] = F::ONE - chroma;
+    } else {
+        array[io[0]] = F::ONE;
+        array[io[2]] = F::ONE - chroma;
+        array[io[1]] = chroma * second + array[io[2]];
+    };
+    array.into()
+}
+
 pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
     debug_assert!(other.is_proportion(), "other: {:?}", other);
     debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
@@ -235,12 +260,22 @@ pub fn rgb_for_sum_and_chroma<F: ColourComponent>(
 mod test {
     use crate::chroma::{
         calc_chroma_correction, calc_other_from_xy, max_chroma_for_sum, max_chroma_rgb_for_sum,
-        rgb_for_sum_and_chroma, sum_range_for_chroma,
+        max_sum_rgb_for_chroma, min_sum_rgb_for_chroma, rgb_for_sum_and_chroma,
+        sum_range_for_chroma,
     };
     use crate::rgb::*;
     use crate::ColourComponent;
     use float_cmp::*;
     use normalised_angles::Degrees;
+
+    fn approx_equal(rgb1: crate::rgb::RGB<f64>, rgb2: crate::rgb::RGB<f64>) -> bool {
+        for i in [0_usize, 1, 2].iter() {
+            if !approx_eq!(f64, rgb1[*i], rgb2[*i], epsilon = 0.0000001) {
+                return false;
+            }
+        }
+        true
+    }
 
     const NON_ZERO_VALUES: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
     const NON_ZERO_SUMS: [f64; 21] = [
@@ -793,6 +828,54 @@ mod test {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn min_max_sum_rgb_for_chroma() {
+        assert_eq!(
+            min_sum_rgb_for_chroma::<f64>(0.0, 1.0, &[0, 1, 2]),
+            RGB::RED
+        );
+        assert_eq!(
+            max_sum_rgb_for_chroma::<f64>(0.0, 1.0, &[0, 1, 2]),
+            RGB::RED
+        );
+        assert_eq!(
+            min_sum_rgb_for_chroma::<f64>(1.0, 1.0, &[0, 1, 2]),
+            RGB::YELLOW
+        );
+        assert_eq!(
+            max_sum_rgb_for_chroma::<f64>(1.0, 1.0, &[0, 1, 2]),
+            RGB::YELLOW
+        );
+        let io: [usize; 3] = [0, 1, 2];
+        for second in OTHER_VALUES.iter() {
+            assert_eq!(min_sum_rgb_for_chroma::<f64>(*second, 0.0, &io), RGB::BLACK);
+            assert_eq!(max_sum_rgb_for_chroma::<f64>(*second, 0.0, &io), RGB::WHITE);
+            for chroma in NON_ZERO_VALUES.iter() {
+                let shade = min_sum_rgb_for_chroma(*second, *chroma, &io);
+                let tint = max_sum_rgb_for_chroma(*second, *chroma, &io);
+                assert!(shade.sum() <= tint.sum());
+                assert!(approx_eq!(
+                    f64,
+                    shade.chroma(),
+                    *chroma,
+                    epsilon = 0.00000000001
+                ));
+                assert!(approx_eq!(
+                    f64,
+                    tint.chroma(),
+                    *chroma,
+                    epsilon = 0.00000000001
+                ));
+                assert!(
+                    approx_equal(shade.max_chroma_rgb(), tint.max_chroma_rgb()),
+                    "{:?} == {:?}",
+                    shade.max_chroma_rgb(),
+                    tint.max_chroma_rgb()
+                );
             }
         }
     }
