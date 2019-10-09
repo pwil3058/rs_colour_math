@@ -95,6 +95,29 @@ impl<F: ColourComponent> RGBManipulator<F> {
             cur_sum != self.sum
         }
     }
+
+    pub fn incr_value(&mut self, delta: F) -> bool {
+        debug_assert!(delta.is_proportion());
+        if self.sum == F::THREE {
+            false
+        } else {
+            let cur_sum = self.sum;
+            let new_sum = (cur_sum + F::THREE * delta).min(F::ONE);
+            if let Some((second, io)) = self.hue_data {
+                if let Some(rgb) = chroma::rgb_for_sum_and_chroma(second, new_sum, self.chroma, &io)
+                {
+                    self.rgb = rgb
+                } else {
+                    self.rgb = chroma::max_sum_rgb_for_chroma(second, self.chroma, &io);
+                };
+            } else {
+                let new_value = new_sum / F::THREE;
+                self.rgb = [new_value, new_value, new_value].into();
+            }
+            self.sum = self.rgb.sum();
+            cur_sum != self.sum
+        }
+    }
 }
 
 #[cfg(test)]
