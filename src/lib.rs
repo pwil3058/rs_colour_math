@@ -18,7 +18,7 @@ pub mod rgb;
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 
-pub trait ColourComponent: FloatPlus + DegreesConst + std::fmt::Debug {
+pub trait ColourComponent: FloatPlus + DegreesConst + Debug {
     const ZERO: Self;
     const ONE: Self;
     const TWO: Self;

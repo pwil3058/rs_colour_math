@@ -233,8 +233,7 @@ impl<F: ColourComponent> Hue<F> {
                 // happens we go straight to a zero chroma RGB
                 let (x, y) = rgb.xy();
                 let angle: Degrees<F> = Degrees::atan2(x, y);
-                let limit = F::from(0.00000000000001).unwrap();
-                if angle.approx_eq(&self.angle, Some(limit), Some(limit)) {
+                if angle.approx_eq(&self.angle, Some(F::from(0.00000000000001).unwrap())) {
                     Some(rgb)
                 } else {
                     Some(RGB::from([value, value, value]))
