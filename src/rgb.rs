@@ -4,6 +4,8 @@ use std::{convert::From, ops::Index};
 
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
+use float_plus::*;
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB<F: ColourComponent>([F; 3]);
 
@@ -72,6 +74,20 @@ impl<F: ColourComponent> RGB<F> {
         } else {
             [I_BLUE, I_GREEN, I_RED]
         }
+    }
+}
+
+impl<F: ColourComponent + std::fmt::Debug> FloatApproxEq<F> for RGB<F> {
+    fn abs_diff(&self, other: &Self) -> F {
+        let mut sum = F::ZERO;
+        for i in 0..self.0.len() {
+            sum += (self.0[i] - other.0[i]).abs()
+        }
+        sum / F::THREE
+    }
+
+    fn rel_diff_scale_factor(&self, other: &Self) -> F {
+        self.value().max(other.value())
     }
 }
 

@@ -1,6 +1,6 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use normalised_angles::Degrees;
+use normalised_angles::*;
 
 use crate::{rgb::RGB, ColourComponent};
 
@@ -265,17 +265,8 @@ mod test {
     };
     use crate::rgb::*;
     use crate::ColourComponent;
-    use float_cmp::*;
+    use float_plus::*;
     use normalised_angles::Degrees;
-
-    fn approx_equal(rgb1: crate::rgb::RGB<f64>, rgb2: crate::rgb::RGB<f64>) -> bool {
-        for i in [0_usize, 1, 2].iter() {
-            if !approx_eq!(f64, rgb1[*i], rgb2[*i], epsilon = 0.0000001) {
-                return false;
-            }
-        }
-        true
-    }
 
     const NON_ZERO_VALUES: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
     const NON_ZERO_SUMS: [f64; 21] = [
@@ -342,13 +333,7 @@ mod test {
             let hue_angle = Degrees::<f64>::from(*angle);
             let other = super::calc_other_from_angle(hue_angle.abs());
             assert!(other.is_proportion(), "other = {}", other);
-            assert!(
-                approx_eq!(f64, other, *expected, epsilon = 0.000000000000001),
-                "{} :: {} :: {}",
-                expected,
-                other,
-                angle
-            );
+            assert_approx_eq!(other, *expected);
         }
     }
 
@@ -374,13 +359,7 @@ mod test {
                     let rgb = RGB::<f64>::from(*array);
                     let other = super::calc_other_from_xy(rgb.xy());
                     assert!(other.is_proportion(), "other = {}", other);
-                    assert!(
-                        approx_eq!(f64, other, *expected, epsilon = 0.00000000001),
-                        "{} :: {} :: {:?}",
-                        expected,
-                        other,
-                        rgb
-                    );
+                    assert_approx_eq!(other, *expected);
                 }
             }
         }
@@ -408,13 +387,7 @@ mod test {
                     let rgb = RGB::<f64>::from(*array);
                     let other = super::calc_other_from_xy_alt(rgb.xy());
                     assert!(other.is_proportion(), "other = {}", other);
-                    assert!(
-                        approx_eq!(f64, other, *expected, epsilon = 0.00000000001),
-                        "{} :: {} :: {:?}",
-                        expected,
-                        other,
-                        rgb
-                    );
+                    assert_approx_eq!(other, *expected);
                 }
             }
         }
@@ -457,19 +430,13 @@ mod test {
             let hue_angle = Degrees::<f64>::from(*angle);
             let other = super::calc_other_from_xy(hue_angle.xy());
             assert!(other.is_proportion(), "other = {}", other);
-            assert!(
-                approx_eq!(f64, other, *expected, epsilon = 0.000000000000001),
-                "{} :: {} :: {}",
-                expected,
-                other,
-                angle
-            );
+            assert_approx_eq!(other, *expected, 0.000000000000001);
         }
     }
 
     #[test]
     fn calc_other_from_xy_from_comparison() {
-        for (angle, expected) in &[
+        for (angle, _expected) in &[
             (f64::RED_ANGLE, 0.0),
             (f64::GREEN_ANGLE, 0.0),
             (f64::BLUE_ANGLE, 0.0),
@@ -505,14 +472,7 @@ mod test {
             let hue_angle = Degrees::<f64>::from(*angle);
             let other_xy = super::calc_other_from_xy(hue_angle.xy());
             let other_hue = super::calc_other_from_angle(hue_angle.abs());
-            assert!(
-                approx_eq!(f64, other_xy, other_hue, epsilon = 0.000000000000001),
-                "expected: {} :: fm y: {} :: fm hue: {} :: angle: {}",
-                expected,
-                other_xy,
-                other_hue,
-                angle,
-            );
+            assert_approx_eq!(other_xy, other_hue, 0.000000000000001);
         }
     }
 
@@ -534,23 +494,9 @@ mod test {
             for chroma in NON_ZERO_VALUES.iter() {
                 let (shade, tint) = super::sum_range_for_chroma(*other, *chroma);
                 let max_chroma = super::max_chroma_for_sum(*other, shade);
-                assert!(
-                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.000000000000001),
-                    "chroma {} == {} :: other: {} shade: {}",
-                    max_chroma,
-                    *chroma,
-                    other,
-                    shade
-                );
+                assert_approx_eq!(max_chroma, *chroma);
                 let max_chroma = super::max_chroma_for_sum(*other, tint);
-                assert!(
-                    approx_eq!(f64, max_chroma, *chroma, epsilon = 0.000000000000001),
-                    "chroma {} == {} :: other: {} tint: {}",
-                    max_chroma,
-                    *chroma,
-                    other,
-                    tint
-                );
+                assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
             }
         }
     }
@@ -657,37 +603,14 @@ mod test {
                 assert_eq!(max_chroma_rgb_for_sum::<f64>(*other, 3.0, io), RGB::WHITE);
                 for sum in NON_ZERO_SUMS.iter() {
                     let rgb = max_chroma_rgb_for_sum::<f64>(*other, *sum, io);
-                    assert!(
-                        approx_eq!(f64, rgb.sum(), *sum, epsilon = 0.000000000000001),
-                        "{} == {}:: other: {} io: {:?} rgb: {:?}",
-                        rgb.sum(),
-                        *sum,
-                        other,
-                        io,
-                        rgb
-                    );
+                    assert_approx_eq!(rgb.sum(), *sum);
                     let xy = rgb.xy();
                     if xy.0 == 0.0 && xy.1 == 0.0 {
-                        assert!(
-                            approx_eq!(f64, rgb[0], rgb[1], epsilon = 0.000000000000001)
-                                && approx_eq!(f64, rgb[0], rgb[2], epsilon = 0.000000000000001),
-                            "sum: {} other: {} io: {:?} rgb: {:?}",
-                            *sum,
-                            other,
-                            io,
-                            rgb
-                        );
+                        assert_approx_eq!(rgb[0], rgb[1]);
+                        assert_approx_eq!(rgb[0], rgb[2]);
                     } else {
                         let rgb_other = calc_other_from_xy(xy);
-                        assert!(
-                            approx_eq!(f64, rgb_other, *other, epsilon = 0.0000000001),
-                            "{} == {}:: sum: {} io: {:?} rgb: {:?}",
-                            rgb_other,
-                            *other,
-                            sum,
-                            io,
-                            rgb
-                        );
+                        assert_approx_eq!(rgb_other, *other, 0.0000000001);
                         let rgb_io = rgb.indices_value_order();
                         assert!(
                             *io == rgb_io || rgb[io[1]] == rgb[io[2]] || rgb[io[0]] == rgb[io[1]],
@@ -701,16 +624,7 @@ mod test {
                         let chroma_correction = calc_chroma_correction(rgb_other);
                         let rgb_chroma = xy.0.hypot(xy.1) * chroma_correction;
                         let max_chroma = max_chroma_for_sum(*other, *sum);
-                        assert!(
-                            approx_eq!(f64, rgb_chroma, max_chroma, epsilon = 0.000000000000001),
-                            "{} == {}:: sum: {} other: {} io: {:?} rgb: {:?}",
-                            rgb_chroma,
-                            max_chroma,
-                            sum,
-                            *other,
-                            io,
-                            rgb
-                        );
+                        assert_approx_eq!(rgb_chroma, max_chroma, 0.000000000000001);
                     }
                 }
             }
@@ -743,45 +657,14 @@ mod test {
                     for sum in NON_ZERO_SUMS.iter() {
                         if let Some(rgb) = rgb_for_sum_and_chroma::<f64>(*other, *sum, *chroma, io)
                         {
-                            assert!(
-                                approx_eq!(f64, rgb.sum(), *sum, epsilon = 0.000000000000001),
-                                "{} == {}:: chroma: {} other: {} io: {:?} rgb: {:?}",
-                                rgb.sum(),
-                                *sum,
-                                *chroma,
-                                other,
-                                io,
-                                rgb
-                            );
+                            assert_approx_eq!(rgb.sum(), *sum, 0.000000000000001);
                             let xy = rgb.xy();
                             if xy.0 == 0.0 && xy.1 == 0.0 {
-                                assert!(
-                                    approx_eq!(f64, rgb[0], rgb[1], epsilon = 0.000000000000001)
-                                        && approx_eq!(
-                                            f64,
-                                            rgb[0],
-                                            rgb[2],
-                                            epsilon = 0.000000000000001
-                                        ),
-                                    "sum: {} chroma: {} other: {} io: {:?} rgb: {:?}",
-                                    *sum,
-                                    *chroma,
-                                    other,
-                                    io,
-                                    rgb
-                                );
+                                assert_approx_eq!(rgb[0], rgb[1]);
+                                assert_approx_eq!(rgb[0], rgb[2]);
                             } else {
                                 let rgb_other = calc_other_from_xy(xy);
-                                assert!(
-                                    approx_eq!(f64, rgb_other, *other, epsilon = 0.0000000001),
-                                    "{} == {}:: sum: {} chroma: {} io: {:?} rgb: {:?}",
-                                    rgb_other,
-                                    *other,
-                                    sum,
-                                    *chroma,
-                                    io,
-                                    rgb
-                                );
+                                assert_approx_eq!(rgb_other, *other, 0.0000000001);
                                 let rgb_io = rgb.indices_value_order();
                                 assert!(
                                     *io == rgb_io
@@ -797,21 +680,7 @@ mod test {
                                 );
                                 let chroma_correction = calc_chroma_correction(rgb_other);
                                 let rgb_chroma = xy.0.hypot(xy.1) * chroma_correction;
-                                assert!(
-                                    approx_eq!(
-                                        f64,
-                                        rgb_chroma,
-                                        *chroma,
-                                        epsilon = 0.000000000000001
-                                    ),
-                                    "{} == {}:: sum: {} other: {} io: {:?} rgb: {:?}",
-                                    rgb_chroma,
-                                    *chroma,
-                                    sum,
-                                    *other,
-                                    io,
-                                    rgb
-                                );
+                                assert_approx_eq!(rgb_chroma, *chroma, 0.000000000000001);
                             }
                         } else {
                             let (shade_sum, tint_sum) = sum_range_for_chroma(*other, *chroma);
@@ -858,24 +727,9 @@ mod test {
                 let shade = min_sum_rgb_for_chroma(*second, *chroma, &io);
                 let tint = max_sum_rgb_for_chroma(*second, *chroma, &io);
                 assert!(shade.sum() <= tint.sum());
-                assert!(approx_eq!(
-                    f64,
-                    shade.chroma(),
-                    *chroma,
-                    epsilon = 0.00000000001
-                ));
-                assert!(approx_eq!(
-                    f64,
-                    tint.chroma(),
-                    *chroma,
-                    epsilon = 0.00000000001
-                ));
-                assert!(
-                    approx_equal(shade.max_chroma_rgb(), tint.max_chroma_rgb()),
-                    "{:?} == {:?}",
-                    shade.max_chroma_rgb(),
-                    tint.max_chroma_rgb()
-                );
+                assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
+                assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
+                assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
             }
         }
     }

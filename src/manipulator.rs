@@ -123,7 +123,7 @@ impl<F: ColourComponent> RGBManipulator<F> {
 #[cfg(test)]
 mod test {
     use crate::ColourInterface;
-    use float_cmp::*;
+    use float_plus::*;
 
     //    fn approx_equal(rgb1: crate::rgb::RGB<f64>, rgb2: crate::rgb::RGB<f64>) -> bool {
     //        for i in [0_usize, 1, 2].iter() {
@@ -144,12 +144,7 @@ mod test {
         let decr = 0.1;
         let mut expected = (manipulator.chroma - decr).max(0.0);
         while manipulator.decr_chroma(decr) {
-            assert!(
-                approx_eq!(f64, manipulator.chroma, expected, epsilon = 0.00000000001),
-                "{} == {}",
-                manipulator.chroma,
-                expected,
-            );
+            assert_approx_eq!(manipulator.chroma, expected, 0.00000000001);
             expected = (manipulator.chroma - decr).max(0.0);
             assert_eq!(manipulator.sum, 2.0);
             assert_eq!(manipulator.hue_data, saved_hue_data);
@@ -172,12 +167,7 @@ mod test {
             manipulator.sum,
         ));
         while manipulator.incr_chroma(incr) {
-            assert!(
-                approx_eq!(f64, manipulator.chroma, expected, epsilon = 0.00000000001),
-                "{} == {}",
-                manipulator.chroma,
-                expected,
-            );
+            assert_approx_eq!(manipulator.chroma, expected, 0.00000000001);
             expected = (manipulator.chroma + incr).min(crate::chroma::max_chroma_for_sum(
                 saved_hue_data.unwrap().0,
                 manipulator.sum,

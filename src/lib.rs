@@ -7,9 +7,8 @@ use std::{
     fmt::Debug,
 };
 
-use num::traits::{Float, NumAssign, NumOps};
-
-use normalised_angles::AngleConst;
+use float_plus::*;
+use normalised_angles::DegreesConst;
 
 pub mod chroma;
 pub mod hue;
@@ -19,9 +18,7 @@ pub mod rgb;
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 
-pub trait ColourComponent:
-    Float + PartialOrd + Copy + NumAssign + NumOps + AngleConst + Debug
-{
+pub trait ColourComponent: FloatPlus + DegreesConst + std::fmt::Debug {
     const ZERO: Self;
     const ONE: Self;
     const TWO: Self;

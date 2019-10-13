@@ -7,7 +7,8 @@ use std::{
     ops::{Add, Sub},
 };
 
-use normalised_angles::Degrees;
+use float_plus::*;
+use normalised_angles::*;
 
 use crate::rgb::RGB;
 use crate::{chroma, ColourComponent, ColourInterface};
@@ -232,7 +233,8 @@ impl<F: ColourComponent> Hue<F> {
                 // happens we go straight to a zero chroma RGB
                 let (x, y) = rgb.xy();
                 let angle: Degrees<F> = Degrees::atan2(x, y);
-                if angle.approx_eq(self.angle) {
+                let limit = F::from(0.00000000000001).unwrap();
+                if angle.approx_eq(&self.angle, Some(limit), Some(limit)) {
                     Some(rgb)
                 } else {
                     Some(RGB::from([value, value, value]))
@@ -281,7 +283,6 @@ impl<F: ColourComponent> Hue<F> {
 mod test {
     use super::*;
     use crate::{I_BLUE, I_GREEN, I_RED};
-    use float_cmp::*;
 
     const TEST_ANGLES: [f64; 13] = [
         -180.0, -150.0, -120.0, -90.0, -60.0, -30.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0,
@@ -290,10 +291,6 @@ mod test {
     const NON_ZERO_TEST_RATIOS: [f64; 10] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
     const TEST_RATIOS: [f64; 11] = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-
-    fn calculate_chroma(rgb: &RGB<f64>) -> f64 {
-        rgb.hypot() * Hue::from(*rgb).chroma_correction
-    }
 
     #[test]
     fn from_angle() {
@@ -413,24 +410,30 @@ mod test {
 
     #[test]
     fn from_rgb() {
-        assert!(Hue::<f64>::from(RGB::<f64>::RED)
-            .angle
-            .approx_eq(Degrees::<f64>::from(f64::RED_ANGLE)));
-        assert!(Hue::<f64>::from(RGB::<f64>::GREEN)
-            .angle
-            .approx_eq(Degrees::<f64>::from(f64::GREEN_ANGLE)));
-        assert!(Hue::<f64>::from(RGB::<f64>::BLUE)
-            .angle
-            .approx_eq(Degrees::<f64>::from(f64::BLUE_ANGLE)));
-        assert!(Hue::<f64>::from(RGB::<f64>::CYAN)
-            .angle
-            .approx_eq(Degrees::<f64>::from(f64::CYAN_ANGLE)));
-        assert!(Hue::<f64>::from(RGB::<f64>::MAGENTA)
-            .angle
-            .approx_eq(Degrees::<f64>::from(f64::MAGENTA_ANGLE)));
-        assert!(Hue::<f64>::from(RGB::<f64>::YELLOW)
-            .angle
-            .approx_eq(Degrees::<f64>::from(f64::YELLOW_ANGLE)));
+        assert_approx_eq!(
+            Hue::<f64>::from(RGB::<f64>::RED).angle,
+            Degrees::<f64>::from(f64::RED_ANGLE)
+        );
+        assert_approx_eq!(
+            Hue::<f64>::from(RGB::<f64>::GREEN).angle,
+            Degrees::<f64>::from(f64::GREEN_ANGLE)
+        );
+        assert_approx_eq!(
+            Hue::<f64>::from(RGB::<f64>::BLUE).angle,
+            Degrees::<f64>::from(f64::BLUE_ANGLE)
+        );
+        assert_approx_eq!(
+            Hue::<f64>::from(RGB::<f64>::CYAN).angle,
+            Degrees::<f64>::from(f64::CYAN_ANGLE)
+        );
+        assert_approx_eq!(
+            Hue::<f64>::from(RGB::<f64>::MAGENTA).angle,
+            Degrees::<f64>::from(f64::MAGENTA_ANGLE)
+        );
+        assert_approx_eq!(
+            Hue::<f64>::from(RGB::<f64>::YELLOW).angle,
+            Degrees::<f64>::from(f64::YELLOW_ANGLE)
+        );
         assert!(Hue::<f64>::from(RGB::<f64>::BLACK).angle.is_nan());
         assert!(Hue::<f64>::from(RGB::<f64>::WHITE).angle.is_nan());
     }
@@ -443,66 +446,58 @@ mod test {
         assert_eq!(Hue::<f64>::from(RGB::CYAN).chroma_correction, 1.0);
         assert_eq!(Hue::<f64>::from(RGB::MAGENTA).chroma_correction, 1.0);
         assert_eq!(Hue::<f64>::from(RGB::YELLOW).chroma_correction, 1.0);
-        assert!(approx_eq!(
-            f64,
+
+        assert_approx_eq!(
             Hue::<f64>::from(RGB::from([0.5, 0.25, 0.0])).chroma_correction,
             2.0 / 3.0_f64.sqrt(),
-            epsilon = 0.000000000000001
-        ));
-        assert!(approx_eq!(
-            f64,
+        );
+        assert_approx_eq!(
             Hue::<f64>::from(RGB::from([0.25, 0.5, 0.0])).chroma_correction,
             2.0 / 3.0_f64.sqrt(),
-            epsilon = 0.000000000000001
-        ));
-        assert!(approx_eq!(
-            f64,
+        );
+        assert_approx_eq!(
             Hue::<f64>::from(RGB::from([0.5, 0.0, 0.25])).chroma_correction,
             2.0 / 3.0_f64.sqrt(),
-            epsilon = 0.000000000000001
-        ));
-        assert!(approx_eq!(
-            f64,
+        );
+        assert_approx_eq!(
             Hue::<f64>::from(RGB::from([0.25, 0.0, 0.5])).chroma_correction,
             2.0 / 3.0_f64.sqrt(),
-            epsilon = 0.000000000000001
-        ));
-        assert!(approx_eq!(
-            f64,
+        );
+        assert_approx_eq!(
             Hue::<f64>::from(RGB::from([0.0, 0.5, 0.25])).chroma_correction,
             2.0 / 3.0_f64.sqrt(),
-            epsilon = 0.000000000000001
-        ));
-        assert!(approx_eq!(
-            f64,
+        );
+        assert_approx_eq!(
             Hue::<f64>::from(RGB::from([0.0, 0.25, 0.5])).chroma_correction,
             2.0 / 3.0_f64.sqrt(),
-            epsilon = 0.000000000000001
-        ));
+        );
     }
 
     #[test]
     fn rotation() {
-        assert!(
-            (Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE)) + Degrees::from(60.0))
-                .angle
-                .approx_eq(Degrees::<f64>::from(f64::GREEN_ANGLE))
+        assert_approx_eq!(
+            (Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE)) + Degrees::from(60.0)).angle,
+            Degrees::<f64>::from(f64::GREEN_ANGLE)
         );
-        assert!(
+        assert_approx_eq!(
             (Hue::<f64>::from(Degrees::<f64>::from(f64::MAGENTA_ANGLE)) - Degrees::from(60.0))
-                .angle
-                .approx_eq(Degrees::<f64>::from(f64::BLUE_ANGLE))
+                .angle,
+            Degrees::<f64>::from(f64::BLUE_ANGLE)
         )
     }
 
     #[test]
     fn difference() {
-        assert!((Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE))
-            - Hue::from(Degrees::<f64>::from(f64::GREEN_ANGLE)))
-        .approx_eq(Degrees::from(-60.0)));
-        assert!((Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE))
-            - Hue::from(Degrees::<f64>::from(f64::MAGENTA_ANGLE)))
-        .approx_eq(Degrees::from(120.0)));
+        assert_approx_eq!(
+            (Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE))
+                - Hue::from(Degrees::<f64>::from(f64::GREEN_ANGLE))),
+            Degrees::from(-60.0)
+        );
+        assert_approx_eq!(
+            (Hue::<f64>::from(Degrees::<f64>::from(f64::YELLOW_ANGLE))
+                - Hue::from(Degrees::<f64>::from(f64::MAGENTA_ANGLE))),
+            Degrees::from(120.0)
+        );
     }
 
     #[test]
@@ -513,23 +508,9 @@ mod test {
                 if let Some((shade_value, tint_value)) = hue.value_range_with_chroma(*chroma) {
                     // TODO: try and make these exact reciprocals
                     let max_chroma = hue.max_chroma_for_value(shade_value);
-                    assert!(
-                        approx_eq!(f64, *chroma, max_chroma, epsilon = 0.00000000001),
-                        "{} == {} :: {:?} {}",
-                        chroma,
-                        max_chroma,
-                        angle,
-                        shade_value
-                    );
+                    assert_approx_eq!(*chroma, max_chroma);
                     let max_chroma = hue.max_chroma_for_value(tint_value);
-                    assert!(
-                        approx_eq!(f64, *chroma, max_chroma, epsilon = 0.00000000001),
-                        "{} == {} :: {:?} {}",
-                        chroma,
-                        max_chroma,
-                        angle,
-                        tint_value
-                    );
+                    assert_approx_eq!(*chroma, max_chroma, 0.00000000001);
                 }
             }
         }
@@ -542,19 +523,9 @@ mod test {
             for value in NON_ZERO_TEST_RATIOS.iter().filter(|x| **x < 1.0) {
                 let max_chroma = hue.max_chroma_for_value(*value);
                 if let Some(rgb) = hue.rgb_with_chroma_and_value(max_chroma, *value) {
-                    assert!(approx_eq!(
-                        f64,
-                        calculate_chroma(&rgb),
-                        max_chroma,
-                        epsilon = 0.000000000000001
-                    ));
-                    assert!(approx_eq!(
-                        f64,
-                        rgb.value(),
-                        *value,
-                        epsilon = 0.000000000000001
-                    ));
-                    assert!((angle.approx_eq(Hue::from(rgb).angle)));
+                    assert_approx_eq!(rgb.chroma(), max_chroma, 0.000000000000001);
+                    assert_approx_eq!(rgb.value(), *value);
+                    assert_approx_eq!(angle, Hue::from(rgb).angle, 0.000000000000001);
                 } else {
                     if let Some((shade_value, tint_value)) = hue.value_range_with_chroma(max_chroma)
                     {
@@ -575,18 +546,8 @@ mod test {
             for value in [0.0, 1.0].iter() {
                 let max_chroma = hue.max_chroma_for_value(*value);
                 let rgb = hue.rgb_with_chroma_and_value(max_chroma, *value).unwrap();
-                assert!(approx_eq!(
-                    f64,
-                    calculate_chroma(&rgb),
-                    max_chroma,
-                    epsilon = 0.000000000000001
-                ));
-                assert!(approx_eq!(
-                    f64,
-                    rgb.value(),
-                    *value,
-                    epsilon = 0.000000000000001
-                ));
+                assert_approx_eq!(rgb.chroma(), max_chroma,);
+                assert_approx_eq!(rgb.value(), *value);
                 assert!(Hue::from(rgb).is_grey());
             }
         }
@@ -595,18 +556,8 @@ mod test {
             let max_chroma = hue.max_chroma_for_value(*value);
             assert_eq!(max_chroma, 0.0);
             let rgb = hue.rgb_with_chroma_and_value(max_chroma, *value).unwrap();
-            assert!(approx_eq!(
-                f64,
-                calculate_chroma(&rgb),
-                max_chroma,
-                epsilon = 0.000000000000001
-            ));
-            assert!(approx_eq!(
-                f64,
-                rgb.value(),
-                *value,
-                epsilon = 0.000000000000001
-            ));
+            assert_approx_eq!(rgb.chroma(), max_chroma,);
+            assert_approx_eq!(rgb.value(), *value);
             assert!(Hue::from(rgb).is_grey());
         }
     }
@@ -629,32 +580,10 @@ mod test {
                     angle.degrees(),
                     shade_rgb
                 );
-                let shade_chroma = calculate_chroma(&shade_rgb);
-                assert!(
-                    approx_eq!(f64, shade_chroma, *chroma, epsilon = 0.000000000000001),
-                    "{} == {} :: {} : {:?}",
-                    shade_chroma,
-                    *chroma,
-                    angle.degrees(),
-                    shade_rgb
-                );
-                let tint_chroma = calculate_chroma(&tint_rgb);
-                assert!(
-                    approx_eq!(f64, tint_chroma, *chroma, epsilon = 0.000000000000001),
-                    "{} == {} :: {:?} : {:?}",
-                    tint_chroma,
-                    *chroma,
-                    angle,
-                    tint_rgb
-                );
-                assert!(
-                    angle.approx_eq(Hue::from(shade_rgb).angle),
-                    "{:?} == {:?} :: {:?}",
-                    angle,
-                    Hue::from(shade_rgb).angle,
-                    tint_rgb
-                );
-                assert!(angle.approx_eq(Hue::from(tint_rgb).angle));
+                assert_approx_eq!(shade_rgb.chroma(), *chroma, 0.000000000000001);
+                assert_approx_eq!(tint_rgb.chroma(), *chroma, 0.000000000000001);
+                assert_approx_eq!(angle, Hue::from(shade_rgb).angle, 0.000000000000001);
+                assert_approx_eq!(angle, Hue::from(tint_rgb).angle, 0.00000000000001);
             }
         }
         let hue = Hue::<f64>::from(Degrees::<f64>::from(std::f64::NAN));
@@ -677,19 +606,9 @@ mod test {
                 for value in NON_ZERO_TEST_RATIOS.iter() {
                     match hue.rgb_with_chroma_and_value(*chroma, *value) {
                         Some(rgb) => {
-                            assert!(approx_eq!(
-                                f64,
-                                calculate_chroma(&rgb),
-                                *chroma,
-                                epsilon = 0.000000000000001
-                            ));
-                            assert!(approx_eq!(
-                                f64,
-                                rgb.value(),
-                                *value,
-                                epsilon = 0.000000000000001
-                            ));
-                            assert!(hue.angle.approx_eq(Hue::from(rgb).angle));
+                            assert_approx_eq!(rgb.chroma(), *chroma, 0.000000000000001);
+                            assert_approx_eq!(rgb.value(), *value);
+                            assert_approx_eq!(hue.angle, Hue::from(rgb).angle, 0.00000000000001);
                         }
                         None => {
                             if let Some((min_value, max_value)) =
@@ -710,22 +629,12 @@ mod test {
                         Some(rgb) => {
                             let rgb_hue = Hue::from(rgb);
                             if rgb_hue.is_grey() {
-                                assert!(approx_eq!(
-                                    f64,
-                                    rgb.value(),
-                                    *value,
-                                    epsilon = 0.000000000000001
-                                ));
+                                assert_approx_eq!(rgb.value(), *value);
                                 count_a += 1;
                             } else {
-                                //assert!(approx_eq!(f64, calculate_chroma(&rgb), *chroma, epsilon = 0.000000000000001));
-                                assert!(approx_eq!(
-                                    f64,
-                                    rgb.value(),
-                                    *value,
-                                    epsilon = 0.000000000000001
-                                ));
-                                assert!(hue.angle.approx_eq(rgb_hue.angle));
+                                //assert!(approx_eq!(f64, rgb.chroma(), *chroma, epsilon = 0.000000000000001));
+                                assert_approx_eq!(rgb.value(), *value);
+                                assert_approx_eq!(hue.angle, rgb_hue.angle, 0.000000000000001);
                                 count_b += 1;
                             }
                         }
@@ -744,18 +653,8 @@ mod test {
             for value in TEST_RATIOS.iter() {
                 match hue.rgb_with_chroma_and_value(0.0, *value) {
                     Some(rgb) => {
-                        assert!(approx_eq!(
-                            f64,
-                            calculate_chroma(&rgb),
-                            0.0,
-                            epsilon = 0.000000000000001
-                        ));
-                        assert!(approx_eq!(
-                            f64,
-                            rgb.value(),
-                            *value,
-                            epsilon = 0.000000000000001
-                        ));
+                        assert_approx_eq!(rgb.chroma(), 0.0);
+                        assert_approx_eq!(rgb.value(), *value);
                         assert!(Hue::from(rgb).is_grey());
                     }
                     None => (assert!(false)),
@@ -785,42 +684,16 @@ mod test {
             for chroma in NON_ZERO_TEST_RATIOS.iter() {
                 let (min_value, max_value) = hue.value_range_with_chroma(*chroma).unwrap();
                 let shade_rgb = hue.rgb_with_chroma_and_value(*chroma, min_value).unwrap();
-                let shade_chroma = calculate_chroma(&shade_rgb);
                 let shade_hue = Hue::from(shade_rgb);
-                assert!(approx_eq!(
-                    f64,
-                    shade_chroma,
-                    *chroma,
-                    epsilon = 0.000000000000001
-                ));
-                assert!(approx_eq!(
-                    f64,
-                    shade_rgb.value(),
-                    min_value,
-                    epsilon = 0.000000000000001
-                ));
-                assert!(angle.approx_eq(shade_hue.angle));
+                assert_approx_eq!(shade_rgb.chroma(), *chroma, 0.000000000000001);
+                assert_approx_eq!(shade_rgb.value(), min_value);
+                assert_approx_eq!(angle, shade_hue.angle, 0.000000000000001);
                 let tint_rgb = hue.rgb_with_chroma_and_value(*chroma, max_value).unwrap();
                 let tint_value = tint_rgb.value();
-                assert!(
-                    approx_eq!(f64, tint_value, max_value, epsilon = 0.000000000000001),
-                    "{} == {} :: {:?} : {}",
-                    tint_value,
-                    max_value,
-                    angle,
-                    *chroma
-                );
-                let tint_chroma = calculate_chroma(&tint_rgb);
-                assert!(
-                    approx_eq!(f64, tint_chroma, *chroma, epsilon = 0.000000000000001),
-                    "{} == {} :: {:?} : {}",
-                    tint_chroma,
-                    *chroma,
-                    angle,
-                    max_value
-                );
+                assert_approx_eq!(tint_value, max_value);
+                assert_approx_eq!(tint_rgb.chroma(), *chroma, 0.000000000000001);
                 let tint_hue = Hue::from(tint_rgb);
-                assert!(angle.approx_eq(tint_hue.angle));
+                assert_approx_eq!(angle, tint_hue.angle, 0.00000000000001);
             }
         }
     }
@@ -831,30 +704,15 @@ mod test {
             let hue = Hue::from(angle);
             for value in NON_ZERO_TEST_RATIOS.iter().map(|x| *x - 0.01) {
                 let rgb = hue.max_chroma_rgb_with_value(value);
-                assert!(approx_eq!(
-                    f64,
-                    rgb.value(),
-                    value,
-                    epsilon = 0.000000000000001
-                ));
-                assert!(hue.angle.approx_eq(Hue::from(rgb).angle));
+                assert_approx_eq!(rgb.value(), value);
+                assert_approx_eq!(hue.angle, Hue::from(rgb).angle, 0.00000000000001);
                 let max_chroma = hue.max_chroma_for_value(value);
-                let rgb_chroma = calculate_chroma(&rgb);
-                assert!(
-                    approx_eq!(f64, rgb_chroma, max_chroma, epsilon = 0.000000000000001),
-                    "{} != {}",
-                    rgb_chroma,
-                    max_chroma
-                );
+                let rgb_chroma = rgb.chroma();
+                assert_approx_eq!(rgb_chroma, max_chroma, 0.000000000000001);
             }
             for value in [0.0, 1.0].iter() {
                 let rgb = hue.max_chroma_rgb_with_value(*value);
-                assert!(approx_eq!(
-                    f64,
-                    rgb.value(),
-                    *value,
-                    epsilon = 0.000000000000001
-                ));
+                assert_approx_eq!(rgb.value(), *value);
                 assert!(Hue::from(rgb).is_grey());
             }
         }
