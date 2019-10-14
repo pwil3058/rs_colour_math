@@ -19,15 +19,9 @@ pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 
 pub trait ColourComponent: FloatPlus + DegreesConst + Debug {
-    const ZERO: Self;
-    const ONE: Self;
-    const TWO: Self;
-    const THREE: Self;
     const FOUR: Self;
     const SIN_120: Self;
     const COS_120: Self;
-    const SQRT_3: Self;
-    const HALF: Self;
 
     const RED_ANGLE: Self;
     const GREEN_ANGLE: Self;
@@ -43,15 +37,9 @@ pub trait ColourComponent: FloatPlus + DegreesConst + Debug {
 }
 
 impl ColourComponent for f32 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-    const TWO: Self = 2.0;
-    const THREE: Self = 3.0;
     const FOUR: Self = 3.0;
     const SIN_120: Self = 0.86602_5404;
     const COS_120: Self = -0.5;
-    const SQRT_3: Self = 1.73205_0808;
-    const HALF: Self = 0.5;
 
     const RED_ANGLE: Self = 0.0;
     const GREEN_ANGLE: Self = 120.0;
@@ -63,15 +51,9 @@ impl ColourComponent for f32 {
 }
 
 impl ColourComponent for f64 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-    const TWO: Self = 2.0;
-    const THREE: Self = 3.0;
     const FOUR: Self = 3.0;
     const SIN_120: Self = 0.86602_54037_84439;
     const COS_120: Self = -0.5;
-    const SQRT_3: Self = 1.73205_08075_68878;
-    const HALF: Self = 0.5;
 
     const RED_ANGLE: Self = 0.0;
     const GREEN_ANGLE: Self = 120.0;
