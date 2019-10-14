@@ -125,15 +125,6 @@ mod test {
     use crate::ColourInterface;
     use float_plus::*;
 
-    //    fn approx_equal(rgb1: crate::rgb::RGB<f64>, rgb2: crate::rgb::RGB<f64>) -> bool {
-    //        for i in [0_usize, 1, 2].iter() {
-    //            if !approx_eq!(f64, rgb1[*i], rgb2[*i], epsilon = 0.00000000001) {
-    //                return false;
-    //            }
-    //        }
-    //        true
-    //    }
-
     #[test]
     fn decr_chroma() {
         let mut manipulator = super::RGBManipulator::<f64>::new();

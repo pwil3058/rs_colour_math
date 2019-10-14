@@ -77,13 +77,15 @@ impl<F: ColourComponent> RGB<F> {
     }
 }
 
-impl<F: ColourComponent + std::fmt::Debug> FloatApproxEq<F> for RGB<F> {
+impl<F: ColourComponent + std::fmt::Debug + std::iter::Sum> FloatApproxEq<F> for RGB<F> {
     fn abs_diff(&self, other: &Self) -> F {
-        let mut sum = F::ZERO;
-        for i in 0..self.0.len() {
-            sum += (self.0[i] - other.0[i]).abs()
-        }
-        sum / F::THREE
+        let sum: F = self
+            .0
+            .iter()
+            .zip(other.0.iter())
+            .map(|(a, b)| (*a - *b).powi(2))
+            .sum();
+        sum.sqrt() / F::THREE
     }
 
     fn rel_diff_scale_factor(&self, other: &Self) -> F {
