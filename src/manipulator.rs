@@ -102,7 +102,7 @@ impl<F: ColourComponent> RGBManipulator<F> {
             false
         } else {
             let cur_sum = self.sum;
-            let new_sum = (cur_sum + F::THREE * delta).min(F::ONE);
+            let new_sum = (cur_sum + F::THREE * delta).min(F::THREE);
             if let Some((second, io)) = self.hue_data {
                 if let Some(rgb) = chroma::rgb_for_sum_and_chroma(second, new_sum, self.chroma, &io)
                 {
@@ -180,5 +180,25 @@ mod test {
         assert!(manipulator.rgb.is_grey());
         while manipulator.incr_chroma(0.01) {}
         assert_eq!(manipulator.rgb, crate::rgb::RGB::CYAN);
+    }
+
+    #[test]
+    fn incr_decr_sum() {
+        let mut manipulator = super::RGBManipulator::<f64>::new();
+        assert!(!manipulator.decr_value(0.1));
+        while manipulator.incr_value(0.1) {}
+        assert_eq!(manipulator.rgb, crate::rgb::RGB::WHITE);
+        while manipulator.decr_value(0.1) {}
+        assert_eq!(manipulator.rgb, crate::rgb::RGB::BLACK);
+        manipulator.set_rgb(crate::rgb::RGB::YELLOW);
+        assert!(!manipulator.decr_value(0.1));
+        assert!(!manipulator.incr_value(0.1));
+        let cur_value = manipulator.rgb.value();
+        manipulator.decr_chroma(0.5);
+        assert_eq!(cur_value, manipulator.rgb.value());
+        while manipulator.decr_value(0.1) {}
+        assert_approx_eq!(manipulator.rgb, [0.5, 0.5, 0.0].into());
+        while manipulator.incr_value(0.1) {}
+        assert_approx_eq!(manipulator.rgb, [1.0, 1.0, 0.5].into());
     }
 }
