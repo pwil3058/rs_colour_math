@@ -102,128 +102,103 @@ pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct HueData<F: ColourComponent> {
     // TODO: un pub HueData fields
-    pub(crate) second: Option<F>,
+    pub(crate) second: F,
     pub(crate) io: [u8; 3],
 }
 
 impl<F: ColourComponent> HueData<F> {
-    pub fn is_grey(&self) -> bool {
-        self.second.is_none()
-    }
-
-    pub fn max_chroma_rgb(&self) -> Option<RGB<F>> {
-        if let Some(second) = self.second {
-            let mut array = [F::ZERO, F::ZERO, F::ZERO];
-            array[self.io[0] as usize] = F::ONE;
-            array[self.io[1] as usize] = second;
-            Some(array.into())
-        } else {
-            None
-        }
+    pub fn max_chroma_rgb(&self) -> RGB<F> {
+        let mut array = [F::ZERO, F::ZERO, F::ZERO];
+        array[self.io[0] as usize] = F::ONE;
+        array[self.io[1] as usize] = self.second;
+        array.into()
     }
 
     pub fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if let Some(second) = self.second {
-            let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
-            if sum == F::ZERO {
-                // Nothing to do
-            } else if sum == F::THREE {
-                array = [F::ONE, F::ONE, F::ONE];
-            } else if second == F::ZERO {
-                // pure red, green or blue
-                if sum <= F::ONE {
-                    array[self.io[0] as usize] = sum;
-                } else {
-                    array[self.io[0] as usize] = F::ONE;
-                    array[self.io[1] as usize] = ((sum - F::ONE) / F::TWO).min(F::ONE);
-                    array[self.io[2] as usize] = array[self.io[1] as usize];
-                }
-            } else if second == F::ONE {
-                // pure cyan, magenta or yellow
-                if sum <= F::TWO {
-                    array[self.io[0] as usize] = (sum / F::TWO).min(F::ONE);
-                    array[self.io[1] as usize] = array[self.io[0] as usize];
-                } else {
-                    array[self.io[0] as usize] = F::ONE;
-                    array[self.io[1] as usize] = F::ONE;
-                    array[self.io[2] as usize] = (sum - F::TWO).min(F::ONE);
-                }
-            } else if sum < F::ONE + second {
-                let divisor = F::ONE + second;
-                array[self.io[0] as usize] = (sum / divisor).min(F::ONE);
-                array[self.io[1] as usize] = sum * second / divisor;
-            } else if sum > F::ONE + second {
-                let chroma = (F::THREE - sum) / (F::TWO - second);
-                let oc = second * chroma;
-                array[self.io[0] as usize] = ((sum + F::TWO * chroma - oc) / F::THREE).min(F::ONE);
-                array[self.io[1] as usize] = (sum + F::TWO * oc - chroma) / F::THREE;
-                array[self.io[2] as usize] = (sum - oc - chroma) / F::THREE;
+        let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+        if sum == F::ZERO {
+            // Nothing to do
+        } else if sum == F::THREE {
+            array = [F::ONE, F::ONE, F::ONE];
+        } else if self.second == F::ZERO {
+            // pure red, green or blue
+            if sum <= F::ONE {
+                array[self.io[0] as usize] = sum;
             } else {
                 array[self.io[0] as usize] = F::ONE;
-                array[self.io[1] as usize] = second;
-            };
-            array.into()
-        } else {
-            let value = sum / F::THREE;
-            [value, value, value].into()
-        }
-    }
-
-    pub fn min_sum_rgb_for_chroma(&self, chroma: F) -> Option<RGB<F>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if let Some(second) = self.second {
-            let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
-            if chroma == F::ZERO {
-                // do nothing
-            } else if chroma == F::ONE {
-                array[self.io[0] as usize] = F::ONE;
-                array[self.io[1] as usize] = second;
-            } else if second == F::ZERO {
-                array[self.io[0] as usize] = chroma;
-            } else if second == F::ONE {
-                array[self.io[0] as usize] = chroma;
-                array[self.io[1] as usize] = chroma;
-            } else {
-                array[self.io[0] as usize] = chroma;
-                array[self.io[1] as usize] = chroma * second;
-            };
-            Some(array.into())
-        } else if chroma == F::ZERO {
-            Some(RGB::BLACK)
-        } else {
-            None
-        }
-    }
-
-    pub fn max_sum_rgb_for_chroma(&self, chroma: F) -> Option<RGB<F>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if let Some(second) = self.second {
-            let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
-            if chroma == F::ZERO {
-                array = [F::ONE, F::ONE, F::ONE];
-            } else if chroma == F::ONE {
-                array[self.io[0] as usize] = F::ONE;
-                array[self.io[1] as usize] = second;
-            } else if second == F::ZERO {
-                array[self.io[0] as usize] = F::ONE;
-                array[self.io[1] as usize] = F::ONE - chroma;
+                array[self.io[1] as usize] = ((sum - F::ONE) / F::TWO).min(F::ONE);
                 array[self.io[2] as usize] = array[self.io[1] as usize];
-            } else if second == F::ONE {
+            }
+        } else if self.second == F::ONE {
+            // pure cyan, magenta or yellow
+            if sum <= F::TWO {
+                array[self.io[0] as usize] = (sum / F::TWO).min(F::ONE);
+                array[self.io[1] as usize] = array[self.io[0] as usize];
+            } else {
                 array[self.io[0] as usize] = F::ONE;
                 array[self.io[1] as usize] = F::ONE;
-                array[self.io[2] as usize] = F::ONE - chroma;
-            } else {
-                array[self.io[0] as usize] = F::ONE;
-                array[self.io[2] as usize] = F::ONE - chroma;
-                array[self.io[1] as usize] = chroma * second + array[self.io[2] as usize];
-            };
-            Some(array.into())
-        } else if chroma == F::ZERO {
-            Some(RGB::WHITE)
+                array[self.io[2] as usize] = (sum - F::TWO).min(F::ONE);
+            }
+        } else if sum < F::ONE + self.second {
+            let divisor = F::ONE + self.second;
+            array[self.io[0] as usize] = (sum / divisor).min(F::ONE);
+            array[self.io[1] as usize] = sum * self.second / divisor;
+        } else if sum > F::ONE + self.second {
+            let chroma = (F::THREE - sum) / (F::TWO - self.second);
+            let oc = self.second * chroma;
+            array[self.io[0] as usize] = ((sum + F::TWO * chroma - oc) / F::THREE).min(F::ONE);
+            array[self.io[1] as usize] = (sum + F::TWO * oc - chroma) / F::THREE;
+            array[self.io[2] as usize] = (sum - oc - chroma) / F::THREE;
         } else {
-            None
-        }
+            array[self.io[0] as usize] = F::ONE;
+            array[self.io[1] as usize] = self.second;
+        };
+        array.into()
+    }
+
+    pub fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+        if chroma == F::ZERO {
+            // do nothing
+        } else if chroma == F::ONE {
+            array[self.io[0] as usize] = F::ONE;
+            array[self.io[1] as usize] = self.second;
+        } else if self.second == F::ZERO {
+            array[self.io[0] as usize] = chroma;
+        } else if self.second == F::ONE {
+            array[self.io[0] as usize] = chroma;
+            array[self.io[1] as usize] = chroma;
+        } else {
+            array[self.io[0] as usize] = chroma;
+            array[self.io[1] as usize] = chroma * self.second;
+        };
+        array.into()
+    }
+
+    pub fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
+        if chroma == F::ZERO {
+            array = [F::ONE, F::ONE, F::ONE];
+        } else if chroma == F::ONE {
+            array[self.io[0] as usize] = F::ONE;
+            array[self.io[1] as usize] = self.second;
+        } else if self.second == F::ZERO {
+            array[self.io[0] as usize] = F::ONE;
+            array[self.io[1] as usize] = F::ONE - chroma;
+            array[self.io[2] as usize] = array[self.io[1] as usize];
+        } else if self.second == F::ONE {
+            array[self.io[0] as usize] = F::ONE;
+            array[self.io[1] as usize] = F::ONE;
+            array[self.io[2] as usize] = F::ONE - chroma;
+        } else {
+            array[self.io[0] as usize] = F::ONE;
+            array[self.io[2] as usize] = F::ONE - chroma;
+            array[self.io[1] as usize] = chroma * self.second + array[self.io[2] as usize];
+        };
+        array.into()
     }
 
     pub fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
@@ -243,52 +218,48 @@ impl<F: ColourComponent> HueData<F> {
         } else if chroma == F::ZERO {
             let value = sum / F::THREE;
             array = [value, value, value];
-        } else if let Some(second) = self.second {
-            if chroma == F::ONE {
-                if sum == F::ONE + second {
-                    array[self.io[0] as usize] = F::ONE;
-                    array[self.io[1] as usize] = second;
-                } else {
-                    return None;
-                }
-            } else if second == F::ZERO {
-                // pure red, green or blue
-                array[self.io[0] as usize] = (sum + F::TWO * chroma) / F::THREE;
-                array[self.io[1] as usize] = (sum - chroma) / F::THREE;
-                array[self.io[2] as usize] = array[self.io[1] as usize];
-            } else if second == F::ONE {
-                // pure cyan, magenta or yellow
-                array[self.io[0] as usize] = (sum + chroma) / F::THREE;
-                array[self.io[1] as usize] = array[self.io[0] as usize];
-                array[self.io[2] as usize] = (sum - F::TWO * chroma) / F::THREE;
+        } else if chroma == F::ONE {
+            if sum == F::ONE + self.second {
+                array[self.io[0] as usize] = F::ONE;
+                array[self.io[1] as usize] = self.second;
             } else {
-                let oc = second * chroma;
-                array[self.io[0] as usize] = (sum + F::TWO * chroma - oc) / F::THREE;
-                array[self.io[1] as usize] = (sum + F::TWO * oc - chroma) / F::THREE;
-                array[self.io[2] as usize] = (sum - oc - chroma) / F::THREE;
-            }
-            if array[self.io[0] as usize] > F::ONE || array[self.io[2] as usize] < F::ZERO {
                 return None;
-            } else {
-                // NB: because floats only approximate real numbers trying to
-                // set chroma too small (but non zero) results in a drift
-                // in the hue angle of the resulting RGB. When this
-                // happens we go straight to a zero chroma RGB
-                if chroma < F::from(0.00001).unwrap() && chroma > F::ZERO {
-                    let rgb: RGB<F> = array.into();
-                    let xy: (F, F) = rgb.xy();
-                    let rgb_second = calc_other_from_xy_alt(xy);
-                    // deviation "second" indicates a drift in the hue
-                    if (rgb_second - second).abs() / rgb_second > F::from(0.0000000001).unwrap() {
-                        let value = sum / F::THREE;
-                        array = [value, value, value];
-                    }
-                };
             }
+        } else if self.second == F::ZERO {
+            // pure red, green or blue
+            array[self.io[0] as usize] = (sum + F::TWO * chroma) / F::THREE;
+            array[self.io[1] as usize] = (sum - chroma) / F::THREE;
+            array[self.io[2] as usize] = array[self.io[1] as usize];
+        } else if self.second == F::ONE {
+            // pure cyan, magenta or yellow
+            array[self.io[0] as usize] = (sum + chroma) / F::THREE;
+            array[self.io[1] as usize] = array[self.io[0] as usize];
+            array[self.io[2] as usize] = (sum - F::TWO * chroma) / F::THREE;
         } else {
-            return None;
+            let oc = self.second * chroma;
+            array[self.io[0] as usize] = (sum + F::TWO * chroma - oc) / F::THREE;
+            array[self.io[1] as usize] = (sum + F::TWO * oc - chroma) / F::THREE;
+            array[self.io[2] as usize] = (sum - oc - chroma) / F::THREE;
         }
-        return Some(array.into());
+        if array[self.io[0] as usize] > F::ONE || array[self.io[2] as usize] < F::ZERO {
+            return None;
+        } else {
+            // NB: because floats only approximate real numbers trying to
+            // set chroma too small (but non zero) results in a drift
+            // in the hue angle of the resulting RGB. When this
+            // happens we go straight to a zero chroma RGB
+            if chroma < F::from(0.00001).unwrap() && chroma > F::ZERO {
+                let rgb: RGB<F> = array.into();
+                let xy: (F, F) = rgb.xy();
+                let rgb_second = calc_other_from_xy_alt(xy);
+                // deviation "second" indicates a drift in the hue
+                if (rgb_second - self.second).abs() / rgb_second > F::from(0.0000000001).unwrap() {
+                    let value = sum / F::THREE;
+                    array = [value, value, value];
+                }
+            };
+        }
+        Some(array.into())
     }
 }
 
@@ -540,7 +511,7 @@ mod test {
     fn primary_max_chroma_rgbs() {
         for io in [[0_u8, 1, 2], [0_u8, 2, 1]].iter() {
             let hue_data = HueData::<f64> {
-                second: Some(0.0),
+                second: 0.0,
                 io: *io,
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(1.0), RGB::RED);
@@ -557,7 +528,7 @@ mod test {
         }
         for io in [[1_u8, 0, 2], [1_u8, 2, 0]].iter() {
             let hue_data = HueData::<f64> {
-                second: Some(0.0),
+                second: 0.0,
                 io: *io,
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(1.0), RGB::GREEN);
@@ -574,7 +545,7 @@ mod test {
         }
         for io in [[2_u8, 0, 1], [2_u8, 1, 0]].iter() {
             let hue_data = HueData::<f64> {
-                second: Some(0.0),
+                second: 0.0,
                 io: *io,
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(1.0), RGB::BLUE);
@@ -595,7 +566,7 @@ mod test {
     fn secondary_max_chroma_rgbs() {
         for io in [[2_u8, 1, 0], [1, 2, 0]].iter() {
             let hue_data = HueData::<f64> {
-                second: Some(1.0),
+                second: 1.0,
                 io: *io,
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(2.0), RGB::CYAN);
@@ -612,7 +583,7 @@ mod test {
         }
         for io in [[2_u8, 0, 1], [0_u8, 2, 1]].iter() {
             let hue_data = HueData::<f64> {
-                second: Some(1.0),
+                second: 1.0,
                 io: *io,
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(2.0), RGB::MAGENTA);
@@ -629,7 +600,7 @@ mod test {
         }
         for io in [[1_u8, 0, 2], [0_u8, 1, 2]].iter() {
             let hue_data = HueData::<f64> {
-                second: Some(1.0),
+                second: 1.0,
                 io: *io,
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(2.0), RGB::YELLOW);
@@ -659,7 +630,7 @@ mod test {
         for io in ios.iter() {
             for second in OTHER_VALUES.iter() {
                 let hue_data = HueData::<f64> {
-                    second: Some(*second),
+                    second: *second,
                     io: *io,
                 };
                 assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -709,7 +680,7 @@ mod test {
         for io in ios.iter() {
             for other in OTHER_VALUES.iter() {
                 let hue_data = HueData::<f64> {
-                    second: Some(*other),
+                    second: *other,
                     io: *io,
                 };
                 assert_eq!(hue_data.rgb_for_sum_and_chroma(0.0, 0.0), Some(RGB::BLACK));
@@ -767,47 +738,47 @@ mod test {
     fn min_max_sum_rgb_for_chroma() {
         assert_eq!(
             HueData::<f64> {
-                second: Some(0.0),
+                second: 0.0,
                 io: [0, 1, 2]
             }
             .min_sum_rgb_for_chroma(1.0),
-            Some(RGB::RED)
+            RGB::RED
         );
         assert_eq!(
             HueData::<f64> {
-                second: Some(0.0),
+                second: 0.0,
                 io: [0, 1, 2],
             }
             .max_sum_rgb_for_chroma(1.0),
-            Some(RGB::RED)
+            RGB::RED
         );
         assert_eq!(
             HueData::<f64> {
-                second: Some(1.0),
+                second: 1.0,
                 io: [0, 1, 2]
             }
             .min_sum_rgb_for_chroma(1.0),
-            Some(RGB::YELLOW)
+            RGB::YELLOW
         );
         assert_eq!(
             HueData::<f64> {
-                second: Some(1.0),
+                second: 1.0,
                 io: [0, 1, 2],
             }
             .max_sum_rgb_for_chroma(1.0),
-            Some(RGB::YELLOW)
+            RGB::YELLOW
         );
         let io: [u8; 3] = [0, 1, 2];
         for second in OTHER_VALUES.iter() {
             let hue_data = HueData::<f64> {
-                second: Some(*second),
+                second: *second,
                 io: io,
             };
-            assert_eq!(hue_data.min_sum_rgb_for_chroma(0.0), Some(RGB::BLACK));
-            assert_eq!(hue_data.max_sum_rgb_for_chroma(0.0), Some(RGB::WHITE));
+            assert_eq!(hue_data.min_sum_rgb_for_chroma(0.0), RGB::BLACK);
+            assert_eq!(hue_data.max_sum_rgb_for_chroma(0.0), RGB::WHITE);
             for chroma in NON_ZERO_VALUES.iter() {
-                let shade = hue_data.min_sum_rgb_for_chroma(*chroma).unwrap();
-                let tint = hue_data.max_sum_rgb_for_chroma(*chroma).unwrap();
+                let shade = hue_data.min_sum_rgb_for_chroma(*chroma);
+                let tint = hue_data.max_sum_rgb_for_chroma(*chroma);
                 assert!(shade.sum() <= tint.sum());
                 assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
                 assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);

@@ -44,7 +44,7 @@ impl<F: ColourComponent> RGBManipulator<F> {
             let new_chroma = (cur_chroma - delta).max(F::ZERO);
             let (second, io) = self.hue_data.expect("chroma is non zero");
             let hue_data = HueData {
-                second: Some(second),
+                second: second,
                 io: [io[0] as u8, io[1] as u8, io[2] as u8],
             };
             self.rgb = hue_data
@@ -70,14 +70,14 @@ impl<F: ColourComponent> RGBManipulator<F> {
                 self.hue_data.expect("we just set it to some")
             };
             let hue_data = HueData {
-                second: Some(second),
+                second: second,
                 io: [io[0] as u8, io[1] as u8, io[2] as u8],
             };
             if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(self.sum, new_chroma) {
                 self.rgb = rgb;
             } else {
                 let hue_data = HueData {
-                    second: Some(second),
+                    second: second,
                     io: [io[0] as u8, io[1] as u8, io[2] as u8],
                 };
                 self.rgb = hue_data.max_chroma_rgb_for_sum(self.sum);
@@ -96,17 +96,17 @@ impl<F: ColourComponent> RGBManipulator<F> {
             let new_sum = (cur_sum - F::THREE * delta).max(F::ZERO);
             if let Some((second, io)) = self.hue_data {
                 let hue_data = HueData {
-                    second: Some(second),
+                    second: second,
                     io: [io[0] as u8, io[1] as u8, io[2] as u8],
                 };
                 if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
                     self.rgb = rgb
                 } else {
                     let hue_data = HueData {
-                        second: Some(second),
+                        second: second,
                         io: [io[0] as u8, io[1] as u8, io[2] as u8],
                     };
-                    self.rgb = hue_data.min_sum_rgb_for_chroma(self.chroma).unwrap();
+                    self.rgb = hue_data.min_sum_rgb_for_chroma(self.chroma);
                 };
             } else {
                 let new_value = new_sum / F::THREE;
@@ -126,17 +126,17 @@ impl<F: ColourComponent> RGBManipulator<F> {
             let new_sum = (cur_sum + F::THREE * delta).min(F::THREE);
             if let Some((second, io)) = self.hue_data {
                 let hue_data = HueData {
-                    second: Some(second),
+                    second: second,
                     io: [io[0] as u8, io[1] as u8, io[2] as u8],
                 };
                 if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
                     self.rgb = rgb
                 } else {
                     let hue_data = HueData {
-                        second: Some(second),
+                        second: second,
                         io: [io[0] as u8, io[1] as u8, io[2] as u8],
                     };
-                    self.rgb = hue_data.max_sum_rgb_for_chroma(self.chroma).unwrap();
+                    self.rgb = hue_data.max_sum_rgb_for_chroma(self.chroma);
                 };
             } else {
                 let new_value = new_sum / F::THREE;
