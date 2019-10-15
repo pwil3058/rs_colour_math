@@ -99,11 +99,20 @@ pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HueData<F: ColourComponent> {
     // TODO: un pub HueData fields
     pub(crate) second: F,
     pub(crate) io: [u8; 3],
+}
+
+impl<F: ColourComponent> std::default::Default for HueData<F> {
+    fn default() -> Self {
+        Self {
+            second: F::ZERO,
+            io: [0, 1, 2],
+        }
+    }
 }
 
 impl<F: ColourComponent> HueData<F> {
