@@ -1,5 +1,6 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use crate::chroma::HueData;
 use crate::{chroma, rgb::RGB, ColourComponent, ColourInterface};
 
 pub struct RGBManipulator<F: ColourComponent> {
@@ -42,7 +43,12 @@ impl<F: ColourComponent> RGBManipulator<F> {
             let cur_chroma = self.chroma;
             let new_chroma = (cur_chroma - delta).max(F::ZERO);
             let (second, io) = self.hue_data.expect("chroma is non zero");
-            self.rgb = chroma::rgb_for_sum_and_chroma(second, self.sum, new_chroma, &io)
+            let hue_data = HueData {
+                second: Some(second),
+                io: [io[0] as u8, io[1] as u8, io[2] as u8],
+            };
+            self.rgb = hue_data
+                .rgb_for_sum_and_chroma(self.sum, new_chroma)
                 .expect("smaller chroma always possible");
             self.chroma = self.rgb.chroma();
             cur_chroma != self.chroma
@@ -63,10 +69,18 @@ impl<F: ColourComponent> RGBManipulator<F> {
                 self.hue_data = Some((F::ZERO, [0, 1, 2]));
                 self.hue_data.expect("we just set it to some")
             };
-            if let Some(rgb) = chroma::rgb_for_sum_and_chroma(second, self.sum, new_chroma, &io) {
+            let hue_data = HueData {
+                second: Some(second),
+                io: [io[0] as u8, io[1] as u8, io[2] as u8],
+            };
+            if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(self.sum, new_chroma) {
                 self.rgb = rgb;
             } else {
-                self.rgb = chroma::max_chroma_rgb_for_sum(second, self.sum, &io);
+                let hue_data = HueData {
+                    second: Some(second),
+                    io: [io[0] as u8, io[1] as u8, io[2] as u8],
+                };
+                self.rgb = hue_data.max_chroma_rgb_for_sum(self.sum);
             };
             self.chroma = self.rgb.chroma();
             cur_chroma != self.chroma
@@ -81,11 +95,18 @@ impl<F: ColourComponent> RGBManipulator<F> {
             let cur_sum = self.sum;
             let new_sum = (cur_sum - F::THREE * delta).max(F::ZERO);
             if let Some((second, io)) = self.hue_data {
-                if let Some(rgb) = chroma::rgb_for_sum_and_chroma(second, new_sum, self.chroma, &io)
-                {
+                let hue_data = HueData {
+                    second: Some(second),
+                    io: [io[0] as u8, io[1] as u8, io[2] as u8],
+                };
+                if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
                     self.rgb = rgb
                 } else {
-                    self.rgb = chroma::min_sum_rgb_for_chroma(second, self.chroma, &io);
+                    let hue_data = HueData {
+                        second: Some(second),
+                        io: [io[0] as u8, io[1] as u8, io[2] as u8],
+                    };
+                    self.rgb = hue_data.min_sum_rgb_for_chroma(self.chroma).unwrap();
                 };
             } else {
                 let new_value = new_sum / F::THREE;
@@ -104,11 +125,18 @@ impl<F: ColourComponent> RGBManipulator<F> {
             let cur_sum = self.sum;
             let new_sum = (cur_sum + F::THREE * delta).min(F::THREE);
             if let Some((second, io)) = self.hue_data {
-                if let Some(rgb) = chroma::rgb_for_sum_and_chroma(second, new_sum, self.chroma, &io)
-                {
+                let hue_data = HueData {
+                    second: Some(second),
+                    io: [io[0] as u8, io[1] as u8, io[2] as u8],
+                };
+                if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
                     self.rgb = rgb
                 } else {
-                    self.rgb = chroma::max_sum_rgb_for_chroma(second, self.chroma, &io);
+                    let hue_data = HueData {
+                        second: Some(second),
+                        io: [io[0] as u8, io[1] as u8, io[2] as u8],
+                    };
+                    self.rgb = hue_data.max_sum_rgb_for_chroma(self.chroma).unwrap();
                 };
             } else {
                 let new_value = new_sum / F::THREE;

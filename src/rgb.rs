@@ -75,6 +75,28 @@ impl<F: ColourComponent> RGB<F> {
             [I_BLUE, I_GREEN, I_RED]
         }
     }
+
+    pub(crate) fn indices_value_order_u8(self) -> [u8; 3] {
+        if self[I_RED] >= self[I_GREEN] {
+            if self[I_RED] >= self[I_BLUE] {
+                if self[I_GREEN] >= self[I_BLUE] {
+                    [I_RED as u8, I_GREEN as u8, I_BLUE as u8]
+                } else {
+                    [I_RED as u8, I_BLUE as u8, I_GREEN as u8]
+                }
+            } else {
+                [I_BLUE as u8, I_RED as u8, I_GREEN as u8]
+            }
+        } else if self[I_GREEN] >= self[I_BLUE] {
+            if self[I_RED] >= self[I_BLUE] {
+                [I_GREEN as u8, I_RED as u8, I_BLUE as u8]
+            } else {
+                [I_GREEN as u8, I_BLUE as u8, I_RED as u8]
+            }
+        } else {
+            [I_BLUE as u8, I_GREEN as u8, I_RED as u8]
+        }
+    }
 }
 
 impl<F: ColourComponent + std::fmt::Debug + std::iter::Sum> FloatApproxEq<F> for RGB<F> {
