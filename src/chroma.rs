@@ -1,4 +1,5 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::convert::TryFrom;
 
 use normalised_angles::*;
 
@@ -106,6 +107,60 @@ pub struct HueData<F: ColourComponent> {
     pub(crate) io: [u8; 3],
 }
 
+impl<F: ColourComponent> TryFrom<(F, F)> for HueData<F> {
+    type Error = &'static str;
+
+    fn try_from(xy: (F, F)) -> Result<Self, Self::Error> {
+        if xy.1 == F::ZERO {
+            if xy.0 > F::ZERO {
+                Ok(Self {
+                    second: F::ZERO,
+                    io: [0, 1, 2],
+                }) // red
+            } else if xy.0 < F::ZERO {
+                Ok(Self {
+                    second: F::ONE,
+                    io: [1, 2, 0],
+                }) // cyan
+            } else {
+                Err("Greys have no hue and, ergo, can't generate HueData")
+            }
+        } else {
+            let x_sqrt_3 = xy.0.abs() * F::SQRT_3;
+            if x_sqrt_3 > xy.1.abs() {
+                let divisor = xy.0.abs() * F::SQRT_3 + xy.1.abs();
+                let x = xy.0 * F::SQRT_3 / divisor;
+                if xy.0 >= F::ZERO {
+                    Ok(Self {
+                        second: (F::ONE - x) * F::TWO,
+                        io: if xy.1 > F::ZERO { [0, 1, 2] } else { [0, 2, 1] },
+                    })
+                } else {
+                    Ok(Self {
+                        second: -(x * F::TWO + F::ONE),
+                        io: if xy.1 > F::ZERO { [1, 2, 0] } else { [2, 1, 0] },
+                    })
+                }
+            } else if x_sqrt_3 < xy.1.abs() {
+                Ok(Self {
+                    second: F::HALF + xy.0 * F::SIN_120 / xy.1.abs(),
+                    io: if xy.1 > F::ZERO { [1, 0, 2] } else { [2, 0, 1] },
+                })
+            } else if xy.0 > F::ZERO {
+                Ok(Self {
+                    second: F::ONE,
+                    io: if xy.1 > F::ZERO { [0, 1, 2] } else { [0, 2, 1] },
+                }) // yellow and magenta
+            } else {
+                Ok(Self {
+                    second: F::ZERO,
+                    io: if xy.1 > F::ZERO { [1, 0, 2] } else { [2, 0, 1] },
+                }) // green and blue
+            }
+        }
+    }
+}
+
 impl<F: ColourComponent> std::default::Default for HueData<F> {
     fn default() -> Self {
         Self {
@@ -116,6 +171,10 @@ impl<F: ColourComponent> std::default::Default for HueData<F> {
 }
 
 impl<F: ColourComponent> HueData<F> {
+    pub fn chroma_correction(&self) -> F {
+        calc_chroma_correction(self.second)
+    }
+
     pub fn max_chroma_rgb(&self) -> RGB<F> {
         let mut array = [F::ZERO, F::ZERO, F::ZERO];
         array[self.io[0] as usize] = F::ONE;

@@ -1,7 +1,7 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::convert::TryFrom;
 
-use crate::chroma::HueData;
-use crate::{chroma, rgb::RGB, ColourComponent, ColourInterface};
+use crate::{chroma::HueData, rgb::RGB, ColourComponent, ColourInterface};
 
 pub struct RGBManipulator<F: ColourComponent> {
     rgb: RGB<F>,
@@ -24,14 +24,12 @@ impl<F: ColourComponent> RGBManipulator<F> {
         self.rgb = rgb;
         self.sum = rgb.sum();
         let xy = rgb.xy();
-        if xy.0 == F::ZERO && xy.1 == F::ZERO {
+        if let Ok(hue_data) = HueData::try_from(xy) {
+            self.chroma = (xy.0.hypot(xy.1) * hue_data.chroma_correction()).min(F::ONE);
+            self.hue_data = Some(hue_data);
+        } else {
             self.chroma = F::ZERO;
             self.hue_data = None;
-        } else {
-            let second = chroma::calc_other_from_xy_alt(xy);
-            let io = rgb.indices_value_order_u8();
-            self.chroma = (xy.0.hypot(xy.1) * chroma::calc_chroma_correction(second)).min(F::ONE);
-            self.hue_data = Some(HueData { second, io });
         }
     }
 
