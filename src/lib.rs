@@ -71,10 +71,10 @@ pub const I_BLUE: usize = 2;
 pub trait ColourInterface<F: ColourComponent> {
     fn rgb(&self) -> [F; 3];
 
-    fn hue(&self) -> Hue<F>;
+    fn hue(&self) -> Option<Hue<F>>;
 
     fn is_grey(&self) -> bool {
-        self.hue().is_grey()
+        self.hue().is_none()
     }
 
     fn chroma(&self) -> F;
@@ -90,7 +90,11 @@ pub trait ColourInterface<F: ColourComponent> {
     fn monotone_rgb(&self) -> RGB<F>;
 
     fn max_chroma_rgb(&self) -> RGB<F> {
-        self.hue().max_chroma_rgb()
+        if let Some(hue) = self.hue() {
+            hue.max_chroma_rgb()
+        } else {
+            self.rgb().into()
+        }
     }
 
     fn warmth_rgb(&self) -> RGB<F>;
@@ -99,7 +103,7 @@ pub trait ColourInterface<F: ColourComponent> {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
 pub struct Colour<F: ColourComponent> {
     rgb: RGB<F>,
-    hue: Hue<F>,
+    hue: Option<Hue<F>>,
 }
 
 impl<F: ColourComponent> PartialEq for Colour<F> {
@@ -114,30 +118,35 @@ impl<F: ColourComponent> PartialOrd for Colour<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.rgb == other.rgb {
             Some(Ordering::Equal)
-        } else if self.hue.is_grey() {
-            if other.hue.is_grey() {
-                self.rgb.value().partial_cmp(&other.rgb.value())
+        } else if let Some(hue) = self.hue {
+            if let Some(other_hue) = other.hue {
+                // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
+                match hue.partial_cmp(&other_hue) {
+                    Some(Ordering::Less) => Some(Ordering::Less),
+                    Some(Ordering::Greater) => Some(Ordering::Greater),
+                    Some(Ordering::Equal) => self.rgb.value().partial_cmp(&other.rgb.value()),
+                    None => None,
+                }
             } else {
-                Some(Ordering::Less)
+                Some(Ordering::Greater)
             }
-        } else if other.hue.is_grey() {
-            Some(Ordering::Greater)
+        } else if other.hue.is_some() {
+            Some(Ordering::Less)
         } else {
-            // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
-            self.hue
-                .angle()
-                .radians()
-                .partial_cmp(&other.hue.angle().radians())
+            self.rgb.value().partial_cmp(&other.rgb.value())
         }
     }
 }
 
 impl<F: ColourComponent> From<RGB<F>> for Colour<F> {
     fn from(rgb: RGB<F>) -> Self {
-        Self {
-            rgb,
-            hue: rgb.into(),
-        }
+        use std::convert::TryInto;
+        let hue: Option<Hue<F>> = if let Ok(hue) = rgb.try_into() {
+            Some(hue)
+        } else {
+            None
+        };
+        Self { rgb, hue }
     }
 }
 
@@ -146,7 +155,7 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
         self.rgb.rgb()
     }
 
-    fn hue(&self) -> Hue<F> {
+    fn hue(&self) -> Option<Hue<F>> {
         self.hue
     }
 

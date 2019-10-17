@@ -1,6 +1,9 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use std::{convert::From, ops::Index};
+use std::{
+    convert::{From, TryFrom},
+    ops::Index,
+};
 
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
@@ -135,8 +138,13 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         self.0
     }
 
-    fn hue(&self) -> Hue<F> {
-        (*self).into()
+    fn hue(&self) -> Option<Hue<F>> {
+        use std::convert::TryInto;
+        if let Ok(hue) = (*self).try_into() {
+            Some(hue)
+        } else {
+            None
+        }
     }
 
     fn is_grey(&self) -> bool {
