@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 
 use normalised_angles::*;
 
-use crate::{rgb::RGB, ColourComponent};
+use crate::{rgb::RGB, ColourAngle, ColourComponent};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
@@ -109,38 +109,37 @@ pub struct HueData<F: ColourComponent> {
 
 impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
     fn from(angle: Degrees<F>) -> Self {
-        let degrees = angle.degrees();
-        let (second, io) = if degrees == F::RED_ANGLE {
+        let (second, io) = if angle == Degrees::RED_ANGLE {
             (F::ZERO, [0, 1, 2])
-        } else if degrees == F::GREEN_ANGLE {
+        } else if angle == Degrees::GREEN_ANGLE {
             (F::ZERO, [1, 2, 0])
-        } else if degrees == F::BLUE_ANGLE {
+        } else if angle == Degrees::BLUE_ANGLE {
             (F::ZERO, [2, 0, 1])
-        } else if degrees == F::CYAN_ANGLE || degrees == -F::CYAN_ANGLE {
+        } else if angle == Degrees::CYAN_ANGLE || angle == -Degrees::CYAN_ANGLE {
             (F::ONE, [2, 1, 0])
-        } else if degrees == F::MAGENTA_ANGLE {
+        } else if angle == Degrees::MAGENTA_ANGLE {
             (F::ONE, [0, 2, 1])
-        } else if degrees == F::YELLOW_ANGLE {
+        } else if angle == Degrees::YELLOW_ANGLE {
             (F::ONE, [1, 0, 2])
         } else {
-            fn f<F: ColourComponent>(angle: F) -> F {
+            fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
                 // Careful of float not fully representing real numbers
-                (angle.sin() / (F::GREEN_ANGLE - angle).sin()).min(F::ONE)
+                (angle.sin() / (Degrees::GREEN_ANGLE - angle).sin()).min(F::ONE)
             };
-            if degrees >= F::ZERO {
-                if degrees <= F::YELLOW_ANGLE {
-                    (f(degrees), [0, 1, 2])
-                } else if degrees <= F::GREEN_ANGLE {
-                    (f(F::GREEN_ANGLE - degrees), [1, 0, 2])
+            if angle >= Degrees::DEG_0 {
+                if angle <= Degrees::YELLOW_ANGLE {
+                    (f(angle), [0, 1, 2])
+                } else if angle <= Degrees::GREEN_ANGLE {
+                    (f(Degrees::GREEN_ANGLE - angle), [1, 0, 2])
                 } else {
-                    (f(degrees - F::GREEN_ANGLE), [1, 2, 0])
+                    (f(angle - Degrees::GREEN_ANGLE), [1, 2, 0])
                 }
-            } else if degrees >= F::MAGENTA_ANGLE {
-                (f(-degrees), [0, 2, 1])
-            } else if degrees >= F::BLUE_ANGLE {
-                (f(F::GREEN_ANGLE + degrees), [2, 0, 1])
+            } else if angle >= Degrees::MAGENTA_ANGLE {
+                (f(-angle), [0, 2, 1])
+            } else if angle >= Degrees::BLUE_ANGLE {
+                (f(Degrees::GREEN_ANGLE + angle), [2, 0, 1])
             } else {
-                (f(-degrees - F::GREEN_ANGLE), [2, 1, 0])
+                (f(-angle - Degrees::GREEN_ANGLE), [2, 1, 0])
             }
         };
         Self { second, io }
@@ -448,6 +447,54 @@ mod test {
             let other = super::calc_other_from_angle(hue_angle.abs());
             assert!(other.is_proportion(), "other = {}", other);
             assert_approx_eq!(other, *expected);
+        }
+    }
+
+    #[test]
+    fn hue_data_from_angle() {
+        for (angle, expected, io) in &[
+            (f64::RED_ANGLE, 0.0, [0_u8, 1, 2]),
+            (f64::GREEN_ANGLE, 0.0, [1, 2, 0]),
+            (f64::BLUE_ANGLE, 0.0, [2, 0, 1]),
+            (f64::CYAN_ANGLE, 1.0, [2, 1, 0]),
+            (f64::MAGENTA_ANGLE, 1.0, [0, 2, 1]),
+            (f64::YELLOW_ANGLE, 1.0, [1, 0, 2]),
+            (-180.0, 1.0, [2, 1, 0]),
+            (-165.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 1, 0]),
+            (-150.0, 0.5, [2, 1, 0]),
+            (-135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [2, 1, 0]),
+            (-120.0, 0.0, [2, 0, 1]),
+            (-105.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [2, 0, 1]),
+            (-90.0, 0.5, [2, 0, 1]),
+            (-75.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 0, 1]),
+            (-60.0, 1.0, [0, 2, 1]),
+            (-45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 2, 1]),
+            (-30.0, 0.5, [0, 2, 1]),
+            (-15.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [0, 2, 1]),
+            (0.0, 0.0, [0, 1, 2]),
+            (15.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [0, 1, 2]),
+            (30.0, 0.5, [0, 1, 2]),
+            (45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 1, 2]),
+            (60.0, 1.0, [1, 0, 2]),
+            (75.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 0, 2]),
+            (90.0, 0.5, [1, 0, 2]),
+            (105.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [1, 0, 2]),
+            (120.0, 0.0, [1, 2, 0]),
+            (135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [1, 2, 0]),
+            (150.0, 0.5, [1, 2, 0]),
+            (165.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 2, 0]),
+            (180.0, 1.0, [2, 1, 0]),
+        ] {
+            let hue_angle = Degrees::<f64>::from(*angle);
+            let hue_data: HueData<f64> = hue_angle.into();
+            assert!(
+                hue_data.second.is_proportion(),
+                "angle = {:?} hue_date = {:?}",
+                hue_angle,
+                hue_data
+            );
+            assert_approx_eq!(hue_data.second, *expected);
+            assert_eq!(hue_data.io, *io, "angle = {:?}", hue_angle);
         }
     }
 
