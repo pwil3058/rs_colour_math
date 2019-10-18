@@ -6,21 +6,21 @@ use normalised_angles::*;
 use crate::{rgb::RGB, ColourAngle, ColourComponent};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
-    if [F::RED_ANGLE, F::GREEN_ANGLE].contains(&abs_angle.degrees()) {
+    if [Degrees::RED_ANGLE, Degrees::GREEN_ANGLE].contains(&abs_angle) {
         F::ZERO
-    } else if [F::YELLOW_ANGLE, F::CYAN_ANGLE].contains(&abs_angle.degrees()) {
+    } else if [Degrees::YELLOW_ANGLE, Degrees::CYAN_ANGLE].contains(&abs_angle) {
         F::ONE
     } else {
         fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
             // Careful of float not fully representing real numbers
-            (angle.sin() / (Degrees::from(F::GREEN_ANGLE) - angle).sin()).min(F::ONE)
+            (angle.sin() / (Degrees::GREEN_ANGLE - angle).sin()).min(F::ONE)
         };
-        if abs_angle.degrees() <= F::YELLOW_ANGLE {
+        if abs_angle <= Degrees::YELLOW_ANGLE {
             f(abs_angle)
-        } else if abs_angle.degrees() <= F::GREEN_ANGLE {
-            f(Degrees::from(F::GREEN_ANGLE) - abs_angle)
+        } else if abs_angle <= Degrees::GREEN_ANGLE {
+            f(Degrees::GREEN_ANGLE - abs_angle)
         } else {
-            f(abs_angle - Degrees::from(F::GREEN_ANGLE))
+            f(abs_angle - Degrees::GREEN_ANGLE)
         }
     }
 }
@@ -412,12 +412,6 @@ mod test {
     #[test]
     fn calc_other_from_angle_from_angle() {
         for (angle, expected) in &[
-            (f64::RED_ANGLE, 0.0),
-            (f64::GREEN_ANGLE, 0.0),
-            (f64::BLUE_ANGLE, 0.0),
-            (f64::CYAN_ANGLE, 1.0),
-            (f64::MAGENTA_ANGLE, 1.0),
-            (f64::YELLOW_ANGLE, 1.0),
             (-180.0, 1.0),
             (-165.0, 2.0 / (f64::SQRT_3 + 1.0)),
             (-150.0, 0.5),
@@ -442,6 +436,7 @@ mod test {
             (135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
             (150.0, 0.5),
             (165.0, 2.0 / (f64::SQRT_3 + 1.0)),
+            (180.0, 1.0),
         ] {
             let hue_angle = Degrees::<f64>::from(*angle);
             let other = super::calc_other_from_angle(hue_angle.abs());
@@ -453,12 +448,6 @@ mod test {
     #[test]
     fn hue_data_from_angle() {
         for (angle, expected, io) in &[
-            (f64::RED_ANGLE, 0.0, [0_u8, 1, 2]),
-            (f64::GREEN_ANGLE, 0.0, [1, 2, 0]),
-            (f64::BLUE_ANGLE, 0.0, [2, 0, 1]),
-            (f64::CYAN_ANGLE, 1.0, [2, 1, 0]),
-            (f64::MAGENTA_ANGLE, 1.0, [0, 2, 1]),
-            (f64::YELLOW_ANGLE, 1.0, [1, 0, 2]),
             (-180.0, 1.0, [2, 1, 0]),
             (-165.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 1, 0]),
             (-150.0, 0.5, [2, 1, 0]),
@@ -557,12 +546,6 @@ mod test {
     #[test]
     fn calc_other_from_xy_from_angle() {
         for (angle, expected) in &[
-            (f64::RED_ANGLE, 0.0),
-            (f64::GREEN_ANGLE, 0.0),
-            (f64::BLUE_ANGLE, 0.0),
-            (f64::CYAN_ANGLE, 1.0),
-            (f64::MAGENTA_ANGLE, 1.0),
-            (f64::YELLOW_ANGLE, 1.0),
             (-180.0, 1.0),
             (-165.0, 2.0 / (f64::SQRT_3 + 1.0)),
             (-150.0, 0.5),
@@ -587,6 +570,7 @@ mod test {
             (135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0)),
             (150.0, 0.5),
             (165.0, 2.0 / (f64::SQRT_3 + 1.0)),
+            (180.0, 1.0),
         ] {
             let hue_angle = Degrees::<f64>::from(*angle);
             let other = super::calc_other_from_xy(hue_angle.xy());
@@ -598,12 +582,6 @@ mod test {
     #[test]
     fn calc_other_from_xy_from_comparison() {
         for (angle, _expected) in &[
-            (f64::RED_ANGLE, 0.0),
-            (f64::GREEN_ANGLE, 0.0),
-            (f64::BLUE_ANGLE, 0.0),
-            (f64::CYAN_ANGLE, 1.0),
-            (f64::MAGENTA_ANGLE, 1.0),
-            (f64::YELLOW_ANGLE, 1.0),
             (-180.0, 1.0),
             (-165.0, 2.0 / (f64::SQRT_3 + 1.0)),
             (-150.0, 0.5),

@@ -43,14 +43,6 @@ pub trait ColourComponent: FloatPlus + DegreesConst + Debug {
     const SIN_120: Self;
     const COS_120: Self;
 
-    const RED_ANGLE: Self;
-    const GREEN_ANGLE: Self;
-    const BLUE_ANGLE: Self;
-
-    const CYAN_ANGLE: Self;
-    const YELLOW_ANGLE: Self;
-    const MAGENTA_ANGLE: Self;
-
     fn is_proportion(self) -> bool {
         self <= Self::ONE && self >= Self::ZERO
     }
@@ -60,28 +52,12 @@ impl ColourComponent for f32 {
     const FOUR: Self = 3.0;
     const SIN_120: Self = 0.86602_5404;
     const COS_120: Self = -0.5;
-
-    const RED_ANGLE: Self = 0.0;
-    const GREEN_ANGLE: Self = 120.0;
-    const BLUE_ANGLE: Self = -120.0;
-
-    const CYAN_ANGLE: Self = 180.0;
-    const YELLOW_ANGLE: Self = 60.0;
-    const MAGENTA_ANGLE: Self = -60.0;
 }
 
 impl ColourComponent for f64 {
     const FOUR: Self = 3.0;
     const SIN_120: Self = 0.86602_54037_84439;
     const COS_120: Self = -0.5;
-
-    const RED_ANGLE: Self = 0.0;
-    const GREEN_ANGLE: Self = 120.0;
-    const BLUE_ANGLE: Self = -120.0;
-
-    const CYAN_ANGLE: Self = 180.0;
-    const YELLOW_ANGLE: Self = 60.0;
-    const MAGENTA_ANGLE: Self = -60.0;
 }
 
 pub const I_RED: usize = 0;
