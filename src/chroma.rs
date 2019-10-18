@@ -107,6 +107,46 @@ pub struct HueData<F: ColourComponent> {
     pub(crate) io: [u8; 3],
 }
 
+impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
+    fn from(angle: Degrees<F>) -> Self {
+        let degrees = angle.degrees();
+        let (second, io) = if degrees == F::RED_ANGLE {
+            (F::ZERO, [0, 1, 2])
+        } else if degrees == F::GREEN_ANGLE {
+            (F::ZERO, [1, 2, 0])
+        } else if degrees == F::BLUE_ANGLE {
+            (F::ZERO, [2, 0, 1])
+        } else if degrees == F::CYAN_ANGLE || degrees == -F::CYAN_ANGLE {
+            (F::ONE, [2, 1, 0])
+        } else if degrees == F::MAGENTA_ANGLE {
+            (F::ONE, [0, 2, 1])
+        } else if degrees == F::YELLOW_ANGLE {
+            (F::ONE, [1, 0, 2])
+        } else {
+            fn f<F: ColourComponent>(angle: F) -> F {
+                // Careful of float not fully representing real numbers
+                (angle.sin() / (F::GREEN_ANGLE - angle).sin()).min(F::ONE)
+            };
+            if degrees >= F::ZERO {
+                if degrees <= F::YELLOW_ANGLE {
+                    (f(degrees), [0, 1, 2])
+                } else if degrees <= F::GREEN_ANGLE {
+                    (f(F::GREEN_ANGLE - degrees), [1, 0, 2])
+                } else {
+                    (f(degrees - F::GREEN_ANGLE), [1, 2, 0])
+                }
+            } else if degrees >= F::MAGENTA_ANGLE {
+                (f(-degrees), [0, 2, 1])
+            } else if degrees >= F::BLUE_ANGLE {
+                (f(F::GREEN_ANGLE + degrees), [2, 0, 1])
+            } else {
+                (f(-degrees - F::GREEN_ANGLE), [2, 1, 0])
+            }
+        };
+        Self { second, io }
+    }
+}
+
 impl<F: ColourComponent> TryFrom<(F, F)> for HueData<F> {
     type Error = &'static str;
 
