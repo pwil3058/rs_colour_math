@@ -4,6 +4,7 @@ use std::convert::TryFrom;
 use normalised_angles::*;
 
 use crate::{rgb::RGB, ColourAngle, ColourComponent};
+use std::path::Prefix::DeviceNS;
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if [Degrees::RED_ANGLE, Degrees::GREEN_ANGLE].contains(&abs_angle) {
@@ -210,6 +211,38 @@ impl<F: ColourComponent> std::default::Default for HueData<F> {
 }
 
 impl<F: ColourComponent> HueData<F> {
+    pub fn hue_angle(&self) -> Degrees<F> {
+        if self.second == F::ZERO {
+            match self.io[0] {
+                0 => Degrees::RED_ANGLE,
+                1 => Degrees::GREEN_ANGLE,
+                2 => Degrees::BLUE_ANGLE,
+                _ => panic!("illegal colour component index: {}", self.io[0]),
+            }
+        } else if self.second == F::ONE {
+            match self.io[2] {
+                0 => Degrees::CYAN_ANGLE,
+                1 => Degrees::MAGENTA_ANGLE,
+                2 => Degrees::YELLOW_ANGLE,
+                _ => panic!("illegal colour component index: {}", self.io[0]),
+            }
+        } else {
+            let sin = F::SQRT_3 * self.second
+                / F::TWO
+                / (F::ONE - self.second + self.second.powi(2)).sqrt();
+            let angle = Degrees::asin(sin);
+            match self.io {
+                [0, 1, 2] => angle,
+                [1, 0, 2] => Degrees::GREEN_ANGLE - angle,
+                [1, 2, 0] => Degrees::GREEN_ANGLE + angle,
+                [0, 2, 1] => -angle,
+                [2, 0, 1] => Degrees::BLUE_ANGLE + angle,
+                [2, 1, 0] => Degrees::BLUE_ANGLE - angle,
+                _ => panic!("illegal colour component indices: {:?}", self.io),
+            }
+        }
+    }
+
     pub fn chroma_correction(&self) -> F {
         calc_chroma_correction(self.second)
     }
@@ -484,6 +517,7 @@ mod test {
             );
             assert_approx_eq!(hue_data.second, *expected);
             assert_eq!(hue_data.io, *io, "angle = {:?}", hue_angle);
+            assert_approx_eq!(hue_data.hue_angle(), hue_angle, 0.000000000000001);
         }
     }
 
