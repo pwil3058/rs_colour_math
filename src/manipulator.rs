@@ -2,6 +2,7 @@
 use std::convert::TryFrom;
 
 use crate::{chroma::HueData, rgb::RGB, ColourComponent, ColourInterface};
+use normalised_angles::Degrees;
 
 pub struct RGBManipulator<F: ColourComponent> {
     rgb: RGB<F>,
@@ -116,6 +117,30 @@ impl<F: ColourComponent> RGBManipulator<F> {
             cur_sum != self.sum
         }
     }
+
+    pub fn rotate(&mut self, angle: Degrees<F>) -> bool {
+        if let Some(hue_data) = self.hue_data {
+            let hue_angle = hue_data.hue_angle();
+            let new_angle = hue_angle + angle;
+            let new_hue_data = HueData::<F>::from(new_angle);
+            if hue_data == new_hue_data {
+                false
+            } else {
+                if let Some(rgb) = new_hue_data.rgb_for_sum_and_chroma(self.sum, self.chroma) {
+                    self.rgb = rgb
+                } else {
+                    self.rgb = new_hue_data.max_sum_rgb_for_chroma(self.chroma);
+                };
+                self.sum = self.rgb.sum();
+                let xy = self.rgb.xy();
+                self.chroma = (xy.0.hypot(xy.1) * new_hue_data.chroma_correction()).min(F::ONE);
+                self.hue_data = Some(new_hue_data);
+                true
+            }
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]
@@ -198,5 +223,75 @@ mod test {
         assert_approx_eq!(manipulator.rgb, [0.5, 0.5, 0.0].into());
         while manipulator.incr_value(0.1) {}
         assert_approx_eq!(manipulator.rgb, [1.0, 1.0, 0.5].into());
+    }
+
+    #[test]
+    fn rotate_rgb() {
+        let mut rgb_manipulator = super::RGBManipulator::<f64>::new();
+        for delta in [
+            -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+        ]
+        .iter()
+        {
+            assert!(!rgb_manipulator.rotate((*delta).into()));
+        }
+        // pure colours
+        for rgb in crate::rgb::RGB::<f64>::PRIMARIES
+            .iter()
+            .chain(crate::rgb::RGB::SECONDARIES.iter())
+        {
+            rgb_manipulator.set_rgb(*rgb);
+            for delta in [
+                -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+            ]
+            .iter()
+            {
+                let cur_chroma = rgb_manipulator.chroma;
+                let cur_angle = rgb_manipulator.hue_data.unwrap().hue_angle();
+                assert!(rgb_manipulator.rotate((*delta).into()));
+                assert_approx_eq!(cur_chroma, rgb_manipulator.chroma);
+                let expected_angle = cur_angle + (*delta).into();
+                assert_approx_eq!(
+                    expected_angle,
+                    rgb_manipulator.hue_data.unwrap().hue_angle(),
+                    0.000000000000001
+                );
+            }
+        }
+        // shades and tints
+        for array in [
+            [0.5_f64, 0.0, 0.0],
+            [0.0, 0.5, 0.0],
+            [0.0, 0.0, 0.5],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.0, 0.5],
+            [0.0, 0.5, 0.5],
+            [1.0, 0.5, 0.5],
+            [0.5, 1.0, 0.5],
+            [0.5, 0.5, 1.0],
+            [1.0, 1.0, 0.5],
+            [1.0, 0.5, 1.0],
+            [0.5, 1.0, 1.0],
+        ]
+        .iter()
+        {
+            rgb_manipulator.set_rgb((*array).into());
+            for delta in [
+                -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+            ]
+            .iter()
+            {
+                let cur_chroma = rgb_manipulator.chroma;
+                let cur_angle = rgb_manipulator.hue_data.unwrap().hue_angle();
+                assert!(rgb_manipulator.rotate((*delta).into()));
+                assert_approx_eq!(cur_chroma, rgb_manipulator.chroma, 0.000000000000001);
+                let expected_angle = cur_angle + (*delta).into();
+                assert_approx_eq!(
+                    expected_angle,
+                    rgb_manipulator.hue_data.unwrap().hue_angle(),
+                    0.000000000000001
+                );
+            }
+        }
     }
 }
