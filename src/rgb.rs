@@ -252,12 +252,40 @@ impl From<std::num::ParseIntError> for RGBError {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB16([u16; 3]);
 
+impl Index<usize> for RGB16 {
+    type Output = u16;
+
+    fn index(&self, index: usize) -> &u16 {
+        &self.0[index]
+    }
+}
+
+impl RGB16 {
+    pub const RED: Self = Self([0xFFFF, 0x0000, 0x0000]);
+    pub const GREEN: Self = Self([0x0000, 0xFFFF, 0x0000]);
+    pub const BLUE: Self = Self([0x0000, 0x0000, 0xFFFF]);
+
+    pub const CYAN: Self = Self([0x0000, 0xFFFF, 0xFFFF]);
+    pub const MAGENTA: Self = Self([0xFFFF, 0x0000, 0xFFFF]);
+    pub const YELLOW: Self = Self([0xFFFF, 0xFFFF, 0x0000]);
+
+    pub const WHITE: Self = Self([0xFFFF, 0xFFFF, 0xFFFF]);
+    pub const BLACK: Self = Self([0x0000, 0x0000, 0x0000]);
+
+    pub const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
+    pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
+    pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+}
+
 lazy_static! {
     pub static ref RGB16_RE: Regex = Regex::new(
         r#"RGB(16)?\((red=)?0x(?P<red>[a-fA-F0-9]+), (green=)?0x(?P<green>[a-fA-F0-9]+), (blue=)?0x(?P<blue>[a-fA-F0-9]+)\)"#
     ).unwrap();
     pub static ref RGB16_BASE_10_RE: Regex = Regex::new(
         r#"RGB(16)?\((red=)?(?P<red>\d+), (green=)?(?P<green>\d+), (blue=)?(?P<blue>\d+)\)"#
+    ).unwrap();
+    pub static ref RGB_PANGO_RE: Regex = Regex::new(
+        r#"#(?P<red>[a-fA-F0-9][a-fA-F0-9])(?P<green>[a-fA-F0-9][a-fA-F0-9])(?P<blue>[a-fA-F0-9][a-fA-F0-9])"#
     ).unwrap();
 }
 
@@ -281,6 +309,18 @@ impl FromStr for RGB16 {
     }
 }
 
+impl From<[u16; 3]> for RGB16 {
+    fn from(array: [u16; 3]) -> Self {
+        Self(array)
+    }
+}
+
+impl From<RGB16> for [u16; 3] {
+    fn from(rgb: RGB16) -> Self {
+        rgb.0
+    }
+}
+
 impl<F: ColourComponent> From<RGB<F>> for RGB16 {
     fn from(rgb: RGB<F>) -> Self {
         let scale: F = F::from_u16(0xFFFF).unwrap();
@@ -297,6 +337,81 @@ impl<F: ColourComponent> From<RGB16> for RGB<F> {
         let red: F = F::from_u16(rgb.0[0]).unwrap() / scale;
         let green: F = F::from_u16(rgb.0[1]).unwrap() / scale;
         let blue: F = F::from_u16(rgb.0[2]).unwrap() / scale;
+        Self([red, green, blue])
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RGB8([u8; 3]);
+
+impl Index<usize> for RGB8 {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &u8 {
+        &self.0[index]
+    }
+}
+
+impl RGB8 {
+    pub const RED: Self = Self([0xFF, 0x00, 0x00]);
+    pub const GREEN: Self = Self([0x00, 0xFF, 0x00]);
+    pub const BLUE: Self = Self([0x00, 0x00, 0xFF]);
+
+    pub const CYAN: Self = Self([0x00, 0xFF, 0xFF]);
+    pub const MAGENTA: Self = Self([0xFF, 0x00, 0xFF]);
+    pub const YELLOW: Self = Self([0xFF, 0xFF, 0x00]);
+
+    pub const WHITE: Self = Self([0xFF, 0xFF, 0xFF]);
+    pub const BLACK: Self = Self([0x00, 0x00, 0x00]);
+
+    pub const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
+    pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
+    pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+}
+
+impl FromStr for RGB8 {
+    type Err = RGBError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if let Some(captures) = RGB_PANGO_RE.captures(string) {
+            let red = u8::from_str_radix(captures.name("red").unwrap().as_str(), 16)?;
+            let green = u8::from_str_radix(captures.name("green").unwrap().as_str(), 16)?;
+            let blue = u8::from_str_radix(captures.name("blue").unwrap().as_str(), 16)?;
+            Ok(RGB8([red, green, blue]))
+        } else {
+            Err(RGBError::MalformedText(string.to_string()))
+        }
+    }
+}
+
+impl From<[u8; 3]> for RGB8 {
+    fn from(array: [u8; 3]) -> Self {
+        Self(array)
+    }
+}
+
+impl From<RGB8> for [u8; 3] {
+    fn from(rgb: RGB8) -> Self {
+        rgb.0
+    }
+}
+
+impl<F: ColourComponent> From<RGB<F>> for RGB8 {
+    fn from(rgb: RGB<F>) -> Self {
+        let scale: F = F::from_u8(0xFF).unwrap();
+        let red: u8 = (rgb.0[0] * scale).round().to_u8().unwrap();
+        let green: u8 = (rgb.0[1] * scale).round().to_u8().unwrap();
+        let blue: u8 = (rgb.0[2] * scale).round().to_u8().unwrap();
+        Self([red, green, blue])
+    }
+}
+
+impl<F: ColourComponent> From<RGB8> for RGB<F> {
+    fn from(rgb: RGB8) -> Self {
+        let scale: F = F::from_u8(0xFF).unwrap();
+        let red: F = F::from_u8(rgb.0[0]).unwrap() / scale;
+        let green: F = F::from_u8(rgb.0[1]).unwrap() / scale;
+        let blue: F = F::from_u8(rgb.0[2]).unwrap() / scale;
         Self([red, green, blue])
     }
 }
@@ -328,6 +443,20 @@ mod tests {
         assert_eq!(
             RGB16::from_str("RGB16(128, 45670, 600)").unwrap(),
             RGB16([128, 45670, 600])
+        );
+    }
+
+    #[test]
+    fn rgb8_to_and_from_rgb() {
+        assert_eq!(RGB8([0xff, 0xff, 0x0]), RGB::<f64>::YELLOW.into());
+        assert_eq!(RGB::<f32>::CYAN, RGB8([0, 0xff, 0xff]).into());
+    }
+
+    #[test]
+    fn rgb8_from_str() {
+        assert_eq!(
+            RGB8::from_str("#F8A0F6)").unwrap(),
+            RGB8([0xF8, 0xA0, 0xF6])
         );
     }
 
