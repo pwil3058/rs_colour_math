@@ -3,7 +3,10 @@
 use std::{
     convert::{From, TryFrom},
     ops::Index,
+    str::FromStr,
 };
+
+use regex::Regex;
 
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
@@ -30,11 +33,6 @@ impl<F: ColourComponent> RGB<F> {
 
     pub fn raw(self) -> [F; 3] {
         self.0
-    }
-
-    pub fn rgba(self, alpha: F) -> [F; 4] {
-        debug_assert!(alpha.is_proportion());
-        [self.0[I_RED], self.0[I_GREEN], self.0[I_BLUE], alpha]
     }
 
     pub(crate) fn sum(self) -> F {
@@ -138,6 +136,11 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         self.0
     }
 
+    fn rgba(&self, alpha: F) -> [F; 4] {
+        debug_assert!(alpha.is_proportion());
+        [self.0[I_RED], self.0[I_GREEN], self.0[I_BLUE], alpha]
+    }
+
     fn hue(&self) -> Option<Hue<F>> {
         use std::convert::TryInto;
         if let Ok(hue) = (*self).try_into() {
@@ -225,9 +228,108 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 }
 
+#[derive(Debug)]
+pub enum RGBError {
+    MalformedText(String),
+}
+
+impl std::fmt::Display for RGBError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RGBError::MalformedText(string) => write!(f, "Malformed text: {}", string),
+        }
+    }
+}
+
+impl std::error::Error for RGBError {}
+
+impl From<std::num::ParseIntError> for RGBError {
+    fn from(error: std::num::ParseIntError) -> Self {
+        RGBError::MalformedText(format!("{}", error))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RGB16([u16; 3]);
+
+lazy_static! {
+    pub static ref RGB16_RE: Regex = Regex::new(
+        r#"RGB(16)?\((red=)?0x(?P<red>[a-fA-F0-9]+), (green=)?0x(?P<green>[a-fA-F0-9]+), (blue=)?0x(?P<blue>[a-fA-F0-9]+)\)"#
+    ).unwrap();
+    pub static ref RGB16_BASE_10_RE: Regex = Regex::new(
+        r#"RGB(16)?\((red=)?(?P<red>\d+), (green=)?(?P<green>\d+), (blue=)?(?P<blue>\d+)\)"#
+    ).unwrap();
+}
+
+impl FromStr for RGB16 {
+    type Err = RGBError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if let Some(captures) = RGB16_RE.captures(string) {
+            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 16)?;
+            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 16)?;
+            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 16)?;
+            Ok(RGB16([red, green, blue]))
+        } else if let Some(captures) = RGB16_BASE_10_RE.captures(string) {
+            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 10)?;
+            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 10)?;
+            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 10)?;
+            Ok(RGB16([red, green, blue]))
+        } else {
+            Err(RGBError::MalformedText(string.to_string()))
+        }
+    }
+}
+
+impl<F: ColourComponent> From<RGB<F>> for RGB16 {
+    fn from(rgb: RGB<F>) -> Self {
+        let scale: F = F::from_u16(0xFFFF).unwrap();
+        let red: u16 = (rgb.0[0] * scale).round().to_u16().unwrap();
+        let green: u16 = (rgb.0[1] * scale).round().to_u16().unwrap();
+        let blue: u16 = (rgb.0[2] * scale).round().to_u16().unwrap();
+        Self([red, green, blue])
+    }
+}
+
+impl<F: ColourComponent> From<RGB16> for RGB<F> {
+    fn from(rgb: RGB16) -> Self {
+        let scale: F = F::from_u16(0xFFFF).unwrap();
+        let red: F = F::from_u16(rgb.0[0]).unwrap() / scale;
+        let green: F = F::from_u16(rgb.0[1]).unwrap() / scale;
+        let blue: F = F::from_u16(rgb.0[2]).unwrap() / scale;
+        Self([red, green, blue])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rgb16_to_and_from_rgb() {
+        assert_eq!(RGB16([0xffff, 0xffff, 0x0]), RGB::<f64>::YELLOW.into());
+        assert_eq!(RGB::<f32>::CYAN, RGB16([0, 0xffff, 0xffff]).into());
+    }
+
+    #[test]
+    fn rgb16_from_str() {
+        assert_eq!(
+            RGB16::from_str("RGB16(red=0xF800, green=0xFA00, blue=0xF600)").unwrap(),
+            RGB16([0xF800, 0xFA00, 0xF600])
+        );
+        assert_eq!(
+            RGB16::from_str("RGB16(0xF800, 0xFA00, 0xF600)").unwrap(),
+            RGB16([0xF800, 0xFA00, 0xF600])
+        );
+        assert_eq!(
+            RGB16::from_str("RGB16(red=78, green=2345, blue=5678)").unwrap(),
+            RGB16([78, 2345, 5678])
+        );
+        assert_eq!(
+            RGB16::from_str("RGB16(128, 45670, 600)").unwrap(),
+            RGB16([128, 45670, 600])
+        );
+    }
 
     #[test]
     fn indices_order() {

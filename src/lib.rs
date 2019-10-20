@@ -1,4 +1,6 @@
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate serde_derive;
 
 use std::{
@@ -66,6 +68,8 @@ pub const I_BLUE: usize = 2;
 
 pub trait ColourInterface<F: ColourComponent> {
     fn rgb(&self) -> [F; 3];
+
+    fn rgba(&self, alpha: F) -> [F; 4];
 
     fn hue(&self) -> Option<Hue<F>>;
 
@@ -149,6 +153,10 @@ impl<F: ColourComponent> From<RGB<F>> for Colour<F> {
 impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
     fn rgb(&self) -> [F; 3] {
         self.rgb.rgb()
+    }
+
+    fn rgba(&self, alpha: F) -> [F; 4] {
+        self.rgb.rgba(alpha)
     }
 
     fn hue(&self) -> Option<Hue<F>> {
