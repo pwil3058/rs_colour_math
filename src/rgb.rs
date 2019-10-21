@@ -2,7 +2,7 @@
 
 use std::{
     convert::{From, TryFrom},
-    ops::Index,
+    ops::{Add, Index, Mul},
     str::FromStr,
 };
 
@@ -11,6 +11,7 @@ use regex::Regex;
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
 use float_plus::*;
+use normalised_angles::Degrees;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB<F: ColourComponent>([F; 3]);
@@ -98,6 +99,66 @@ impl<F: ColourComponent> RGB<F> {
             [I_BLUE as u8, I_GREEN as u8, I_RED as u8]
         }
     }
+
+    fn ff(&self, indices: (usize, usize), ks: (F, F)) -> F {
+        self[indices.0] * ks.0 + self[indices.1] * ks.1
+    }
+
+    //Return a copy of the rgb with each component rotated by the specified
+    //angle. This results in an rgb the same value but the hue angle rotated
+    //by the specified amount.
+    //NB the chroma will change when there are less than 3 non zero
+    //components and in the case of 2 non zero components this change may
+    //be undesirable.  If it is undesirable it can be avoided by using a
+    //higher level wrapper function to adjust/restore the chroma value.
+    //In some cases maintaining bof chroma and value will not be
+    //possible due to the complex relationship between value and chroma.
+    pub fn components_rotated(&self, delta_hue_angle: Degrees<F>) -> RGB<F> {
+        fn calc_ks<F: ColourComponent>(delta_hue_angle: Degrees<F>) -> (F, F) {
+            let a = delta_hue_angle.sin();
+            let b = (Degrees::DEG_120 - delta_hue_angle).sin();
+            let c = a + b;
+            (b / c, a / c)
+        }
+        if delta_hue_angle > Degrees::DEG_0 {
+            if delta_hue_angle > Degrees::DEG_120 {
+                let ks = calc_ks(delta_hue_angle - Degrees::DEG_120);
+                return RGB([
+                    self.ff((2, 1), ks),
+                    self.ff((0, 2), ks),
+                    self.ff((1, 0), ks),
+                ]);
+            } else {
+                let ks = calc_ks(delta_hue_angle);
+                return RGB([
+                    self.ff((0, 2), ks),
+                    self.ff((1, 0), ks),
+                    self.ff((2, 1), ks),
+                ]);
+            }
+        } else if delta_hue_angle < Degrees::DEG_0 {
+            if delta_hue_angle < -Degrees::DEG_120 {
+                let ks = calc_ks(delta_hue_angle.abs() - Degrees::DEG_120);
+                return RGB([
+                    self.ff((1, 2), ks),
+                    self.ff((2, 0), ks),
+                    self.ff((0, 1), ks),
+                ]);
+            } else {
+                let ks = calc_ks(delta_hue_angle.abs());
+                return RGB([
+                    self.ff((0, 1), ks),
+                    self.ff((1, 2), ks),
+                    self.ff((2, 0), ks),
+                ]);
+            }
+        }
+        *self
+    }
+
+    pub fn pango_string(&self) -> String {
+        RGB8::from(*self).pango_string()
+    }
 }
 
 impl<F: ColourComponent + std::fmt::Debug + std::iter::Sum> FloatApproxEq<F> for RGB<F> {
@@ -124,6 +185,28 @@ impl<F: ColourComponent> Index<usize> for RGB<F> {
     }
 }
 
+impl<F: ColourComponent> Add for RGB<F> {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let array: [F; 3] = [
+            self.0[0] + other.0[0],
+            self.0[1] + other.0[1],
+            self.0[2] + other.0[2],
+        ];
+        array.into()
+    }
+}
+
+impl<F: ColourComponent> Mul<F> for RGB<F> {
+    type Output = Self;
+
+    fn mul(self, scalar: F) -> Self {
+        let array: [F; 3] = [self.0[0] * scalar, self.0[1] * scalar, self.0[2] * scalar];
+        array.into()
+    }
+}
+
 impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
     fn from(array: [F; 3]) -> Self {
         debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
@@ -132,8 +215,8 @@ impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
 }
 
 impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
-    fn rgb(&self) -> [F; 3] {
-        self.0
+    fn rgb(&self) -> RGB<F> {
+        *self
     }
 
     fn rgba(&self, alpha: F) -> [F; 4] {
@@ -341,6 +424,16 @@ impl<F: ColourComponent> From<RGB16> for RGB<F> {
     }
 }
 
+impl std::fmt::Display for RGB16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RGB16(red=0x{:04X}, green=0x{:04X}, blue=0x{:04X})",
+            self.0[0], self.0[1], self.0[2]
+        )
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RGB8([u8; 3]);
 
@@ -367,6 +460,10 @@ impl RGB8 {
     pub const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
     pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
     pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+
+    pub fn pango_string(&self) -> String {
+        format!("#{:02X}{:02X}{:02X}", self.0[0], self.0[1], self.0[2])
+    }
 }
 
 impl FromStr for RGB8 {

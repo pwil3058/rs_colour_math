@@ -21,6 +21,10 @@ impl<F: ColourComponent> RGBManipulator<F> {
         }
     }
 
+    pub fn rgb(&self) -> RGB<F> {
+        self.rgb
+    }
+
     pub fn set_rgb(&mut self, rgb: RGB<F>) {
         self.rgb = rgb;
         self.sum = rgb.sum();

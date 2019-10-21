@@ -66,8 +66,27 @@ pub const I_RED: usize = 0;
 pub const I_GREEN: usize = 1;
 pub const I_BLUE: usize = 2;
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum ScalarAttribute {
+    Chroma,
+    Greyness,
+    Value,
+    Warmth,
+}
+
+impl ScalarAttribute {
+    pub fn to_string(&self) -> String {
+        match *self {
+            ScalarAttribute::Chroma => "Chroma".to_string(),
+            ScalarAttribute::Greyness => "Greyness".to_string(),
+            ScalarAttribute::Value => "Value".to_string(),
+            ScalarAttribute::Warmth => "Warmth".to_string(),
+        }
+    }
+}
+
 pub trait ColourInterface<F: ColourComponent> {
-    fn rgb(&self) -> [F; 3];
+    fn rgb(&self) -> RGB<F>;
 
     fn rgba(&self, alpha: F) -> [F; 4];
 
@@ -98,6 +117,15 @@ pub trait ColourInterface<F: ColourComponent> {
     }
 
     fn warmth_rgb(&self) -> RGB<F>;
+
+    fn scalar_attribute(&self, attr: ScalarAttribute) -> F {
+        match attr {
+            ScalarAttribute::Chroma => self.chroma(),
+            ScalarAttribute::Greyness => self.greyness(),
+            ScalarAttribute::Value => self.value(),
+            ScalarAttribute::Warmth => self.warmth(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
@@ -151,8 +179,8 @@ impl<F: ColourComponent> From<RGB<F>> for Colour<F> {
 }
 
 impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
-    fn rgb(&self) -> [F; 3] {
-        self.rgb.rgb()
+    fn rgb(&self) -> RGB<F> {
+        self.rgb
     }
 
     fn rgba(&self, alpha: F) -> [F; 4] {
