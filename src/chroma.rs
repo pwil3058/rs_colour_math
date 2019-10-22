@@ -4,7 +4,6 @@ use std::convert::TryFrom;
 use normalised_angles::*;
 
 use crate::{rgb::RGB, ColourAngle, ColourComponent};
-use std::path::Prefix::DeviceNS;
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if [Degrees::RED_ANGLE, Degrees::GREEN_ANGLE].contains(&abs_angle) {

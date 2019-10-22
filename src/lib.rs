@@ -192,7 +192,7 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
     }
 
     fn chroma(&self) -> F {
-        self.rgb.greyness()
+        self.rgb.chroma()
     }
 
     fn greyness(&self) -> F {
@@ -222,8 +222,23 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn primary_colour_basics() {
+        for rgb in RGB::<f64>::PRIMARIES.iter() {
+            let colour: Colour<f64> = (*rgb).into();
+            assert_eq!(colour.chroma(), 1.0);
+            assert_eq!(colour.value(), 1.0 / 3.0);
+        }
+    }
+
+    #[test]
+    fn secondary_colour_basics() {
+        for rgb in RGB::<f64>::SECONDARIES.iter() {
+            let colour: Colour<f64> = (*rgb).into();
+            assert_eq!(colour.chroma(), 1.0);
+            assert_eq!(colour.value(), 2.0 / 3.0);
+        }
     }
 }

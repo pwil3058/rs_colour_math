@@ -1,7 +1,7 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use std::{
-    convert::{From, TryFrom},
+    convert::From,
     ops::{Add, Index, Mul},
     str::FromStr,
 };
