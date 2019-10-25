@@ -37,15 +37,16 @@ impl<F: ColourComponent> RGB<F> {
     }
 
     pub(crate) fn sum(self) -> F {
-        self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]
+        //self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]
+        self.0.iter().map(|x| *x).sum()
     }
 
     pub(crate) fn x(self) -> F {
-        self.0[I_RED] + (self.0[I_GREEN] + self.0[I_BLUE]) * F::COS_120
+        self[I_RED] + (self[I_GREEN] + self[I_BLUE]) * F::COS_120
     }
 
     pub(crate) fn y(self) -> F {
-        (self.0[I_GREEN] - self.0[I_BLUE]) * F::SIN_120
+        (self[I_GREEN] - self[I_BLUE]) * F::SIN_120
     }
 
     pub(crate) fn xy(self) -> (F, F) {
@@ -56,7 +57,7 @@ impl<F: ColourComponent> RGB<F> {
         self.x().hypot(self.y())
     }
 
-    pub(crate) fn indices_value_order(self) -> [usize; 3] {
+    pub(crate) fn indices_value_order(self) -> [u8; 3] {
         if self[I_RED] >= self[I_GREEN] {
             if self[I_RED] >= self[I_BLUE] {
                 if self[I_GREEN] >= self[I_BLUE] {
@@ -78,29 +79,7 @@ impl<F: ColourComponent> RGB<F> {
         }
     }
 
-    pub(crate) fn indices_value_order_u8(self) -> [u8; 3] {
-        if self[I_RED] >= self[I_GREEN] {
-            if self[I_RED] >= self[I_BLUE] {
-                if self[I_GREEN] >= self[I_BLUE] {
-                    [I_RED as u8, I_GREEN as u8, I_BLUE as u8]
-                } else {
-                    [I_RED as u8, I_BLUE as u8, I_GREEN as u8]
-                }
-            } else {
-                [I_BLUE as u8, I_RED as u8, I_GREEN as u8]
-            }
-        } else if self[I_GREEN] >= self[I_BLUE] {
-            if self[I_RED] >= self[I_BLUE] {
-                [I_GREEN as u8, I_RED as u8, I_BLUE as u8]
-            } else {
-                [I_GREEN as u8, I_BLUE as u8, I_RED as u8]
-            }
-        } else {
-            [I_BLUE as u8, I_GREEN as u8, I_RED as u8]
-        }
-    }
-
-    fn ff(&self, indices: (usize, usize), ks: (F, F)) -> F {
+    fn ff(&self, indices: (u8, u8), ks: (F, F)) -> F {
         self[indices.0] * ks.0 + self[indices.1] * ks.1
     }
 
@@ -177,11 +156,11 @@ impl<F: ColourComponent + std::fmt::Debug + std::iter::Sum> FloatApproxEq<F> for
     }
 }
 
-impl<F: ColourComponent> Index<usize> for RGB<F> {
+impl<F: ColourComponent> Index<u8> for RGB<F> {
     type Output = F;
 
-    fn index(&self, index: usize) -> &F {
-        &self.0[index]
+    fn index(&self, index: u8) -> &F {
+        &self.0[index as usize]
     }
 }
 
@@ -221,7 +200,7 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
 
     fn rgba(&self, alpha: F) -> [F; 4] {
         debug_assert!(alpha.is_proportion());
-        [self.0[I_RED], self.0[I_GREEN], self.0[I_BLUE], alpha]
+        [self.0[0], self.0[1], self.0[2], alpha]
     }
 
     fn hue(&self) -> Option<Hue<F>> {
@@ -255,8 +234,8 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         } else {
             let io = self.indices_value_order();
             let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
-            array[io[0]] = F::ONE;
-            array[io[1]] = chroma::calc_other_from_xy_alt(xy);
+            array[io[0] as usize] = F::ONE;
+            array[io[1] as usize] = chroma::calc_other_from_xy_alt(xy);
             array.into()
         }
     }
@@ -273,7 +252,7 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 
     fn value(&self) -> F {
-        ((self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]) / F::THREE).min(F::ONE)
+        (self.sum() / F::THREE).min(F::ONE)
     }
 
     fn monotone_rgb(&self) -> RGB<F> {

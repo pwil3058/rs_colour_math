@@ -811,11 +811,9 @@ mod test {
                     } else {
                         let rgb_other = calc_other_from_xy(xy);
                         assert_approx_eq!(rgb_other, *second, 0.0000000001);
-                        let rgb_io = rgb.indices_value_order_u8();
+                        let rgb_io = rgb.indices_value_order();
                         assert!(
-                            *io == rgb_io
-                                || rgb[io[1] as usize] == rgb[io[2] as usize]
-                                || rgb[io[0] as usize] == rgb[io[1] as usize],
+                            *io == rgb_io || rgb[io[1]] == rgb[io[2]] || rgb[io[0]] == rgb[io[1]],
                             "{:?} == {:?} :: sum: {} other: {} {:?}",
                             *io,
                             rgb_io,
@@ -864,11 +862,11 @@ mod test {
                             } else {
                                 let rgb_other = calc_other_from_xy(xy);
                                 assert_approx_eq!(rgb_other, *other, 0.0000000001);
-                                let rgb_io = rgb.indices_value_order_u8();
+                                let rgb_io = rgb.indices_value_order();
                                 assert!(
                                     *io == rgb_io
-                                        || rgb[io[1] as usize] == rgb[io[2] as usize]
-                                        || rgb[io[0] as usize] == rgb[io[1] as usize],
+                                        || rgb[io[1]] == rgb[io[2]]
+                                        || rgb[io[0]] == rgb[io[1]],
                                     "{:?} == {:?} :: sum: {} chroma: {} other: {} {:?}",
                                     *io,
                                     rgb_io,

@@ -40,7 +40,7 @@ impl<F: FloatPlus + DegreesConst + Debug> ColourAngle for Degrees<F> {
     const MAGENTA_ANGLE: Self = Self::NEG_DEG_60;
 }
 
-pub trait ColourComponent: FloatPlus + DegreesConst + Debug {
+pub trait ColourComponent: FloatPlus + DegreesConst + std::iter::Sum + Debug {
     const FOUR: Self;
     const SIN_120: Self;
     const COS_120: Self;
@@ -62,9 +62,9 @@ impl ColourComponent for f64 {
     const COS_120: Self = -0.5;
 }
 
-pub const I_RED: usize = 0;
-pub const I_GREEN: usize = 1;
-pub const I_BLUE: usize = 2;
+pub const I_RED: u8 = 0;
+pub const I_GREEN: u8 = 1;
+pub const I_BLUE: u8 = 2;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum ScalarAttribute {
@@ -128,6 +128,7 @@ pub trait ColourInterface<F: ColourComponent> {
     }
 }
 
+// TODO: turn Colour into a fully cached implementation of ColourInterface
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
 pub struct Colour<F: ColourComponent> {
     rgb: RGB<F>,

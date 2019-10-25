@@ -64,13 +64,13 @@ impl<F: ColourComponent> TryFrom<RGB<F>> for Hue<F> {
         let angle: Degrees<F> = rgb.xy().try_into()?;
         let io = rgb.indices_value_order();
         let mut parts: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
-        parts[io[0]] = F::ONE;
+        parts[io[0] as usize] = F::ONE;
         if rgb[io[0]] == rgb[io[1]] {
             // Secondary colour
-            parts[io[1]] = F::ONE;
+            parts[io[1] as usize] = F::ONE;
         } else if rgb[io[1]] != rgb[io[2]] {
             // Not Primary or Secondary
-            parts[io[1]] = chroma::calc_other_from_angle(angle.abs());
+            parts[io[1] as usize] = chroma::calc_other_from_angle(angle.abs());
         }
         let max_chroma_rgb: RGB<F> = parts.into();
         let chroma_correction = chroma::calc_chroma_correction(max_chroma_rgb[io[1]]);
@@ -252,8 +252,8 @@ impl<F: ColourComponent> Hue<F> {
                 // it's simpler to work out weakest component first
                 let other = self.max_chroma_rgb[io[1]];
                 let shortfall = (value - mcv) * F::THREE;
-                array[io[2]] = shortfall / (F::TWO - other);
-                array[io[1]] = other + shortfall - array[io[2]];
+                array[io[2] as usize] = shortfall / (F::TWO - other);
+                array[io[1] as usize] = other + shortfall - array[io[2] as usize];
                 array.into()
             }
         } else {
