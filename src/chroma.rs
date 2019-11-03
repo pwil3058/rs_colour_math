@@ -390,11 +390,15 @@ impl<F: ColourComponent> HueData<F> {
             if chroma < F::from(0.00001).unwrap() && chroma > F::ZERO {
                 let rgb: RGB<F> = array.into();
                 let xy: (F, F) = rgb.xy();
-                let rgb_second = calc_other_from_xy_alt(xy);
-                // deviation "second" indicates a drift in the hue
-                if (rgb_second - self.second).abs() / rgb_second > F::from(0.0000000001).unwrap() {
-                    let value = sum / F::THREE;
-                    array = [value, value, value];
+                if !(xy.0 == F::ZERO && xy.1 == F::ZERO) {
+                    let rgb_second = calc_other_from_xy_alt(xy);
+                    // deviation "second" indicates a drift in the hue
+                    if (rgb_second - self.second).abs() / rgb_second
+                        > F::from(0.0000000001).unwrap()
+                    {
+                        let value = sum / F::THREE;
+                        array = [value, value, value];
+                    }
                 }
             };
         }
