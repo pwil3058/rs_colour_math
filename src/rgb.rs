@@ -266,14 +266,13 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
 
     fn warmth_rgb(&self) -> RGB<F> {
         let x = self.x();
-        let half = F::HALF;
         if x < F::ZERO {
-            let temp = x.abs() + (F::ONE + x) * half;
+            let temp = x.abs() + (F::ONE + x) * F::HALF;
             [F::ZERO, temp, temp].into()
         } else if x > F::ZERO {
-            [x + (F::ONE - x) * half, F::ZERO, F::ZERO].into()
+            [x + (F::ONE - x) * F::HALF, F::ZERO, F::ZERO].into()
         } else {
-            [half, half, half].into()
+            [F::HALF, F::HALF, F::HALF].into()
         }
     }
 
