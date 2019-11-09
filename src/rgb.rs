@@ -193,6 +193,18 @@ impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
     }
 }
 
+impl<F: ColourComponent> From<&[u8]> for RGB<F> {
+    fn from(array: &[u8]) -> Self {
+        debug_assert_eq!(array.len(), 3);
+        let divisor = F::from(255.0).unwrap();
+        Self([
+            F::from_u8(array[0]).unwrap() / divisor,
+            F::from_u8(array[1]).unwrap() / divisor,
+            F::from_u8(array[2]).unwrap() / divisor,
+        ])
+    }
+}
+
 impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     fn rgb(&self) -> RGB<F> {
         *self

@@ -14,6 +14,7 @@ use normalised_angles::{Degrees, DegreesConst};
 
 pub mod chroma;
 pub mod hue;
+pub mod image;
 pub mod manipulator;
 pub mod rgb;
 
