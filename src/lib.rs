@@ -86,7 +86,7 @@ impl ScalarAttribute {
     }
 }
 
-pub trait ColourInterface<F: ColourComponent>: Copy {
+pub trait ColourInterface<F: ColourComponent> {
     fn rgb(&self) -> RGB<F>;
 
     fn rgba(&self, alpha: F) -> [F; 4];
