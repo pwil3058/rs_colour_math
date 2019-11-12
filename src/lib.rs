@@ -10,7 +10,7 @@ use std::{
 };
 
 use float_plus::*;
-use normalised_angles::{Degrees, DegreesConst};
+use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
 pub mod chroma;
 pub mod hue;
@@ -41,7 +41,9 @@ impl<F: FloatPlus + DegreesConst + Debug> ColourAngle for Degrees<F> {
     const MAGENTA_ANGLE: Self = Self::NEG_DEG_60;
 }
 
-pub trait ColourComponent: FloatPlus + DegreesConst + std::iter::Sum + Debug {
+pub trait ColourComponent:
+    FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + Debug
+{
     const FOUR: Self;
     const SIN_120: Self;
     const COS_120: Self;
@@ -93,9 +95,9 @@ pub trait ColourInterface<F: ColourComponent> {
 
     fn hue(&self) -> Option<Hue<F>>;
 
-    fn is_grey(&self) -> bool {
-        self.hue().is_none()
-    }
+    fn hue_angle(&self) -> Option<Degrees<F>>;
+
+    fn is_grey(&self) -> bool;
 
     fn chroma(&self) -> F;
 
@@ -109,13 +111,7 @@ pub trait ColourInterface<F: ColourComponent> {
 
     fn monotone_rgb(&self) -> RGB<F>;
 
-    fn max_chroma_rgb(&self) -> RGB<F> {
-        if let Some(hue) = self.hue() {
-            hue.max_chroma_rgb()
-        } else {
-            self.rgb().into()
-        }
-    }
+    fn max_chroma_rgb(&self) -> RGB<F>;
 
     fn warmth_rgb(&self) -> RGB<F>;
 
@@ -193,6 +189,18 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
         self.hue
     }
 
+    fn hue_angle(&self) -> Option<Degrees<F>> {
+        if let Some(hue) = self.hue {
+            Some(hue.angle())
+        } else {
+            None
+        }
+    }
+
+    fn is_grey(&self) -> bool {
+        self.hue.is_none()
+    }
+
     fn chroma(&self) -> F {
         self.rgb.chroma()
     }
@@ -203,6 +211,14 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
 
     fn value(&self) -> F {
         self.rgb.value()
+    }
+
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        if let Some(hue) = self.hue {
+            hue.max_chroma_rgb()
+        } else {
+            self.rgb().into()
+        }
     }
 
     fn warmth(&self) -> F {

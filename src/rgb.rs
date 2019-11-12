@@ -224,6 +224,10 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         }
     }
 
+    fn hue_angle(&self) -> Option<Degrees<F>> {
+        Degrees::atan2(self.y(), self.x())
+    }
+
     fn is_grey(&self) -> bool {
         self.hypot() == F::ZERO
     }
