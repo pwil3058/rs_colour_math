@@ -271,7 +271,7 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         (self.sum() / F::THREE).min(F::ONE)
     }
 
-    fn monotone_rgb(&self) -> RGB<F> {
+    fn monochrome_rgb(&self) -> RGB<F> {
         let value = self.value();
         [value, value, value].into()
     }

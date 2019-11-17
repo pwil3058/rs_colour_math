@@ -109,7 +109,7 @@ pub trait ColourInterface<F: ColourComponent> {
 
     fn best_foreground_rgb(&self) -> RGB<F>;
 
-    fn monotone_rgb(&self) -> RGB<F>;
+    fn monochrome_rgb(&self) -> RGB<F>;
 
     fn max_chroma_rgb(&self) -> RGB<F>;
 
@@ -229,8 +229,8 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
         self.rgb.best_foreground_rgb()
     }
 
-    fn monotone_rgb(&self) -> RGB<F> {
-        self.rgb.monotone_rgb()
+    fn monochrome_rgb(&self) -> RGB<F> {
+        self.rgb.monochrome_rgb()
     }
 
     fn warmth_rgb(&self) -> RGB<F> {

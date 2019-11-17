@@ -251,10 +251,12 @@ mod test {
             ]
             .iter()
             {
-                let cur_chroma = rgb_manipulator.chroma;
+                //let cur_chroma = rgb_manipulator.chroma;
+                let cur_sum = rgb_manipulator.sum;
                 let cur_angle = rgb_manipulator.hue_data.unwrap().hue_angle();
                 assert!(rgb_manipulator.rotate((*delta).into()));
-                assert_approx_eq!(cur_chroma, rgb_manipulator.chroma);
+                //assert_approx_eq!(cur_chroma, rgb_manipulator.chroma);
+                assert_approx_eq!(cur_sum, rgb_manipulator.sum);
                 let expected_angle = cur_angle + (*delta).into();
                 assert_approx_eq!(
                     expected_angle,
@@ -286,10 +288,12 @@ mod test {
             ]
             .iter()
             {
-                let cur_chroma = rgb_manipulator.chroma;
+                //let cur_chroma = rgb_manipulator.chroma;
+                let cur_sum = rgb_manipulator.sum;
                 let cur_angle = rgb_manipulator.hue_data.unwrap().hue_angle();
                 assert!(rgb_manipulator.rotate((*delta).into()));
-                assert_approx_eq!(cur_chroma, rgb_manipulator.chroma, 0.000000000000001);
+                //assert_approx_eq!(cur_chroma, rgb_manipulator.chroma, 0.000000000000001);
+                assert_approx_eq!(cur_sum, rgb_manipulator.sum);
                 let expected_angle = cur_angle + (*delta).into();
                 assert_approx_eq!(
                     expected_angle,
