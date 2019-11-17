@@ -246,7 +246,7 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     fn max_chroma_rgb(&self) -> RGB<F> {
         let xy = self.xy();
         if xy.0 == F::ZERO && xy.1 == F::ZERO {
-            Self::WHITE
+            *self
         } else {
             let io = self.indices_value_order();
             let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];

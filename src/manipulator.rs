@@ -133,7 +133,8 @@ impl<F: ColourComponent> RGBManipulator<F> {
                 if let Some(rgb) = new_hue_data.rgb_for_sum_and_chroma(self.sum, self.chroma) {
                     self.rgb = rgb
                 } else {
-                    self.rgb = new_hue_data.max_sum_rgb_for_chroma(self.chroma);
+                    // TODO: make secondary effects of manipulation optional
+                    self.rgb = new_hue_data.max_chroma_rgb_for_sum(self.sum);
                 };
                 self.sum = self.rgb.sum();
                 let xy = self.rgb.xy();
