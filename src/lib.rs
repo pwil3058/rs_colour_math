@@ -123,6 +123,15 @@ pub trait ColourInterface<F: ColourComponent> {
             ScalarAttribute::Warmth => self.warmth(),
         }
     }
+
+    fn scalar_attribute_rgb(&self, attr: ScalarAttribute) -> RGB<F> {
+        match attr {
+            ScalarAttribute::Chroma => self.rgb(),
+            ScalarAttribute::Greyness => self.rgb(),
+            ScalarAttribute::Value => self.monochrome_rgb(),
+            ScalarAttribute::Warmth => self.warmth_rgb(),
+        }
+    }
 }
 
 // TODO: turn Colour into a fully cached implementation of ColourInterface
