@@ -77,13 +77,13 @@ pub enum ScalarAttribute {
     Warmth,
 }
 
-impl ScalarAttribute {
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for ScalarAttribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            ScalarAttribute::Chroma => "Chroma".to_string(),
-            ScalarAttribute::Greyness => "Greyness".to_string(),
-            ScalarAttribute::Value => "Value".to_string(),
-            ScalarAttribute::Warmth => "Warmth".to_string(),
+            ScalarAttribute::Chroma => write!(f, "Chroma"),
+            ScalarAttribute::Greyness => write!(f, "Greyness"),
+            ScalarAttribute::Value => write!(f, "Value"),
+            ScalarAttribute::Warmth => write!(f, "Warmth"),
         }
     }
 }
