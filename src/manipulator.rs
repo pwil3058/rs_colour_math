@@ -9,15 +9,17 @@ pub struct RGBManipulator<F: ColourComponent> {
     hue_data: Option<HueData<F>>,
     sum: F,
     chroma: F,
+    clamped: bool,
 }
 
 impl<F: ColourComponent> RGBManipulator<F> {
-    pub fn new() -> Self {
+    pub fn new(clamped: bool) -> Self {
         Self {
             rgb: [F::ZERO, F::ZERO, F::ZERO].into(),
             hue_data: None,
             sum: F::ZERO,
             chroma: F::ZERO,
+            clamped,
         }
     }
 
@@ -70,8 +72,18 @@ impl<F: ColourComponent> RGBManipulator<F> {
             };
             if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(self.sum, new_chroma) {
                 self.rgb = rgb;
-            } else {
+            } else if self.clamped {
                 self.rgb = hue_data.max_chroma_rgb_for_sum(self.sum);
+            } else {
+                let min_rgb = hue_data.min_sum_rgb_for_chroma(new_chroma);
+                let max_rgb = hue_data.max_sum_rgb_for_chroma(new_chroma);
+                self.rgb = if self.sum < min_rgb.sum() {
+                    min_rgb
+                } else if self.sum > max_rgb.sum() {
+                    max_rgb
+                } else {
+                    hue_data.max_chroma_rgb_for_sum(self.sum)
+                };
             };
             self.chroma = self.rgb.chroma();
             cur_chroma != self.chroma
@@ -88,8 +100,10 @@ impl<F: ColourComponent> RGBManipulator<F> {
             if let Some(hue_data) = self.hue_data {
                 if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
                     self.rgb = rgb
-                } else {
+                } else if self.clamped {
                     self.rgb = hue_data.min_sum_rgb_for_chroma(self.chroma);
+                } else {
+                    self.rgb = hue_data.max_chroma_rgb_for_sum(new_sum);
                 };
             } else {
                 let new_value = new_sum / F::THREE;
@@ -110,8 +124,10 @@ impl<F: ColourComponent> RGBManipulator<F> {
             if let Some(hue_data) = self.hue_data {
                 if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
                     self.rgb = rgb
-                } else {
+                } else if self.clamped {
                     self.rgb = hue_data.max_sum_rgb_for_chroma(self.chroma);
+                } else {
+                    self.rgb = hue_data.max_chroma_rgb_for_sum(new_sum);
                 };
             } else {
                 let new_value = new_sum / F::THREE;
@@ -155,7 +171,7 @@ mod test {
 
     #[test]
     fn decr_chroma() {
-        let mut manipulator = super::RGBManipulator::<f64>::new();
+        let mut manipulator = super::RGBManipulator::<f64>::new(true);
         assert!(!manipulator.decr_chroma(0.1));
         manipulator.set_rgb(crate::rgb::RGB::YELLOW);
         assert_eq!(manipulator.chroma, 1.0);
@@ -176,7 +192,7 @@ mod test {
 
     #[test]
     fn incr_chroma() {
-        let mut manipulator = super::RGBManipulator::<f64>::new();
+        let mut manipulator = super::RGBManipulator::<f64>::new(true);
         assert!(!manipulator.incr_chroma(0.1));
         manipulator.set_rgb([0.75, 0.5, 0.75].into());
         let saved_hue_data = manipulator.hue_data;
@@ -202,7 +218,7 @@ mod test {
 
     #[test]
     fn round_trip_chroma() {
-        let mut manipulator = super::RGBManipulator::<f64>::new();
+        let mut manipulator = super::RGBManipulator::<f64>::new(true);
         manipulator.set_rgb(crate::rgb::RGB::CYAN);
         while manipulator.decr_chroma(0.01) {}
         assert!(manipulator.rgb.is_grey());
@@ -212,7 +228,7 @@ mod test {
 
     #[test]
     fn incr_decr_sum() {
-        let mut manipulator = super::RGBManipulator::<f64>::new();
+        let mut manipulator = super::RGBManipulator::<f64>::new(true);
         assert!(!manipulator.decr_value(0.1));
         while manipulator.incr_value(0.1) {}
         assert_eq!(manipulator.rgb, crate::rgb::RGB::WHITE);
@@ -232,7 +248,7 @@ mod test {
 
     #[test]
     fn rotate_rgb() {
-        let mut rgb_manipulator = super::RGBManipulator::<f64>::new();
+        let mut rgb_manipulator = super::RGBManipulator::<f64>::new(true);
         for delta in [
             -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
         ]
