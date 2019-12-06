@@ -9,8 +9,8 @@ use std::{
     fmt::Debug,
 };
 
-use float_plus::*;
-use normalised_angles::{Degrees, DegreesConst, RadiansConst};
+pub use float_plus::*;
+pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
 pub mod chroma;
 pub mod hue;
