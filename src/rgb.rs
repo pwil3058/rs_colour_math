@@ -1,6 +1,7 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use std::{
+    cmp::Ordering,
     convert::From,
     ops::{Add, Index, Mul},
     str::FromStr,
@@ -13,7 +14,7 @@ pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREE
 use float_plus::*;
 use normalised_angles::Degrees;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
 pub struct RGB<F: ColourComponent>([F; 3]);
 
 impl<F: ColourComponent> RGB<F> {
@@ -137,6 +138,45 @@ impl<F: ColourComponent> RGB<F> {
 
     pub fn pango_string(&self) -> String {
         RGB8::from(*self).pango_string()
+    }
+}
+
+impl<F: ColourComponent> PartialEq for RGB<F> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<F: ColourComponent> Eq for RGB<F> {}
+
+impl<F: ColourComponent> PartialOrd for RGB<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.0 == other.0 {
+            Some(Ordering::Equal)
+        } else if let Some(hue_angle) = self.hue_angle() {
+            if let Some(other_hue_angle) = other.hue_angle() {
+                // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
+                match hue_angle.partial_cmp(&other_hue_angle) {
+                    Some(Ordering::Less) => Some(Ordering::Less),
+                    Some(Ordering::Greater) => Some(Ordering::Greater),
+                    Some(Ordering::Equal) => self.sum().partial_cmp(&other.sum()),
+                    None => None,
+                }
+            } else {
+                Some(Ordering::Greater)
+            }
+        } else if other.hue_angle().is_some() {
+            Some(Ordering::Less)
+        } else {
+            self.sum().partial_cmp(&other.sum())
+        }
+    }
+}
+
+impl<F: ColourComponent> Ord for RGB<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other)
+            .expect("restricted range of values means this is OK")
     }
 }
 
