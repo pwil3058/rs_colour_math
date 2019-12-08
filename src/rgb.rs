@@ -156,7 +156,7 @@ impl<F: ColourComponent> PartialOrd for RGB<F> {
         } else if let Some(hue_angle) = self.hue_angle() {
             if let Some(other_hue_angle) = other.hue_angle() {
                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
-                match hue_angle.partial_cmp(&other_hue_angle) {
+                match hue_angle.degrees().partial_cmp(&other_hue_angle.degrees()) {
                     Some(Ordering::Less) => Some(Ordering::Less),
                     Some(Ordering::Greater) => Some(Ordering::Greater),
                     Some(Ordering::Equal) => self.sum().partial_cmp(&other.sum()),
@@ -625,5 +625,46 @@ mod tests {
             RGB::<f64>::YELLOW.indices_value_order(),
             [I_RED, I_GREEN, I_BLUE]
         );
+    }
+
+    #[test]
+    fn rgb_order() {
+        assert!(RGB::<f64>::BLACK < RGB::<f64>::WHITE);
+        for rgb in RGB::<f64>::PRIMARIES.iter() {
+            assert!(RGB::<f64>::BLACK < *rgb);
+            assert!(RGB::<f64>::WHITE < *rgb);
+        }
+        for rgb in RGB::<f64>::SECONDARIES.iter() {
+            assert!(RGB::<f64>::BLACK < *rgb);
+            assert!(RGB::<f64>::WHITE < *rgb);
+        }
+        let ordered = [
+            RGB::<f64>::BLACK,
+            RGB::WHITE,
+            RGB::BLUE,
+            RGB::MAGENTA,
+            RGB::RED,
+            RGB::YELLOW,
+            RGB::GREEN,
+            RGB::CYAN,
+        ];
+        for (i, i_rgb) in ordered.iter().enumerate() {
+            for (j, j_rgb) in ordered.iter().enumerate() {
+                println!(
+                    "i: {} {:?} j: {} {:?}",
+                    i,
+                    i_rgb.hue_angle(),
+                    j,
+                    j_rgb.hue_angle()
+                );
+                if i < j {
+                    assert!(i_rgb < j_rgb);
+                } else if i > j {
+                    assert!(i_rgb > j_rgb);
+                } else {
+                    assert_eq!(i_rgb, j_rgb);
+                }
+            }
+        }
     }
 }
