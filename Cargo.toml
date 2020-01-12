@@ -12,10 +12,5 @@ regex = "0.2"
 serde = "1.0"
 serde_derive = "1.0"
 
-# TODO: change float_plus dependency when it goes public
-#float_plus = { git = "https://github.com/pwil3058/rs_float_plus.git" }
-float_plus = { path = "../rs_float_plus.git" }
-
-# TODO: change normalised_angles dependency when it goes public
-#normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
-normalised_angles = { path = "../rs_normalised_angles.git" }
+float_plus = { git = "https://github.com/pwil3058/rs_float_plus.git" }
+normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
