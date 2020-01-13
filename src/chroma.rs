@@ -6,9 +6,21 @@ use normalised_angles::*;
 use crate::{rgb::RGB, ColourAngle, ColourComponent};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
-    if [Degrees::RED_ANGLE, Degrees::GREEN_ANGLE].contains(&abs_angle) {
+    if [
+        Degrees::RED_ANGLE,
+        Degrees::GREEN_ANGLE,
+        Degrees::BLUE_ANGLE,
+    ]
+    .contains(&abs_angle)
+    {
         F::ZERO
-    } else if [Degrees::YELLOW_ANGLE, Degrees::CYAN_ANGLE].contains(&abs_angle) {
+    } else if [
+        Degrees::YELLOW_ANGLE,
+        Degrees::CYAN_ANGLE,
+        Degrees::MAGENTA_ANGLE,
+    ]
+    .contains(&abs_angle)
+    {
         F::ONE
     } else {
         fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
