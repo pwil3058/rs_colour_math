@@ -1,16 +1,6 @@
-[package]
-name = "colour_math"
-version = "0.1.0"
-authors = ["Peter Williams <pwil3058@gmail.com>"]
-edition = "2018"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-lazy_static = "1.4.0"
-regex = "0.2"
-serde = "1.0"
-serde_derive = "1.0"
-
-float_plus = { git = "https://github.com/pwil3058/rs_float_plus.git" }
-normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
+members = [
+    "colour_math",
+    "colour_math_cairo",
+]
