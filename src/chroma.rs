@@ -406,7 +406,7 @@ impl<F: ColourComponent> HueData<F> {
                     let rgb_second = calc_other_from_xy_alt(xy);
                     // deviation "second" indicates a drift in the hue
                     if (rgb_second - self.second).abs() / rgb_second
-                        > F::from(0.0000000001).unwrap()
+                        > F::from(0.000_000_000_1).unwrap()
                     {
                         let value = sum / F::THREE;
                         array = [value, value, value];
@@ -952,7 +952,7 @@ mod test {
         for second in OTHER_VALUES.iter() {
             let hue_data = HueData::<f64> {
                 second: *second,
-                io: io,
+                io,
             };
             assert_eq!(hue_data.min_sum_rgb_for_chroma(0.0), RGB::BLACK);
             assert_eq!(hue_data.max_sum_rgb_for_chroma(0.0), RGB::WHITE);

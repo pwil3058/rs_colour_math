@@ -21,7 +21,7 @@ pub mod rgb;
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 
-pub trait ColourAngle {
+pub trait ColourAngle: Copy {
     const RED_ANGLE: Self;
     const GREEN_ANGLE: Self;
     const BLUE_ANGLE: Self;
@@ -55,7 +55,7 @@ pub trait ColourComponent:
 
 impl ColourComponent for f32 {
     const FOUR: Self = 3.0;
-    const SIN_120: Self = 0.86602_5404;
+    const SIN_120: Self = 0.86602_54;
     const COS_120: Self = -0.5;
 }
 
@@ -135,7 +135,7 @@ pub trait ColourInterface<F: ColourComponent> {
 }
 
 // TODO: turn Colour into a fully cached implementation of ColourInterface
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Colour<F: ColourComponent> {
     rgb: RGB<F>,
     hue: Option<Hue<F>>,
@@ -226,7 +226,7 @@ impl<F: ColourComponent> ColourInterface<F> for Colour<F> {
         if let Some(hue) = self.hue {
             hue.max_chroma_rgb()
         } else {
-            self.rgb().into()
+            self.rgb()
         }
     }
 

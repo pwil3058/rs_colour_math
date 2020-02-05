@@ -38,14 +38,12 @@ impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
             } else {
                 [F::ZERO, F::ONE, other].into()
             }
+        } else if angle >= Degrees::MAGENTA_ANGLE {
+            [F::ONE, F::ZERO, other].into()
+        } else if angle >= Degrees::BLUE_ANGLE {
+            [other, F::ZERO, F::ONE].into()
         } else {
-            if angle >= Degrees::MAGENTA_ANGLE {
-                [F::ONE, F::ZERO, other].into()
-            } else if angle >= Degrees::BLUE_ANGLE {
-                [other, F::ZERO, F::ONE].into()
-            } else {
-                [F::ZERO, other, F::ONE].into()
-            }
+            [F::ZERO, other, F::ONE].into()
         };
         let chroma_correction = chroma::calc_chroma_correction(other);
         Self {
@@ -217,7 +215,7 @@ impl<F: ColourComponent> Hue<F> {
             // happens we go straight to a zero chroma RGB
             let (x, y) = rgb.xy();
             if let Some(angle) = Degrees::atan2(y, x) {
-                if angle.approx_eq(&self.angle, Some(F::from(0.00000000000001).unwrap())) {
+                if angle.approx_eq(&self.angle, Some(F::from(0.000_000_000_000_01).unwrap())) {
                     Some(rgb)
                 } else {
                     Some(RGB::from([value, value, value]))

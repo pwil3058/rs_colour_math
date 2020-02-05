@@ -14,7 +14,7 @@ pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREE
 use float_plus::*;
 use normalised_angles::Degrees;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq)]
 pub struct RGB<F: ColourComponent>([F; 3]);
 
 impl<F: ColourComponent> RGB<F> {
@@ -39,7 +39,7 @@ impl<F: ColourComponent> RGB<F> {
 
     pub(crate) fn sum(self) -> F {
         //self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]
-        self.0.iter().map(|x| *x).sum()
+        self.0.iter().copied().sum()
     }
 
     pub(crate) fn x(self) -> F {
@@ -138,12 +138,6 @@ impl<F: ColourComponent> RGB<F> {
 
     pub fn pango_string(&self) -> String {
         RGB8::from(*self).pango_string()
-    }
-}
-
-impl<F: ColourComponent> PartialEq for RGB<F> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
     }
 }
 
@@ -495,7 +489,7 @@ impl RGB8 {
     pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
     pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
 
-    pub fn pango_string(&self) -> String {
+    pub fn pango_string(self) -> String {
         format!("#{:02X}{:02X}{:02X}", self.0[0], self.0[1], self.0[2])
     }
 }
