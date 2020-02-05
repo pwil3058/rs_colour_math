@@ -12,6 +12,7 @@ use std::{
 pub use float_plus::*;
 pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
+pub mod attributes;
 pub mod chroma;
 pub mod hue;
 pub mod image;
