@@ -3,4 +3,5 @@
 members = [
     "colour_math",
     "colour_math_cairo",
+    "colour_math_gtk",
 ]

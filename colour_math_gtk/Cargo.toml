@@ -1,0 +1,14 @@
+[package]
+name = "colour_math_gtk"
+version = "0.1.0"
+authors = ["Peter Williams <pwil3058@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gtk = "0.8.0"
+
+pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+
+colour_math = { path = "../colour_math" }
