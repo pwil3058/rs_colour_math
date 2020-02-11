@@ -426,8 +426,8 @@ mod test {
     };
     use crate::rgb::*;
     use crate::ColourComponent;
-    use float_plus::*;
     use normalised_angles::Degrees;
+    use num_traits_plus::{assert_approx_eq, float_plus::*};
 
     const NON_ZERO_VALUES: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
     const NON_ZERO_SUMS: [f64; 21] = [

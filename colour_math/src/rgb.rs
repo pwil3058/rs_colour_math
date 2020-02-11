@@ -11,10 +11,10 @@ use regex::Regex;
 
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
-use float_plus::*;
 use normalised_angles::Degrees;
+use num_traits_plus::float_plus::*;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<F: ColourComponent>([F; 3]);
 
 impl<F: ColourComponent> RGB<F> {

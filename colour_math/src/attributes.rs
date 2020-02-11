@@ -6,7 +6,7 @@ use crate::{ColourComponent, ColourInterface, Hue, RGB};
 
 pub mod drawing {
     use crate::{ColourComponent, RGB};
-    use float_plus::FloatPlus;
+    use num_traits_plus::float_plus::FloatPlus;
     use std::default::Default;
 
     #[derive(Debug, Clone, Copy, PartialEq, Default)]

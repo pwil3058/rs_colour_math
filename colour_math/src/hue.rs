@@ -7,8 +7,8 @@ use std::{
     ops::{Add, Sub},
 };
 
-use float_plus::*;
 use normalised_angles::*;
+use num_traits_plus::assert_approx_eq;
 
 use crate::rgb::RGB;
 use crate::{chroma, ColourAngle, ColourComponent, ColourInterface};

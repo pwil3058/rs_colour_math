@@ -167,7 +167,7 @@ impl<F: ColourComponent> RGBManipulator<F> {
 #[cfg(test)]
 mod test {
     use crate::ColourInterface;
-    use float_plus::*;
+    use num_traits_plus::{assert_approx_eq, float_plus::*};
 
     #[test]
     fn decr_chroma() {

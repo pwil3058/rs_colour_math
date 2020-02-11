@@ -9,8 +9,8 @@ use std::{
     fmt::Debug,
 };
 
-pub use float_plus::*;
 pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
+pub use num_traits_plus::float_plus::*;
 
 pub mod attributes;
 pub mod chroma;
@@ -18,9 +18,27 @@ pub mod hue;
 pub mod image;
 pub mod manipulator;
 pub mod rgb;
+pub mod urgb;
 
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
+
+pub trait RGBConstants: Sized {
+    const RED: Self;
+    const GREEN: Self;
+    const BLUE: Self;
+
+    const CYAN: Self;
+    const MAGENTA: Self;
+    const YELLOW: Self;
+
+    const WHITE: Self;
+    const BLACK: Self;
+
+    const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
+    const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
+    const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+}
 
 pub trait ColourAngle: Copy {
     const RED_ANGLE: Self;
@@ -43,7 +61,7 @@ impl<F: FloatPlus + DegreesConst + Debug> ColourAngle for Degrees<F> {
 }
 
 pub trait ColourComponent:
-    FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + Debug
+    FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + Debug + Default
 {
     const FOUR: Self;
     const SIN_120: Self;

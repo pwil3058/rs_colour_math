@@ -8,9 +8,10 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.4.0"
+num-traits = "0.2.11"
 regex = "0.2"
 serde = "1.0"
 serde_derive = "1.0"
 
-float_plus = { git = "https://github.com/pwil3058/rs_float_plus.git" }
+num_traits_plus = { git = "https://github.com/pwil3058/rs_num_traits_plus.git" }
 normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
