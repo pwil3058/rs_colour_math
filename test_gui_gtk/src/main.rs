@@ -40,6 +40,9 @@ fn main() {
     let rgb_entry = RGBHexEntryBuilder::<u8>::new().build();
     vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
 
+    let rgb_entry = RGBHexEntryBuilder::<u16>::new().build();
+    vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
+
     let colour_manipulator = RGBManipulatorGUIBuilder::new().build();
     vbox.pack_start(&colour_manipulator.pwo(), true, true, 0);
 

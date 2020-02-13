@@ -28,6 +28,18 @@ impl FromColourComponent for u8 {
     }
 }
 
+impl FromColourComponent for u16 {
+    fn from_cc<F: ColourComponent>(cc: F) -> Self {
+        debug_assert!(cc >= F::ZERO && cc <= F::ONE);
+        let value = F::from_u16(u16::max_value()).unwrap() * cc;
+        value.to_u16().unwrap()
+    }
+
+    fn to_cc<F: ColourComponent>(self) -> F {
+        F::from_u16(self).unwrap() / F::from_u16(u16::max_value()).unwrap()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct URGB<U>([U; 3]);
 
