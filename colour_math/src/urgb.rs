@@ -38,6 +38,7 @@ where
         + num_traits::Bounded
         + num_traits::Unsigned
         + num_traits::FromPrimitive
+        + num_traits_plus::NumberConstants
         + Ord
         + Copy
         + 'static,
@@ -60,10 +61,17 @@ impl RGBConstants for URGB<u8> {
     const BLACK: Self = Self([0xFF, 0xFF, 0xFF]);
 }
 
+impl<U: Copy> From<&[U]> for URGB<U> {
+    fn from(array: &[U]) -> Self {
+        debug_assert!(array.len() == 3);
+        Self([array[0], array[1], array[2]])
+    }
+}
+
 impl<U, F> From<&RGB<F>> for URGB<U>
 where
     F: ColourComponent,
-    U: FromColourComponent,
+    U: FromColourComponent + Copy,
 {
     fn from(rgb: &RGB<F>) -> Self {
         let one: F = U::unsigned_one();
@@ -75,7 +83,7 @@ where
                 U::from_cc(value)
             })
             .collect();
-        URGB([v[0], v[1], v[2]])
+        URGB::<U>::from(&v[..])
     }
 }
 
@@ -86,6 +94,52 @@ where
 {
     fn from(rgb: RGB<F>) -> Self {
         (&rgb).into()
+    }
+}
+
+impl<F, U> From<&URGB<U>> for RGB<F>
+where
+    F: ColourComponent,
+    U: FromColourComponent
+        + Default
+        + UpperHex
+        + num_traits::Bounded
+        + num_traits::Unsigned
+        + num_traits::FromPrimitive
+        + num_traits_plus::NumberConstants
+        + Ord
+        + Copy
+        + 'static,
+{
+    fn from(urgb: &URGB<U>) -> Self {
+        let one: F = U::unsigned_one();
+        let v: Vec<F> = urgb
+            .iter()
+            .map(|u| {
+                let enumerator: F = u.to_cc();
+                enumerator / one
+            })
+            .collect();
+        RGB::<F>::from([v[0], v[1], v[2]])
+    }
+}
+
+impl<F, U> From<URGB<U>> for RGB<F>
+where
+    F: ColourComponent,
+    U: FromColourComponent
+        + Default
+        + UpperHex
+        + num_traits::Bounded
+        + num_traits::Unsigned
+        + num_traits::FromPrimitive
+        + num_traits_plus::NumberConstants
+        + Ord
+        + Copy
+        + 'static,
+{
+    fn from(urgb: URGB<U>) -> Self {
+        (&urgb).into()
     }
 }
 

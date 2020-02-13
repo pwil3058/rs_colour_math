@@ -8,7 +8,6 @@ use std::{
 };
 
 use normalised_angles::*;
-use num_traits_plus::assert_approx_eq;
 
 use crate::rgb::RGB;
 use crate::{chroma, ColourAngle, ColourComponent, ColourInterface};
@@ -264,6 +263,7 @@ impl<F: ColourComponent> Hue<F> {
 mod test {
     use super::*;
     use crate::{I_BLUE, I_GREEN, I_RED};
+    use num_traits_plus::assert_approx_eq;
 
     const TEST_ANGLES: [f64; 13] = [
         -180.0, -150.0, -120.0, -90.0, -60.0, -30.0, 0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0,

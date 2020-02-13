@@ -4,6 +4,7 @@ use std::convert::TryFrom;
 use crate::{chroma::HueData, rgb::RGB, ColourComponent, ColourInterface};
 use normalised_angles::Degrees;
 
+#[derive(Default)]
 pub struct RGBManipulator<F: ColourComponent> {
     rgb: RGB<F>,
     hue_data: Option<HueData<F>>,
@@ -23,12 +24,12 @@ impl<F: ColourComponent> RGBManipulator<F> {
         }
     }
 
-    pub fn rgb(&self) -> RGB<F> {
-        self.rgb
+    pub fn rgb(&self) -> &RGB<F> {
+        &self.rgb
     }
 
-    pub fn set_rgb(&mut self, rgb: RGB<F>) {
-        self.rgb = rgb;
+    pub fn set_rgb(&mut self, rgb: &RGB<F>) {
+        self.rgb = *rgb;
         self.sum = rgb.sum();
         let xy = rgb.xy();
         if let Ok(hue_data) = HueData::try_from(xy) {
@@ -164,6 +165,37 @@ impl<F: ColourComponent> RGBManipulator<F> {
     }
 }
 
+#[derive(Default)]
+pub struct RGBManipulatorBuilder<F: ColourComponent> {
+    init_rgb: Option<RGB<F>>,
+    clamped: bool,
+}
+
+impl<F: ColourComponent> RGBManipulatorBuilder<F> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn init_rgb(&mut self, rgb: &RGB<F>) -> &mut Self {
+        self.init_rgb = Some(*rgb);
+        self
+    }
+
+    pub fn clamped(&mut self, clamped: bool) -> &mut Self {
+        self.clamped = clamped;
+        self
+    }
+
+    pub fn build(&self) -> RGBManipulator<F> {
+        let mut rgb_manipulator = RGBManipulator::<F>::default();
+        rgb_manipulator.clamped = self.clamped;
+        if let Some(init_rgb) = self.init_rgb {
+            rgb_manipulator.set_rgb(&init_rgb);
+        };
+        rgb_manipulator
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::ColourInterface;
@@ -173,7 +205,7 @@ mod test {
     fn decr_chroma() {
         let mut manipulator = super::RGBManipulator::<f64>::new(true);
         assert!(!manipulator.decr_chroma(0.1));
-        manipulator.set_rgb(crate::rgb::RGB::YELLOW);
+        manipulator.set_rgb(&crate::rgb::RGB::YELLOW);
         assert_eq!(manipulator.chroma, 1.0);
         let saved_hue_data = manipulator.hue_data;
         let decr = 0.1;
@@ -194,7 +226,7 @@ mod test {
     fn incr_chroma() {
         let mut manipulator = super::RGBManipulator::<f64>::new(true);
         assert!(!manipulator.incr_chroma(0.1));
-        manipulator.set_rgb([0.75, 0.5, 0.75].into());
+        manipulator.set_rgb(&[0.75, 0.5, 0.75].into());
         let saved_hue_data = manipulator.hue_data;
         let incr = 0.1;
         let mut expected = (manipulator.chroma + incr).min(crate::chroma::max_chroma_for_sum(
@@ -219,7 +251,7 @@ mod test {
     #[test]
     fn round_trip_chroma() {
         let mut manipulator = super::RGBManipulator::<f64>::new(true);
-        manipulator.set_rgb(crate::rgb::RGB::CYAN);
+        manipulator.set_rgb(&crate::rgb::RGB::CYAN);
         while manipulator.decr_chroma(0.01) {}
         assert!(manipulator.rgb.is_grey());
         while manipulator.incr_chroma(0.01) {}
@@ -234,7 +266,7 @@ mod test {
         assert_eq!(manipulator.rgb, crate::rgb::RGB::WHITE);
         while manipulator.decr_value(0.1) {}
         assert_eq!(manipulator.rgb, crate::rgb::RGB::BLACK);
-        manipulator.set_rgb(crate::rgb::RGB::YELLOW);
+        manipulator.set_rgb(&crate::rgb::RGB::YELLOW);
         assert!(!manipulator.decr_value(0.1));
         assert!(!manipulator.incr_value(0.1));
         let cur_value = manipulator.rgb.value();
@@ -261,7 +293,7 @@ mod test {
             .iter()
             .chain(crate::rgb::RGB::SECONDARIES.iter())
         {
-            rgb_manipulator.set_rgb(*rgb);
+            rgb_manipulator.set_rgb(rgb);
             for delta in [
                 -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
             ]
@@ -298,7 +330,7 @@ mod test {
         ]
         .iter()
         {
-            rgb_manipulator.set_rgb((*array).into());
+            rgb_manipulator.set_rgb(&(*array).into());
             for delta in [
                 -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
             ]
