@@ -86,15 +86,7 @@ where
     U: FromColourComponent + Copy,
 {
     fn from(rgb: &RGB<F>) -> Self {
-        let one: F = U::unsigned_one();
-        let v: Vec<U> = rgb
-            .raw()
-            .iter()
-            .map(|f| {
-                let value = (one * *f).round();
-                U::from_cc(value)
-            })
-            .collect();
+        let v: Vec<U> = rgb.raw().iter().map(|f| U::from_cc(*f)).collect();
         URGB::<U>::from(&v[..])
     }
 }
@@ -124,14 +116,7 @@ where
         + 'static,
 {
     fn from(urgb: &URGB<U>) -> Self {
-        let one: F = U::unsigned_one();
-        let v: Vec<F> = urgb
-            .iter()
-            .map(|u| {
-                let enumerator: F = u.to_cc();
-                enumerator / one
-            })
-            .collect();
+        let v: Vec<F> = urgb.iter().map(|u| u.to_cc()).collect();
         RGB::<F>::from([v[0], v[1], v[2]])
     }
 }
