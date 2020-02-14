@@ -1,6 +1,6 @@
 // Copyright 2020 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use std::fmt::UpperHex;
+use std::{fmt::UpperHex, ops::Index};
 
 use crate::{
     rgb::{ColourComponent, RGB},
@@ -152,6 +152,14 @@ where
 {
     fn from(urgb: URGB<U>) -> Self {
         (&urgb).into()
+    }
+}
+
+impl<U> Index<u8> for URGB<U> {
+    type Output = U;
+
+    fn index(&self, index: u8) -> &U {
+        &self.0[index as usize]
     }
 }
 

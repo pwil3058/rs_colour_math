@@ -272,7 +272,7 @@ where
         + Copy
         + 'static,
 {
-    init_values: [U; 3],
+    initial_rgb: URGB<U>,
     editable: bool,
 }
 
@@ -292,6 +292,16 @@ where
         Self::default()
     }
 
+    pub fn editable(&mut self, editable: bool) -> &mut Self {
+        self.editable = editable;
+        self
+    }
+
+    pub fn initial_rgb(&mut self, initial_rgb: &URGB<U>) -> &mut Self {
+        self.initial_rgb = *initial_rgb;
+        self
+    }
+
     pub fn build(&self) -> Rc<RGBHexEntry<U>> {
         let hbox = gtk::BoxBuilder::new().build();
 
@@ -306,7 +316,7 @@ where
         {
             let entry = HexEntryBuilder::new()
                 .editable(self.editable)
-                .initial_value(self.init_values[index])
+                .initial_value(self.initial_rgb[index as u8])
                 .build();
             let label = gtk::Label::new(Some(label));
             label.set_widget_colour_rgb(&(*rgb).into());
