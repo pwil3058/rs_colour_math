@@ -12,7 +12,7 @@ use gtk::prelude::*;
 use pw_gix::wrapper::*;
 
 use crate::{
-    colour::{RGB, URGB},
+    colour::{HueConstants, RGB, URGB},
     coloured::Colourable,
 };
 

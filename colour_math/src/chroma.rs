@@ -425,7 +425,7 @@ mod test {
         HueData,
     };
     use crate::rgb::*;
-    use crate::ColourComponent;
+    use crate::{ColourComponent, HueConstants, RGBConstants};
     use normalised_angles::Degrees;
     use num_traits_plus::{assert_approx_eq, float_plus::*};
 

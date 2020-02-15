@@ -9,7 +9,7 @@ use gtk::DrawingAreaBuilder;
 
 use pw_gix::{gtkx::menu::WrappedMenu, wrapper::*};
 
-use colour_math::manipulator::RGBManipulatorBuilder;
+use colour_math::{manipulator::RGBManipulatorBuilder, RGBConstants};
 
 use colour_math_cairo::Point;
 

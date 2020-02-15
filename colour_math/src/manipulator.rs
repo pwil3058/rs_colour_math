@@ -198,7 +198,7 @@ impl<F: ColourComponent> RGBManipulatorBuilder<F> {
 
 #[cfg(test)]
 mod test {
-    use crate::ColourInterface;
+    use crate::{ColourInterface, HueConstants, RGBConstants};
     use num_traits_plus::{assert_approx_eq, float_plus::*};
 
     #[test]

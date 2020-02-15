@@ -4,7 +4,7 @@ use std::{fmt::UpperHex, ops::Index};
 
 use crate::{
     rgb::{ColourComponent, RGB},
-    RGBConstants,
+    HueConstants, RGBConstants,
 };
 
 pub trait ConvertComponent:
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl RGBConstants for URGB<u8> {
+impl HueConstants for URGB<u8> {
     const RED: Self = Self([0xFF, 0, 0]);
     const GREEN: Self = Self([0, 0xFF, 0]);
     const BLUE: Self = Self([0, 0, 0xFF]);
@@ -57,7 +57,9 @@ impl RGBConstants for URGB<u8> {
     const CYAN: Self = Self([0, 0xFF, 0xFF]);
     const MAGENTA: Self = Self([0xFF, 0, 0xFF]);
     const YELLOW: Self = Self([0xFF, 0xFF, 0]);
+}
 
+impl RGBConstants for URGB<u8> {
     const WHITE: Self = Self([0, 0, 0]);
     const BLACK: Self = Self([0xFF, 0xFF, 0xFF]);
 }

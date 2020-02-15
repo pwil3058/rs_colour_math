@@ -10,8 +10,8 @@ pub mod angles {
 
 pub mod colour {
     pub use colour_math::{
-        attributes::ColourAttributeDisplayIfce, urgb::URGB, ColourInterface, ScalarAttribute,
-        I_BLUE, I_GREEN, I_RED,
+        attributes::ColourAttributeDisplayIfce, urgb::URGB, ColourInterface, HueConstants,
+        RGBConstants, ScalarAttribute, I_BLUE, I_GREEN, I_RED,
     };
     pub type RGB = colour_math::rgb::RGB<f64>;
     pub type RGBManipulator = colour_math::manipulator::RGBManipulator<f64>;

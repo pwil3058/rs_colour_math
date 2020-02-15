@@ -23,7 +23,7 @@ pub mod urgb;
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 
-pub trait RGBConstants: Sized {
+pub trait HueConstants: Sized {
     const RED: Self;
     const GREEN: Self;
     const BLUE: Self;
@@ -32,11 +32,14 @@ pub trait RGBConstants: Sized {
     const MAGENTA: Self;
     const YELLOW: Self;
 
+    const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
+    const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
+}
+
+pub trait RGBConstants: HueConstants {
     const WHITE: Self;
     const BLACK: Self;
 
-    const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
-    const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
     const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
 }
 
@@ -58,6 +61,16 @@ impl<F: FloatPlus + DegreesConst + Debug> ColourAngle for Degrees<F> {
     const CYAN_ANGLE: Self = Self::DEG_180;
     const YELLOW_ANGLE: Self = Self::DEG_60;
     const MAGENTA_ANGLE: Self = Self::NEG_DEG_60;
+}
+
+impl<F: FloatPlus + DegreesConst + Debug> HueConstants for Degrees<F> {
+    const RED: Self = Self::DEG_0;
+    const GREEN: Self = Self::DEG_120;
+    const BLUE: Self = Self::NEG_DEG_120;
+
+    const CYAN: Self = Self::DEG_180;
+    const MAGENTA: Self = Self::NEG_DEG_60;
+    const YELLOW: Self = Self::DEG_60;
 }
 
 pub trait ColourComponent:

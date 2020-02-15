@@ -2,7 +2,10 @@
 
 use std::cell::Cell;
 
-use colour_math::attributes::drawing::{self, Cartesian};
+use colour_math::{
+    attributes::drawing::{self, Cartesian},
+    RGBConstants,
+};
 
 pub type Point = drawing::Point<f64>;
 pub type Size = drawing::Size<f64>;

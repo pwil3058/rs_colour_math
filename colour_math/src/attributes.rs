@@ -2,7 +2,7 @@
 
 use normalised_angles::Degrees;
 
-use crate::{ColourComponent, ColourInterface, Hue, RGB};
+use crate::{ColourComponent, ColourInterface, Hue, HueConstants, RGBConstants, RGB};
 
 pub mod drawing;
 pub mod hue_wheel;

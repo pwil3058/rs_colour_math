@@ -11,28 +11,29 @@ use regex::Regex;
 
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
+use crate::{HueConstants, RGBConstants};
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<F: ColourComponent>([F; 3]);
 
+impl<F: ColourComponent> HueConstants for RGB<F> {
+    const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);
+    const GREEN: Self = Self([F::ZERO, F::ONE, F::ZERO]);
+    const BLUE: Self = Self([F::ZERO, F::ZERO, F::ONE]);
+
+    const CYAN: Self = Self([F::ZERO, F::ONE, F::ONE]);
+    const MAGENTA: Self = Self([F::ONE, F::ZERO, F::ONE]);
+    const YELLOW: Self = Self([F::ONE, F::ONE, F::ZERO]);
+}
+
+impl<F: ColourComponent> RGBConstants for RGB<F> {
+    const WHITE: Self = Self([F::ONE, F::ONE, F::ONE]);
+    const BLACK: Self = Self([F::ZERO, F::ZERO, F::ZERO]);
+}
+
 impl<F: ColourComponent> RGB<F> {
-    pub const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);
-    pub const GREEN: Self = Self([F::ZERO, F::ONE, F::ZERO]);
-    pub const BLUE: Self = Self([F::ZERO, F::ZERO, F::ONE]);
-
-    pub const CYAN: Self = Self([F::ZERO, F::ONE, F::ONE]);
-    pub const MAGENTA: Self = Self([F::ONE, F::ZERO, F::ONE]);
-    pub const YELLOW: Self = Self([F::ONE, F::ONE, F::ZERO]);
-
-    pub const WHITE: Self = Self([F::ONE, F::ONE, F::ONE]);
-    pub const BLACK: Self = Self([F::ZERO, F::ZERO, F::ZERO]);
-
-    pub const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
-    pub const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
-    pub const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
-
     pub fn raw(self) -> [F; 3] {
         self.0
     }

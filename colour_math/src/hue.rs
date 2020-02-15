@@ -10,7 +10,7 @@ use std::{
 use normalised_angles::*;
 
 use crate::rgb::RGB;
-use crate::{chroma, ColourAngle, ColourComponent, ColourInterface};
+use crate::{chroma, ColourAngle, ColourComponent, ColourInterface, RGBConstants};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct HueMod<F: ColourComponent> {
@@ -262,7 +262,7 @@ impl<F: ColourComponent> Hue<F> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{I_BLUE, I_GREEN, I_RED};
+    use crate::{HueConstants, RGBConstants, I_BLUE, I_GREEN, I_RED};
     use num_traits_plus::assert_approx_eq;
 
     const TEST_ANGLES: [f64; 13] = [

@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::FloatPlus;
 
-use crate::{ColourComponent, ColourInterface, ScalarAttribute, RGB};
+use crate::{ColourComponent, ColourInterface, HueConstants, RGBConstants, ScalarAttribute, RGB};
 
 use super::drawing::{Cartesian, Point};
 
