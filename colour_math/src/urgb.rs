@@ -7,38 +7,27 @@ use crate::{
     RGBConstants,
 };
 
-pub trait FromColourComponent: Copy + num_traits::Bounded {
-    fn from_cc<F: ColourComponent>(cc: F) -> Self;
-    fn to_cc<F: ColourComponent>(self) -> F;
-
-    fn unsigned_one<F: ColourComponent>() -> F {
-        Self::max_value().to_cc()
-    }
-}
-
-impl FromColourComponent for u8 {
-    fn from_cc<F: ColourComponent>(cc: F) -> Self {
+pub trait ConvertComponent:
+    Copy
+    + num_traits::Bounded
+    + num_traits::NumCast
+    + num_traits::ToPrimitive
+    + num_traits_plus::NumberConstants
+{
+    fn from_fcc<F: ColourComponent>(cc: F) -> Self {
         debug_assert!(cc >= F::ZERO && cc <= F::ONE);
-        let value = F::from_u8(u8::max_value()).unwrap() * cc;
-        value.to_u8().unwrap()
+        let value = F::from::<Self>(Self::MAX).unwrap() * cc;
+        Self::from::<F>(value.round()).unwrap()
     }
 
-    fn to_cc<F: ColourComponent>(self) -> F {
-        F::from_u8(self).unwrap() / F::from_u8(u8::max_value()).unwrap()
+    fn to_fcc<F: ColourComponent>(self) -> F {
+        F::from::<Self>(self).unwrap() / F::from::<Self>(Self::MAX).unwrap()
     }
 }
 
-impl FromColourComponent for u16 {
-    fn from_cc<F: ColourComponent>(cc: F) -> Self {
-        debug_assert!(cc >= F::ZERO && cc <= F::ONE);
-        let value = F::from_u16(u16::max_value()).unwrap() * cc;
-        value.to_u16().unwrap()
-    }
+impl ConvertComponent for u8 {}
 
-    fn to_cc<F: ColourComponent>(self) -> F {
-        F::from_u16(self).unwrap() / F::from_u16(u16::max_value()).unwrap()
-    }
-}
+impl ConvertComponent for u16 {}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct URGB<U>([U; 3]);
@@ -83,10 +72,10 @@ impl<U: Copy> From<&[U]> for URGB<U> {
 impl<U, F> From<&RGB<F>> for URGB<U>
 where
     F: ColourComponent,
-    U: FromColourComponent + Copy,
+    U: ConvertComponent + Copy,
 {
     fn from(rgb: &RGB<F>) -> Self {
-        let v: Vec<U> = rgb.raw().iter().map(|f| U::from_cc(*f)).collect();
+        let v: Vec<U> = rgb.raw().iter().map(|f| U::from_fcc(*f)).collect();
         URGB::<U>::from(&v[..])
     }
 }
@@ -94,7 +83,7 @@ where
 impl<U, F> From<RGB<F>> for URGB<U>
 where
     F: ColourComponent,
-    U: FromColourComponent,
+    U: ConvertComponent,
 {
     fn from(rgb: RGB<F>) -> Self {
         (&rgb).into()
@@ -104,7 +93,7 @@ where
 impl<F, U> From<&URGB<U>> for RGB<F>
 where
     F: ColourComponent,
-    U: FromColourComponent
+    U: ConvertComponent
         + Default
         + UpperHex
         + num_traits::Bounded
@@ -116,7 +105,7 @@ where
         + 'static,
 {
     fn from(urgb: &URGB<U>) -> Self {
-        let v: Vec<F> = urgb.iter().map(|u| u.to_cc()).collect();
+        let v: Vec<F> = urgb.iter().map(|u| u.to_fcc()).collect();
         RGB::<F>::from([v[0], v[1], v[2]])
     }
 }
@@ -124,7 +113,7 @@ where
 impl<F, U> From<URGB<U>> for RGB<F>
 where
     F: ColourComponent,
-    U: FromColourComponent
+    U: ConvertComponent
         + Default
         + UpperHex
         + num_traits::Bounded
@@ -158,12 +147,12 @@ mod test {
 
     #[test]
     fn component_conversion() {
-        assert_eq!(u8::from_cc(f64::ONE), 0xFF);
-        assert_eq!(u8::from_cc(f64::ZERO), 0x00);
-        assert_eq!(u8::from_cc(0.392157_f64), 0x64);
-        assert_eq!(0xFF_u8.to_cc::<f64>(), 1.0);
-        assert_eq!(0x00_u8.to_cc::<f64>(), 0.0);
-        assert_approx_eq!(0x64_u8.to_cc::<f64>(), 0.39215686274509803);
+        assert_eq!(u8::from_fcc(f64::ONE), 0xFF);
+        assert_eq!(u8::from_fcc(f64::ZERO), 0x00);
+        assert_eq!(u8::from_fcc(0.392157_f64), 0x64);
+        assert_eq!(0xFF_u8.to_fcc::<f64>(), 1.0);
+        assert_eq!(0x00_u8.to_fcc::<f64>(), 0.0);
+        assert_approx_eq!(0x64_u8.to_fcc::<f64>(), 0.39215686274509803);
     }
 
     #[test]
