@@ -8,6 +8,7 @@ use colour_math_gtk::{
     attributes::{AttributeSelectorBuilder, ColourAttributeDisplayStackBuilder},
     colour::{ScalarAttribute, RGB},
     colour_edit::ColourEditorBuilder,
+    hue_wheel::GtkHueWheelBuilder,
     manipulator::RGBManipulatorGUIBuilder,
     rgb_entry::{HexEntryBuilder, RGBHexEntryBuilder},
 };
@@ -48,6 +49,9 @@ fn main() {
 
     let colour_editor = ColourEditorBuilder::new().build();
     vbox.pack_start(&colour_editor.pwo(), true, true, 0);
+
+    let gtk_hue_wheel = GtkHueWheelBuilder::new().attributes(&attributes).build();
+    vbox.pack_start(&gtk_hue_wheel.pwo(), true, true, 0);
 
     vbox.show_all();
     win.add(&vbox);

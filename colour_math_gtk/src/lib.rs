@@ -84,7 +84,10 @@ pub mod coloured {
 }
 
 pub mod attributes {
-    use std::{cell::RefCell, rc::Rc};
+    use std::{
+        cell::{Cell, RefCell},
+        rc::Rc,
+    };
 
     use gtk::{BoxExt, RadioButtonExt, ToggleButtonExt, WidgetExt};
 
@@ -225,15 +228,21 @@ pub mod attributes {
     #[derive(PWO)]
     pub struct AttributeSelector {
         gtk_box: gtk::Box,
+        attribute: Cell<ScalarAttribute>,
         callbacks: RefCell<Vec<SelectionCallback>>,
     }
 
     impl AttributeSelector {
+        pub fn attribute(&self) -> ScalarAttribute {
+            self.attribute.get()
+        }
+
         pub fn connect_changed<F: Fn(ScalarAttribute) + 'static>(&self, callback: F) {
             self.callbacks.borrow_mut().push(Box::new(callback))
         }
 
         fn notify_changed(&self, attr: ScalarAttribute) {
+            self.attribute.set(attr);
             for callback in self.callbacks.borrow().iter() {
                 callback(attr);
             }
@@ -272,6 +281,7 @@ pub mod attributes {
         pub fn build(&self) -> Rc<AttributeSelector> {
             let asrb = Rc::new(AttributeSelector {
                 gtk_box: gtk::Box::new(self.orientation, 0),
+                attribute: Cell::new(*self.attributes.first().expect("programmer error")),
                 callbacks: RefCell::new(vec![]),
             });
 
@@ -300,5 +310,6 @@ pub mod attributes {
 }
 
 pub mod colour_edit;
+pub mod hue_wheel;
 pub mod manipulator;
 pub mod rgb_entry;

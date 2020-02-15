@@ -254,7 +254,7 @@ impl RGBManipulatorGUIBuilder {
             .height_request(150)
             .width_request(150)
             .build();
-        let rgb_manipulator_gui = Rc::new(RGBManipulatorGUI {
+        let rgbm_gui = Rc::new(RGBManipulatorGUI {
             vbox,
             rgb_manipulator,
             drawing_area,
@@ -273,135 +273,98 @@ impl RGBManipulatorGUIBuilder {
             change_callbacks: RefCell::new(Vec::new()),
         });
 
-        rgb_manipulator_gui
+        rgbm_gui
             .vbox
-            .pack_start(&rgb_manipulator_gui.incr_value_btn, false, false, 0);
+            .pack_start(&rgbm_gui.incr_value_btn, false, false, 0);
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        hbox.pack_start(&rgb_manipulator_gui.hue_left_btn, false, false, 0);
-        hbox.pack_start(&rgb_manipulator_gui.drawing_area, true, true, 0);
-        hbox.pack_start(&rgb_manipulator_gui.hue_right_btn, false, false, 0);
-        rgb_manipulator_gui.vbox.pack_start(&hbox, true, true, 0);
+        hbox.pack_start(&rgbm_gui.hue_left_btn, false, false, 0);
+        hbox.pack_start(&rgbm_gui.drawing_area, true, true, 0);
+        hbox.pack_start(&rgbm_gui.hue_right_btn, false, false, 0);
+        rgbm_gui.vbox.pack_start(&hbox, true, true, 0);
 
-        rgb_manipulator_gui
+        rgbm_gui
             .vbox
-            .pack_start(&rgb_manipulator_gui.decr_value_btn, false, false, 0);
+            .pack_start(&rgbm_gui.decr_value_btn, false, false, 0);
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         match self.chroma_label {
             ChromaLabel::Chroma => {
-                rgb_manipulator_gui.incr_chroma_btn.set_label("Chroma++");
-                rgb_manipulator_gui.decr_chroma_btn.set_label("Chroma--");
-                hbox.pack_start(&rgb_manipulator_gui.decr_chroma_btn, true, true, 0);
-                hbox.pack_start(&rgb_manipulator_gui.incr_chroma_btn, true, true, 0);
+                rgbm_gui.incr_chroma_btn.set_label("Chroma++");
+                rgbm_gui.decr_chroma_btn.set_label("Chroma--");
+                hbox.pack_start(&rgbm_gui.decr_chroma_btn, true, true, 0);
+                hbox.pack_start(&rgbm_gui.incr_chroma_btn, true, true, 0);
             }
             ChromaLabel::Greyness => {
-                rgb_manipulator_gui.incr_chroma_btn.set_label("Greyness--");
-                rgb_manipulator_gui.decr_chroma_btn.set_label("Greyness++");
-                hbox.pack_start(&rgb_manipulator_gui.incr_chroma_btn, true, true, 0);
-                hbox.pack_start(&rgb_manipulator_gui.decr_chroma_btn, true, true, 0);
+                rgbm_gui.incr_chroma_btn.set_label("Greyness--");
+                rgbm_gui.decr_chroma_btn.set_label("Greyness++");
+                hbox.pack_start(&rgbm_gui.incr_chroma_btn, true, true, 0);
+                hbox.pack_start(&rgbm_gui.decr_chroma_btn, true, true, 0);
             }
             ChromaLabel::Both => {
-                rgb_manipulator_gui
-                    .incr_chroma_btn
-                    .set_label("Chroma++/Greyness--");
-                rgb_manipulator_gui
-                    .decr_chroma_btn
-                    .set_label("Chroma--/Greyness++");
-                hbox.pack_start(&rgb_manipulator_gui.decr_chroma_btn, true, true, 0);
-                hbox.pack_start(&rgb_manipulator_gui.incr_chroma_btn, true, true, 0);
+                rgbm_gui.incr_chroma_btn.set_label("Chroma++/Greyness--");
+                rgbm_gui.decr_chroma_btn.set_label("Chroma--/Greyness++");
+                hbox.pack_start(&rgbm_gui.decr_chroma_btn, true, true, 0);
+                hbox.pack_start(&rgbm_gui.incr_chroma_btn, true, true, 0);
             }
         }
-        rgb_manipulator_gui.vbox.pack_start(&hbox, false, false, 0);
+        rgbm_gui.vbox.pack_start(&hbox, false, false, 0);
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         for button in self.extra_buttons.iter() {
             hbox.pack_start(button, true, true, 0);
         }
-        hbox.pack_start(&rgb_manipulator_gui.auto_match_btn, true, true, 0);
-        hbox.pack_start(
-            &rgb_manipulator_gui.auto_match_on_paste_btn,
-            false,
-            false,
-            0,
-        );
-        rgb_manipulator_gui.vbox.pack_start(&hbox, false, false, 0);
+        hbox.pack_start(&rgbm_gui.auto_match_btn, true, true, 0);
+        hbox.pack_start(&rgbm_gui.auto_match_on_paste_btn, false, false, 0);
+        rgbm_gui.vbox.pack_start(&hbox, false, false, 0);
 
-        rgb_manipulator_gui.vbox.show_all();
+        rgbm_gui.vbox.show_all();
 
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
-            .vbox
-            .connect_key_press_event(move |_, event| {
-                let key = event.get_keyval();
-                if key == gdk::enums::key::Shift_L {
-                    rgb_manipulator_gui_c.delta_size.set(DeltaSize::Large);
-                } else if key == gdk::enums::key::Shift_R {
-                    rgb_manipulator_gui_c.delta_size.set(DeltaSize::Small);
-                };
-                gtk::Inhibit(false)
-            });
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
-            .vbox
-            .connect_key_release_event(move |_, event| {
-                let key = event.get_keyval();
-                if key == gdk::enums::key::Shift_L || key == gdk::enums::key::Shift_R {
-                    rgb_manipulator_gui_c.delta_size.set(DeltaSize::Normal);
-                };
-                gtk::Inhibit(false)
-            });
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
-            .vbox
-            .connect_enter_notify_event(move |_, _| {
-                rgb_manipulator_gui_c.delta_size.set(DeltaSize::Normal);
-                gtk::Inhibit(false)
-            });
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui.vbox.connect_key_press_event(move |_, event| {
+            let key = event.get_keyval();
+            if key == gdk::enums::key::Shift_L {
+                rgbm_gui_c.delta_size.set(DeltaSize::Large);
+            } else if key == gdk::enums::key::Shift_R {
+                rgbm_gui_c.delta_size.set(DeltaSize::Small);
+            };
+            gtk::Inhibit(false)
+        });
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui.vbox.connect_key_release_event(move |_, event| {
+            let key = event.get_keyval();
+            if key == gdk::enums::key::Shift_L || key == gdk::enums::key::Shift_R {
+                rgbm_gui_c.delta_size.set(DeltaSize::Normal);
+            };
+            gtk::Inhibit(false)
+        });
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui.vbox.connect_enter_notify_event(move |_, _| {
+            rgbm_gui_c.delta_size.set(DeltaSize::Normal);
+            gtk::Inhibit(false)
+        });
 
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
-            .drawing_area
-            .connect_draw(move |_, cctx| {
-                rgb_manipulator_gui_c.draw(cctx);
-                gtk::Inhibit(true)
-            });
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui.drawing_area.connect_draw(move |_, cctx| {
+            rgbm_gui_c.draw(cctx);
+            gtk::Inhibit(true)
+        });
 
-        connect_button!(rgb_manipulator_gui, incr_value_btn, for_value, incr_value);
-        connect_button!(rgb_manipulator_gui, decr_value_btn, for_value, decr_value);
-        connect_button!(
-            rgb_manipulator_gui,
-            incr_chroma_btn,
-            for_chroma,
-            incr_chroma
-        );
-        connect_button!(
-            rgb_manipulator_gui,
-            decr_chroma_btn,
-            for_chroma,
-            decr_chroma
-        );
-        connect_button!(
-            rgb_manipulator_gui,
-            hue_left_btn,
-            for_hue_anticlockwise,
-            rotate
-        );
-        connect_button!(
-            rgb_manipulator_gui,
-            hue_right_btn,
-            for_hue_clockwise,
-            rotate
-        );
+        connect_button!(rgbm_gui, incr_value_btn, for_value, incr_value);
+        connect_button!(rgbm_gui, decr_value_btn, for_value, decr_value);
+        connect_button!(rgbm_gui, incr_chroma_btn, for_chroma, incr_chroma);
+        connect_button!(rgbm_gui, decr_chroma_btn, for_chroma, decr_chroma);
+        connect_button!(rgbm_gui, hue_left_btn, for_hue_anticlockwise, rotate);
+        connect_button!(rgbm_gui, hue_right_btn, for_hue_clockwise, rotate);
 
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui
             .auto_match_btn
-            .connect_clicked(move |_| rgb_manipulator_gui_c.auto_match_samples());
+            .connect_clicked(move |_| rgbm_gui_c.auto_match_samples());
 
         // POPUP
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui
             .popup_menu
             .append_item(
                 "paste",
@@ -413,21 +376,21 @@ impl RGBManipulatorGUIBuilder {
                 if let Some(pixbuf) = cbd.wait_for_image() {
                     let sample = Sample {
                         pixbuf,
-                        position: rgb_manipulator_gui_c.popup_menu_posn.get(),
+                        position: rgbm_gui_c.popup_menu_posn.get(),
                     };
-                    rgb_manipulator_gui_c.samples.borrow_mut().push(sample);
-                    if rgb_manipulator_gui_c.auto_match_on_paste_btn.get_active() {
-                        rgb_manipulator_gui_c.auto_match_samples();
+                    rgbm_gui_c.samples.borrow_mut().push(sample);
+                    if rgbm_gui_c.auto_match_on_paste_btn.get_active() {
+                        rgbm_gui_c.auto_match_samples();
                     } else {
-                        rgb_manipulator_gui_c.drawing_area.queue_draw();
+                        rgbm_gui_c.drawing_area.queue_draw();
                     };
-                    rgb_manipulator_gui_c.auto_match_btn.set_sensitive(true);
+                    rgbm_gui_c.auto_match_btn.set_sensitive(true);
                 } else {
-                    rgb_manipulator_gui_c.inform_user("No image data on clipboard.", None);
+                    rgbm_gui_c.inform_user("No image data on clipboard.", None);
                 }
             });
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui
             .popup_menu
             .append_item(
                 "remove",
@@ -435,34 +398,34 @@ impl RGBManipulatorGUIBuilder {
                 "Remove all image samples from the sample area",
             )
             .connect_activate(move |_| {
-                rgb_manipulator_gui_c.samples.borrow_mut().clear();
-                rgb_manipulator_gui_c.drawing_area.queue_draw();
-                rgb_manipulator_gui_c.auto_match_btn.set_sensitive(false);
+                rgbm_gui_c.samples.borrow_mut().clear();
+                rgbm_gui_c.drawing_area.queue_draw();
+                rgbm_gui_c.auto_match_btn.set_sensitive(false);
             });
-        let rgb_manipulator_gui_c = Rc::clone(&rgb_manipulator_gui);
-        rgb_manipulator_gui
+        let rgbm_gui_c = Rc::clone(&rgbm_gui);
+        rgbm_gui
             .drawing_area
             .connect_button_press_event(move |_, event| {
                 if event.get_event_type() == gdk::EventType::ButtonPress && event.get_button() == 3
                 {
                     let position = Point::from(event.get_position());
-                    let n_samples = rgb_manipulator_gui_c.samples.borrow().len();
+                    let n_samples = rgbm_gui_c.samples.borrow().len();
                     let cbd = gtk::Clipboard::get(&gdk::SELECTION_CLIPBOARD);
-                    rgb_manipulator_gui_c
+                    rgbm_gui_c
                         .popup_menu
                         .set_sensitivities(cbd.wait_is_image_available(), &["paste"]);
-                    rgb_manipulator_gui_c
+                    rgbm_gui_c
                         .popup_menu
                         .set_sensitivities(n_samples > 0, &["remove"]);
-                    rgb_manipulator_gui_c.popup_menu_posn.set(position);
-                    rgb_manipulator_gui_c.popup_menu.popup_at_event(event);
+                    rgbm_gui_c.popup_menu_posn.set(position);
+                    rgbm_gui_c.popup_menu.popup_at_event(event);
                     return Inhibit(true);
                 }
                 Inhibit(false)
             });
 
-        rgb_manipulator_gui.reset();
+        rgbm_gui.reset();
 
-        rgb_manipulator_gui
+        rgbm_gui
     }
 }

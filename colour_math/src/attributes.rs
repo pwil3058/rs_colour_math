@@ -5,6 +5,7 @@ use normalised_angles::Degrees;
 use crate::{ColourComponent, ColourInterface, Hue, RGB};
 
 pub mod drawing;
+pub mod hue_wheel;
 
 use self::drawing::{Dirn, Draw, Point, TextPosn};
 

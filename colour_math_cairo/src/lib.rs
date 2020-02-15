@@ -2,7 +2,7 @@
 
 use std::cell::Cell;
 
-use colour_math::attributes::drawing;
+use colour_math::attributes::drawing::{self, Cartesian};
 
 pub type Point = drawing::Point<f64>;
 pub type Size = drawing::Size<f64>;
@@ -139,5 +139,103 @@ impl<'a> drawing::Draw<f64> for Drawer<'a> {
         }
         self.set_colour(self.text_colour.get());
         self.cairo_context.show_text(&text);
+    }
+}
+
+pub struct CairoCartesian<'a> {
+    pub cairo_context: &'a cairo::Context,
+    fill_colour: Cell<RGB>,
+    line_colour: Cell<RGB>,
+}
+
+impl<'a> CairoCartesian<'a> {
+    pub fn cartesian_transform_matrix(width: f64, height: f64) -> cairo::Matrix {
+        let scale = if width > height {
+            height / 2.15
+        } else {
+            width / 2.15
+        };
+        cairo::Matrix::new(scale, 0.0, 0.0, -scale, width / 2.0, height / 2.0)
+    }
+
+    pub fn new(cairo_context: &'a cairo::Context) -> Self {
+        Self {
+            cairo_context,
+            fill_colour: Cell::new(RGB::BLACK),
+            line_colour: Cell::new(RGB::BLACK),
+        }
+    }
+
+    fn set_colour(&self, rgb: RGB) {
+        self.cairo_context.set_source_rgb(rgb[0], rgb[1], rgb[2]);
+    }
+
+    fn fill(&self) {
+        self.set_colour(self.fill_colour.get());
+        self.cairo_context.fill();
+    }
+
+    fn stroke(&self) {
+        self.set_colour(self.line_colour.get());
+        self.cairo_context.stroke();
+    }
+}
+
+impl<'a> Cartesian<f64> for CairoCartesian<'a> {
+    fn draw_circle(&self, centre: Point, radius: f64, fill: bool) {
+        const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
+        self.cairo_context
+            .arc(centre.x, centre.y, radius, 0.0, TWO_PI);
+        if fill {
+            self.fill();
+        } else {
+            self.stroke();
+        }
+    }
+
+    fn draw_line(&self, line: &[Point]) {
+        if let Some(start) = line.first() {
+            self.cairo_context.move_to(start.x, start.y);
+            for point in line[1..].iter() {
+                self.cairo_context.line_to(point.x, point.y);
+            }
+            if line.len() > 1 {
+                self.stroke();
+            }
+        }
+    }
+
+    fn draw_polygon(&self, polygon: &[Point], fill: bool) {
+        if let Some(start) = polygon.first() {
+            self.cairo_context.move_to(start.x, start.y);
+            for point in polygon[1..].iter() {
+                self.cairo_context.line_to(point.x, point.y);
+            }
+            if polygon.len() > 1 {
+                self.cairo_context.close_path();
+                if fill {
+                    self.fill();
+                } else {
+                    self.stroke();
+                }
+            }
+        }
+    }
+
+    fn set_line_width(&self, width: f64) {
+        self.cairo_context.set_line_width(width);
+    }
+
+    fn set_background_colour(&self, rgb: RGB) {
+        self.set_colour(rgb);
+        self.cairo_context.paint();
+    }
+
+    fn set_line_colour(&self, rgb: RGB) {
+        self.line_colour.set(rgb);
+    }
+
+    fn set_fill_colour(&self, rgb: RGB) {
+        self.fill_colour.set(rgb);
     }
 }
