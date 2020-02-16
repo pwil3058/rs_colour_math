@@ -97,11 +97,11 @@ pub mod attributes {
 
     use crate::colour::{ColourAttributeDisplayIfce, ColourInterface, ScalarAttribute, RGB};
 
-    type ChromaCAD = colour_math::attributes::ChromaCAD<f64>;
-    type GreynessCAD = colour_math::attributes::GreynessCAD<f64>;
-    type HueCAD = colour_math::attributes::HueCAD<f64>;
-    type ValueCAD = colour_math::attributes::ValueCAD<f64>;
-    type WarmthCAD = colour_math::attributes::WarmthCAD<f64>;
+    pub type ChromaCAD = ColourAttributeDisplay<colour_math::attributes::ChromaCAD<f64>>;
+    pub type GreynessCAD = ColourAttributeDisplay<colour_math::attributes::GreynessCAD<f64>>;
+    pub type HueCAD = ColourAttributeDisplay<colour_math::attributes::HueCAD<f64>>;
+    pub type ValueCAD = ColourAttributeDisplay<colour_math::attributes::ValueCAD<f64>>;
+    pub type WarmthCAD = ColourAttributeDisplay<colour_math::attributes::WarmthCAD<f64>>;
 
     pub trait DynColourAttributeDisplay: PackableWidgetObject<PWT = gtk::DrawingArea> {
         fn set_rgb(&self, rgb: Option<&RGB>);
@@ -160,16 +160,15 @@ pub mod attributes {
         pub fn build(&self) -> ColourAttributeDisplayStack {
             let vbox = gtk::Box::new(gtk::Orientation::Vertical, 1);
             let mut cads = vec![];
-            let hue_cad: Rc<dyn DynColourAttributeDisplay> =
-                ColourAttributeDisplay::<HueCAD>::new();
+            let hue_cad: Rc<dyn DynColourAttributeDisplay> = HueCAD::new();
             vbox.pack_start(&hue_cad.pwo(), true, true, 0);
             cads.push(hue_cad);
             for scalar_attribute in self.attributes.iter() {
                 let cad: Rc<dyn DynColourAttributeDisplay> = match scalar_attribute {
-                    ScalarAttribute::Value => ColourAttributeDisplay::<ValueCAD>::new(),
-                    ScalarAttribute::Chroma => ColourAttributeDisplay::<ChromaCAD>::new(),
-                    ScalarAttribute::Warmth => ColourAttributeDisplay::<WarmthCAD>::new(),
-                    ScalarAttribute::Greyness => ColourAttributeDisplay::<GreynessCAD>::new(),
+                    ScalarAttribute::Value => ValueCAD::new(),
+                    ScalarAttribute::Chroma => ChromaCAD::new(),
+                    ScalarAttribute::Warmth => WarmthCAD::new(),
+                    ScalarAttribute::Greyness => GreynessCAD::new(),
                 };
                 vbox.pack_start(&cad.pwo(), true, true, 0);
                 cads.push(cad);
