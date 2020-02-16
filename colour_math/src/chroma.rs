@@ -3,36 +3,24 @@ use std::convert::TryFrom;
 
 use normalised_angles::*;
 
-use crate::{rgb::RGB, ColourAngle, ColourComponent};
+use crate::{rgb::RGB, ColourComponent, HueConstants};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
-    if [
-        Degrees::RED_ANGLE,
-        Degrees::GREEN_ANGLE,
-        Degrees::BLUE_ANGLE,
-    ]
-    .contains(&abs_angle)
-    {
+    if Degrees::PRIMARIES.contains(&abs_angle) {
         F::ZERO
-    } else if [
-        Degrees::YELLOW_ANGLE,
-        Degrees::CYAN_ANGLE,
-        Degrees::MAGENTA_ANGLE,
-    ]
-    .contains(&abs_angle)
-    {
+    } else if Degrees::SECONDARIES.contains(&abs_angle) {
         F::ONE
     } else {
         fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
             // Careful of float not fully representing real numbers
-            (angle.sin() / (Degrees::GREEN_ANGLE - angle).sin()).min(F::ONE)
+            (angle.sin() / (Degrees::GREEN - angle).sin()).min(F::ONE)
         };
-        if abs_angle <= Degrees::YELLOW_ANGLE {
+        if abs_angle <= Degrees::YELLOW {
             f(abs_angle)
-        } else if abs_angle <= Degrees::GREEN_ANGLE {
-            f(Degrees::GREEN_ANGLE - abs_angle)
+        } else if abs_angle <= Degrees::GREEN {
+            f(Degrees::GREEN - abs_angle)
         } else {
-            f(abs_angle - Degrees::GREEN_ANGLE)
+            f(abs_angle - Degrees::GREEN)
         }
     }
 }
@@ -121,37 +109,37 @@ pub struct HueData<F: ColourComponent> {
 
 impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
     fn from(angle: Degrees<F>) -> Self {
-        let (second, io) = if angle == Degrees::RED_ANGLE {
+        let (second, io) = if angle == Degrees::RED {
             (F::ZERO, [0, 1, 2])
-        } else if angle == Degrees::GREEN_ANGLE {
+        } else if angle == Degrees::GREEN {
             (F::ZERO, [1, 2, 0])
-        } else if angle == Degrees::BLUE_ANGLE {
+        } else if angle == Degrees::BLUE {
             (F::ZERO, [2, 0, 1])
-        } else if angle == Degrees::CYAN_ANGLE || angle == -Degrees::CYAN_ANGLE {
+        } else if angle == Degrees::CYAN || angle == -Degrees::CYAN {
             (F::ONE, [2, 1, 0])
-        } else if angle == Degrees::MAGENTA_ANGLE {
+        } else if angle == Degrees::MAGENTA {
             (F::ONE, [0, 2, 1])
-        } else if angle == Degrees::YELLOW_ANGLE {
+        } else if angle == Degrees::YELLOW {
             (F::ONE, [1, 0, 2])
         } else {
             fn f<F: ColourComponent>(angle: Degrees<F>) -> F {
                 // Careful of float not fully representing real numbers
-                (angle.sin() / (Degrees::GREEN_ANGLE - angle).sin()).min(F::ONE)
+                (angle.sin() / (Degrees::GREEN - angle).sin()).min(F::ONE)
             };
             if angle >= Degrees::DEG_0 {
-                if angle <= Degrees::YELLOW_ANGLE {
+                if angle <= Degrees::YELLOW {
                     (f(angle), [0, 1, 2])
-                } else if angle <= Degrees::GREEN_ANGLE {
-                    (f(Degrees::GREEN_ANGLE - angle), [1, 0, 2])
+                } else if angle <= Degrees::GREEN {
+                    (f(Degrees::GREEN - angle), [1, 0, 2])
                 } else {
-                    (f(angle - Degrees::GREEN_ANGLE), [1, 2, 0])
+                    (f(angle - Degrees::GREEN), [1, 2, 0])
                 }
-            } else if angle >= Degrees::MAGENTA_ANGLE {
+            } else if angle >= Degrees::MAGENTA {
                 (f(-angle), [0, 2, 1])
-            } else if angle >= Degrees::BLUE_ANGLE {
-                (f(Degrees::GREEN_ANGLE + angle), [2, 0, 1])
+            } else if angle >= Degrees::BLUE {
+                (f(Degrees::GREEN + angle), [2, 0, 1])
             } else {
-                (f(-angle - Degrees::GREEN_ANGLE), [2, 1, 0])
+                (f(-angle - Degrees::GREEN), [2, 1, 0])
             }
         };
         Self { second, io }
@@ -225,16 +213,16 @@ impl<F: ColourComponent> HueData<F> {
     pub fn hue_angle(&self) -> Degrees<F> {
         if self.second == F::ZERO {
             match self.io[0] {
-                0 => Degrees::RED_ANGLE,
-                1 => Degrees::GREEN_ANGLE,
-                2 => Degrees::BLUE_ANGLE,
+                0 => Degrees::RED,
+                1 => Degrees::GREEN,
+                2 => Degrees::BLUE,
                 _ => panic!("illegal colour component index: {}", self.io[0]),
             }
         } else if self.second == F::ONE {
             match self.io[2] {
-                0 => Degrees::CYAN_ANGLE,
-                1 => Degrees::MAGENTA_ANGLE,
-                2 => Degrees::YELLOW_ANGLE,
+                0 => Degrees::CYAN,
+                1 => Degrees::MAGENTA,
+                2 => Degrees::YELLOW,
                 _ => panic!("illegal colour component index: {}", self.io[0]),
             }
         } else {
@@ -244,11 +232,11 @@ impl<F: ColourComponent> HueData<F> {
             let angle = Degrees::asin(sin);
             match self.io {
                 [0, 1, 2] => angle,
-                [1, 0, 2] => Degrees::GREEN_ANGLE - angle,
-                [1, 2, 0] => Degrees::GREEN_ANGLE + angle,
+                [1, 0, 2] => Degrees::GREEN - angle,
+                [1, 2, 0] => Degrees::GREEN + angle,
                 [0, 2, 1] => -angle,
-                [2, 0, 1] => Degrees::BLUE_ANGLE + angle,
-                [2, 1, 0] => Degrees::BLUE_ANGLE - angle,
+                [2, 0, 1] => Degrees::BLUE + angle,
+                [2, 1, 0] => Degrees::BLUE - angle,
                 _ => panic!("illegal colour component indices: {:?}", self.io),
             }
         }

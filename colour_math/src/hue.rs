@@ -10,7 +10,7 @@ use std::{
 use normalised_angles::*;
 
 use crate::rgb::RGB;
-use crate::{chroma, ColourAngle, ColourComponent, ColourInterface, RGBConstants};
+use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct HueMod<F: ColourComponent> {
@@ -29,17 +29,17 @@ pub struct Hue<F: ColourComponent> {
 impl<F: ColourComponent> From<Degrees<F>> for Hue<F> {
     fn from(angle: Degrees<F>) -> Self {
         let other = chroma::calc_other_from_angle(angle.abs());
-        let max_chroma_rgb: RGB<F> = if angle >= Degrees::RED_ANGLE {
-            if angle <= Degrees::YELLOW_ANGLE {
+        let max_chroma_rgb: RGB<F> = if angle >= Degrees::RED {
+            if angle <= Degrees::YELLOW {
                 [F::ONE, other, F::ZERO].into()
-            } else if angle <= Degrees::GREEN_ANGLE {
+            } else if angle <= Degrees::GREEN {
                 [other, F::ONE, F::ZERO].into()
             } else {
                 [F::ZERO, F::ONE, other].into()
             }
-        } else if angle >= Degrees::MAGENTA_ANGLE {
+        } else if angle >= Degrees::MAGENTA {
             [F::ONE, F::ZERO, other].into()
-        } else if angle >= Degrees::BLUE_ANGLE {
+        } else if angle >= Degrees::BLUE {
             [other, F::ZERO, F::ONE].into()
         } else {
             [F::ZERO, other, F::ONE].into()
@@ -312,48 +312,39 @@ mod test {
             [I_GREEN, I_BLUE, I_RED]
         );
         assert_eq!(
-            Hue::<f64>::from(Degrees::RED_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::RED).max_chroma_rgb,
             RGB::<f64>::RED
         );
         assert_eq!(
-            Hue::<f64>::from(Degrees::GREEN_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::GREEN).max_chroma_rgb,
             RGB::<f64>::GREEN
         );
         assert_eq!(
-            Hue::<f64>::from(Degrees::BLUE_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::BLUE).max_chroma_rgb,
             RGB::<f64>::BLUE
         );
         assert_eq!(
-            Hue::<f64>::from(Degrees::CYAN_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::CYAN).max_chroma_rgb,
             RGB::<f64>::CYAN
         );
         assert_eq!(
-            Hue::<f64>::from(Degrees::MAGENTA_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::MAGENTA).max_chroma_rgb,
             RGB::<f64>::MAGENTA
         );
         assert_eq!(
-            Hue::<f64>::from(Degrees::YELLOW_ANGLE).max_chroma_rgb,
+            Hue::<f64>::from(Degrees::YELLOW).max_chroma_rgb,
             RGB::<f64>::YELLOW
         );
     }
 
     #[test]
     fn chroma_correction_from_angle() {
-        assert_eq!(Hue::<f64>::from(Degrees::RED_ANGLE).chroma_correction, 1.0);
-        assert_eq!(
-            Hue::<f64>::from(Degrees::GREEN_ANGLE).chroma_correction,
-            1.0
-        );
-        assert_eq!(Hue::<f64>::from(Degrees::BLUE_ANGLE).chroma_correction, 1.0);
-        assert_eq!(Hue::<f64>::from(Degrees::CYAN_ANGLE).chroma_correction, 1.0);
-        assert_eq!(
-            Hue::<f64>::from(Degrees::MAGENTA_ANGLE).chroma_correction,
-            1.0
-        );
-        assert_eq!(
-            Hue::<f64>::from(Degrees::YELLOW_ANGLE).chroma_correction,
-            1.0
-        );
+        assert_eq!(Hue::<f64>::from(Degrees::RED).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(Degrees::GREEN).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(Degrees::BLUE).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(Degrees::CYAN).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(Degrees::MAGENTA).chroma_correction, 1.0);
+        assert_eq!(Hue::<f64>::from(Degrees::YELLOW).chroma_correction, 1.0);
         assert_eq!(
             Hue::<f64>::from(Degrees::from(30.0)).chroma_correction,
             2.0 / 3.0_f64.sqrt()
@@ -384,27 +375,27 @@ mod test {
     fn from_rgb() {
         assert_approx_eq!(
             Hue::<f64>::try_from(RGB::<f64>::RED).unwrap().angle,
-            Degrees::RED_ANGLE
+            Degrees::RED
         );
         assert_approx_eq!(
             Hue::<f64>::try_from(RGB::<f64>::GREEN).unwrap().angle,
-            Degrees::GREEN_ANGLE
+            Degrees::GREEN
         );
         assert_approx_eq!(
             Hue::<f64>::try_from(RGB::<f64>::BLUE).unwrap().angle,
-            Degrees::BLUE_ANGLE
+            Degrees::BLUE
         );
         assert_approx_eq!(
             Hue::<f64>::try_from(RGB::<f64>::CYAN).unwrap().angle,
-            Degrees::CYAN_ANGLE
+            Degrees::CYAN
         );
         assert_approx_eq!(
             Hue::<f64>::try_from(RGB::<f64>::MAGENTA).unwrap().angle,
-            Degrees::MAGENTA_ANGLE
+            Degrees::MAGENTA
         );
         assert_approx_eq!(
             Hue::<f64>::try_from(RGB::<f64>::YELLOW).unwrap().angle,
-            Degrees::YELLOW_ANGLE
+            Degrees::YELLOW
         );
         assert!(Hue::<f64>::try_from(RGB::<f64>::BLACK).is_err());
         assert!(Hue::<f64>::try_from(RGB::<f64>::WHITE).is_err());
@@ -480,23 +471,23 @@ mod test {
     #[test]
     fn rotation() {
         assert_approx_eq!(
-            (Hue::<f64>::from(Degrees::YELLOW_ANGLE) + Degrees::from(60.0)).angle,
-            Degrees::GREEN_ANGLE
+            (Hue::<f64>::from(Degrees::YELLOW) + Degrees::from(60.0)).angle,
+            Degrees::GREEN
         );
         assert_approx_eq!(
-            (Hue::<f64>::from(Degrees::MAGENTA_ANGLE) - Degrees::from(60.0)).angle,
-            Degrees::BLUE_ANGLE
+            (Hue::<f64>::from(Degrees::MAGENTA) - Degrees::from(60.0)).angle,
+            Degrees::BLUE
         )
     }
 
     #[test]
     fn difference() {
         assert_approx_eq!(
-            (Hue::<f64>::from(Degrees::YELLOW_ANGLE) - Hue::from(Degrees::GREEN_ANGLE)),
+            (Hue::<f64>::from(Degrees::YELLOW) - Hue::from(Degrees::GREEN)),
             Degrees::from(-60.0)
         );
         assert_approx_eq!(
-            (Hue::<f64>::from(Degrees::YELLOW_ANGLE) - Hue::from(Degrees::MAGENTA_ANGLE)),
+            (Hue::<f64>::from(Degrees::YELLOW) - Hue::from(Degrees::MAGENTA)),
             Degrees::from(120.0)
         );
     }
