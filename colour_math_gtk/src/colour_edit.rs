@@ -51,7 +51,7 @@ impl ColourEditorBuilder {
         let cads = ColourAttributeDisplayStackBuilder::new()
             .attributes(&self.attributes)
             .build();
-        let rgb_entry = RGBHexEntryBuilder::<u8>::new().build();
+        let rgb_entry = RGBHexEntryBuilder::<u8>::new().editable(true).build();
         let rgb_manipulator = RGBManipulatorGUIBuilder::new()
             .clamped(false)
             .extra_buttons(&self.extra_buttons)

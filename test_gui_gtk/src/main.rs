@@ -10,7 +10,7 @@ use colour_math_gtk::{
     colour_edit::ColourEditorBuilder,
     hue_wheel::GtkHueWheelBuilder,
     manipulator::RGBManipulatorGUIBuilder,
-    rgb_entry::{HexEntryBuilder, RGBHexEntryBuilder},
+    rgb_entry::RGBHexEntryBuilder,
 };
 
 fn main() {
@@ -31,12 +31,6 @@ fn main() {
     cads.set_colour(Some(&RGB::from([0.1, 0.4, 0.7])));
     cads.set_target_colour(Some(&RGB::from([0.7, 0.4, 0.7])));
     vbox.pack_start(&cads.pwo(), true, true, 0);
-
-    let entry = HexEntryBuilder::<u8>::new().editable(true).build();
-    vbox.pack_start(&entry.pwo(), false, false, 0);
-
-    let entry = HexEntryBuilder::<u32>::new().initial_value(0x345).build();
-    vbox.pack_start(&entry.pwo(), false, false, 0);
 
     let rgb_entry = RGBHexEntryBuilder::<u8>::new().build();
     vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
