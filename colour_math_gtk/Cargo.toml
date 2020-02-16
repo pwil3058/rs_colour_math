@@ -12,10 +12,7 @@ gdk = "0.12.0"
 gdk-pixbuf = "0.8.0"
 gtk = "0.8.0"
 
-num-traits = "0.2.11"
-
 normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
-num_traits_plus = { git = "https://github.com/pwil3058/rs_num_traits_plus.git" }
 pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
 
 colour_math = { path = "../colour_math" }

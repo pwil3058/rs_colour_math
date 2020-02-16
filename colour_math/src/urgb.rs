@@ -9,9 +9,9 @@ use crate::{
 
 pub trait ConvertComponent:
     Copy
-    + num_traits::Bounded
-    + num_traits::NumCast
-    + num_traits::ToPrimitive
+    + num_traits_plus::num_traits::Bounded
+    + num_traits_plus::num_traits::NumCast
+    + num_traits_plus::num_traits::ToPrimitive
     + num_traits_plus::NumberConstants
 {
     fn from_fcc<F: ColourComponent>(cc: F) -> Self {
@@ -36,9 +36,9 @@ impl<U> URGB<U>
 where
     U: Default
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + num_traits_plus::NumberConstants
         + Ord
         + Copy
@@ -98,9 +98,9 @@ where
     U: ConvertComponent
         + Default
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + num_traits_plus::NumberConstants
         + Ord
         + Copy
@@ -118,9 +118,9 @@ where
     U: ConvertComponent
         + Default
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + num_traits_plus::NumberConstants
         + Ord
         + Copy

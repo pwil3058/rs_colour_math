@@ -9,8 +9,10 @@ use std::{
     fmt::Debug,
 };
 
-pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
+pub use num_traits_plus;
 pub use num_traits_plus::float_plus::*;
+
+pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
 pub mod attributes;
 pub mod chroma;

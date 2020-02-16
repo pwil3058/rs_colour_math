@@ -11,6 +11,8 @@ use gtk::prelude::*;
 
 use pw_gix::wrapper::*;
 
+use colour_math::num_traits_plus;
+
 use crate::{
     colour::{HueConstants, RGB, URGB},
     coloured::Colourable,
@@ -32,8 +34,8 @@ where
     U: Copy
         + UpperHex
         + Ord
-        + num_traits::Unsigned
-        + num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::Bounded
         + num_traits_plus::NumberConstants
         + 'static,
 {
@@ -129,9 +131,9 @@ where
     U: Default
         + num_traits_plus::NumberConstants
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + Ord
         + Copy
         + 'static,
@@ -228,9 +230,9 @@ impl<U> RGBHexEntry<U>
 where
     U: Default
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + num_traits_plus::NumberConstants
         + Ord
         + Copy
@@ -265,9 +267,9 @@ where
     U: Default
         + num_traits_plus::NumberConstants
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + Ord
         + Copy
         + 'static,
@@ -281,9 +283,9 @@ where
     U: Default
         + num_traits_plus::NumberConstants
         + UpperHex
-        + num_traits::Bounded
-        + num_traits::Unsigned
-        + num_traits::FromPrimitive
+        + num_traits_plus::num_traits::Bounded
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::num_traits::FromPrimitive
         + Ord
         + Copy
         + 'static,
