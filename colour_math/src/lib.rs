@@ -68,13 +68,13 @@ pub trait ColourComponent:
 }
 
 impl ColourComponent for f32 {
-    const FOUR: Self = 3.0;
+    const FOUR: Self = 4.0;
     const SIN_120: Self = 0.86602_54;
     const COS_120: Self = -0.5;
 }
 
 impl ColourComponent for f64 {
-    const FOUR: Self = 3.0;
+    const FOUR: Self = 4.0;
     const SIN_120: Self = 0.86602_54037_84439;
     const COS_120: Self = -0.5;
 }
