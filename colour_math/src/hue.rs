@@ -123,6 +123,7 @@ impl<F: ColourComponent> Sub<Hue<F>> for Hue<F> {
         self.angle - other.angle
     }
 }
+
 impl<F: ColourComponent> Hue<F> {
     pub fn angle(&self) -> Degrees<F> {
         self.angle
