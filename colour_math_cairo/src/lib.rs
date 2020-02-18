@@ -4,7 +4,7 @@ use std::cell::Cell;
 
 use colour_math::{
     attributes::drawing::{self, Cartesian},
-    RGBConstants,
+    ColourInterface, RGBConstants,
 };
 
 pub type Point = drawing::Point<f64>;
@@ -12,6 +12,21 @@ pub type Size = drawing::Size<f64>;
 pub type TextPosn = drawing::TextPosn<f64>;
 
 pub type RGB = colour_math::RGB<f64>;
+
+pub trait CairoSetColour {
+    fn set_source_colour<C: ColourInterface<f64>>(self, colour: &C);
+    fn set_source_colour_rgb(&self, rgb: &RGB);
+}
+
+impl CairoSetColour for cairo::Context {
+    fn set_source_colour<C: ColourInterface<f64>>(self, colour: &C) {
+        self.set_source_colour_rgb(&colour.rgb());
+    }
+
+    fn set_source_colour_rgb(&self, rgb: &RGB) {
+        self.set_source_rgb(rgb[0], rgb[1], rgb[2]);
+    }
+}
 
 pub struct Drawer<'a> {
     pub cairo_context: &'a cairo::Context,
@@ -32,17 +47,15 @@ impl<'a> Drawer<'a> {
         }
     }
 
-    fn set_colour(&self, rgb: RGB) {
-        self.cairo_context.set_source_rgb(rgb[0], rgb[1], rgb[2]);
-    }
-
     fn fill(&self) {
-        self.set_colour(self.fill_colour.get());
+        self.cairo_context
+            .set_source_colour_rgb(&self.fill_colour.get());
         self.cairo_context.fill();
     }
 
     fn stroke(&self) {
-        self.set_colour(self.line_colour.get());
+        self.cairo_context
+            .set_source_colour_rgb(&self.line_colour.get());
         self.cairo_context.stroke();
     }
 }
@@ -140,7 +153,8 @@ impl<'a> drawing::Draw<f64> for Drawer<'a> {
                 self.cairo_context.move_to(point.x - te.width, point.y);
             }
         }
-        self.set_colour(self.text_colour.get());
+        self.cairo_context
+            .set_source_colour_rgb(&self.text_colour.get());
         self.cairo_context.show_text(&text);
     }
 }
@@ -169,17 +183,15 @@ impl<'a> CairoCartesian<'a> {
         }
     }
 
-    fn set_colour(&self, rgb: RGB) {
-        self.cairo_context.set_source_rgb(rgb[0], rgb[1], rgb[2]);
-    }
-
     fn fill(&self) {
-        self.set_colour(self.fill_colour.get());
+        self.cairo_context
+            .set_source_colour_rgb(&self.fill_colour.get());
         self.cairo_context.fill();
     }
 
     fn stroke(&self) {
-        self.set_colour(self.line_colour.get());
+        self.cairo_context
+            .set_source_colour_rgb(&self.line_colour.get());
         self.cairo_context.stroke();
     }
 }
@@ -230,7 +242,7 @@ impl<'a> Cartesian<f64> for CairoCartesian<'a> {
     }
 
     fn set_background_colour(&self, rgb: RGB) {
-        self.set_colour(rgb);
+        self.cairo_context.set_source_colour_rgb(&rgb);
         self.cairo_context.paint();
     }
 
