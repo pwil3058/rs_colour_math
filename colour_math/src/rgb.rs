@@ -34,8 +34,8 @@ impl<F: ColourComponent> RGBConstants for RGB<F> {
 }
 
 impl<F: ColourComponent> RGB<F> {
-    pub fn raw(self) -> [F; 3] {
-        self.0
+    pub fn iter(&self) -> impl Iterator<Item = &F> {
+        self.0.iter()
     }
 
     pub(crate) fn sum(self) -> F {
@@ -228,6 +228,13 @@ impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
     }
 }
 
+impl<F: ColourComponent> From<&[F; 3]> for RGB<F> {
+    fn from(array: &[F; 3]) -> Self {
+        debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
+        Self(*array)
+    }
+}
+
 impl<F: ColourComponent> From<&[u8]> for RGB<F> {
     fn from(array: &[u8]) -> Self {
         debug_assert_eq!(array.len(), 3);
@@ -236,6 +243,28 @@ impl<F: ColourComponent> From<&[u8]> for RGB<F> {
             F::from_u8(array[0]).unwrap() / divisor,
             F::from_u8(array[1]).unwrap() / divisor,
             F::from_u8(array[2]).unwrap() / divisor,
+        ])
+    }
+}
+
+impl<F: ColourComponent> From<&RGB<F>> for (F, F, F) {
+    fn from(rgb: &RGB<F>) -> (F, F, F) {
+        (rgb[0], rgb[1], rgb[2])
+    }
+}
+
+impl<F: ColourComponent> From<&RGB<F>> for [F; 3] {
+    fn from(rgb: &RGB<F>) -> [F; 3] {
+        rgb.0
+    }
+}
+
+impl<F: ColourComponent, G: ColourComponent> From<&RGB<F>> for RGB<G> {
+    fn from(rgb: &RGB<F>) -> RGB<G> {
+        Self([
+            G::from::<F>(rgb[0]).unwrap(),
+            G::from::<F>(rgb[1]).unwrap(),
+            G::from::<F>(rgb[2]).unwrap(),
         ])
     }
 }

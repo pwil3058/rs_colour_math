@@ -77,7 +77,7 @@ where
     U: ConvertComponent + Copy,
 {
     fn from(rgb: &RGB<F>) -> Self {
-        let v: Vec<U> = rgb.raw().iter().map(|f| U::from_fcc(*f)).collect();
+        let v: Vec<U> = rgb.iter().map(|f| U::from_fcc(*f)).collect();
         URGB::<U>::from(&v[..])
     }
 }
@@ -128,6 +128,18 @@ where
 {
     fn from(urgb: URGB<U>) -> Self {
         (&urgb).into()
+    }
+}
+
+impl<U: Copy> From<&URGB<U>> for (U, U, U) {
+    fn from(urgb: &URGB<U>) -> (U, U, U) {
+        (urgb[0], urgb[1], urgb[2])
+    }
+}
+
+impl<U: Copy> From<&URGB<U>> for [U; 3] {
+    fn from(urgb: &URGB<U>) -> [U; 3] {
+        urgb.0
     }
 }
 
