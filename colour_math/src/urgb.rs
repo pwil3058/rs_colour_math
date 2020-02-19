@@ -7,9 +7,12 @@ use crate::{
     HueConstants, RGBConstants,
 };
 
-pub trait ConvertComponent:
+pub trait UnsignedComponent:
     Copy
-    + num_traits_plus::num_traits::Bounded
+    + Default
+    + Ord
+    + UpperHex
+    + num_traits_plus::num_traits::Unsigned
     + num_traits_plus::num_traits::NumCast
     + num_traits_plus::num_traits::ToPrimitive
     + num_traits_plus::NumberConstants
@@ -25,33 +28,30 @@ pub trait ConvertComponent:
     }
 }
 
-impl ConvertComponent for u8 {}
+impl UnsignedComponent for u8 {}
 
-impl ConvertComponent for u16 {}
+impl UnsignedComponent for u16 {}
 
 #[derive(
     Serialize, Deserialize, Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord,
 )]
-pub struct URGB<U>([U; 3]);
+pub struct URGB<U: UnsignedComponent>([U; 3]);
 
 impl<U> URGB<U>
 where
-    U: Default
-        + UpperHex
-        + num_traits_plus::num_traits::Bounded
-        + num_traits_plus::num_traits::Unsigned
-        + num_traits_plus::num_traits::FromPrimitive
-        + num_traits_plus::NumberConstants
-        + Ord
-        + Copy
-        + 'static,
+    U: UnsignedComponent,
 {
     pub fn iter(&self) -> impl Iterator<Item = &U> {
         self.0.iter()
     }
+
+    pub fn pango_string(&self) -> String {
+        let urgb: URGB<u8> = self.into();
+        format!("#{:02X}{:02X}{:02X}", urgb.0[0], urgb.0[1], urgb.0[2])
+    }
 }
 
-impl<U: num_traits_plus::NumberConstants> HueConstants for URGB<U> {
+impl<U: UnsignedComponent> HueConstants for URGB<U> {
     const RED: Self = Self([U::MAX, U::ZERO, U::ZERO]);
     const GREEN: Self = Self([U::ZERO, U::MAX, U::ZERO]);
     const BLUE: Self = Self([U::ZERO, U::ZERO, U::MAX]);
@@ -61,12 +61,12 @@ impl<U: num_traits_plus::NumberConstants> HueConstants for URGB<U> {
     const YELLOW: Self = Self([U::MAX, U::MAX, U::ZERO]);
 }
 
-impl<U: num_traits_plus::NumberConstants> RGBConstants for URGB<U> {
+impl<U: UnsignedComponent> RGBConstants for URGB<U> {
     const WHITE: Self = Self([U::ZERO, U::ZERO, U::ZERO]);
     const BLACK: Self = Self([U::MAX, U::MAX, U::MAX]);
 }
 
-impl<U: Copy> From<&[U]> for URGB<U> {
+impl<U: UnsignedComponent> From<&[U]> for URGB<U> {
     fn from(array: &[U]) -> Self {
         debug_assert!(array.len() == 3);
         Self([array[0], array[1], array[2]])
@@ -76,7 +76,7 @@ impl<U: Copy> From<&[U]> for URGB<U> {
 impl<U, F> From<&RGB<F>> for URGB<U>
 where
     F: ColourComponent,
-    U: ConvertComponent + Copy,
+    U: UnsignedComponent,
 {
     fn from(rgb: &RGB<F>) -> Self {
         let v: Vec<U> = rgb.iter().map(|f| U::from_fcc(*f)).collect();
@@ -87,7 +87,7 @@ where
 impl<U, F> From<RGB<F>> for URGB<U>
 where
     F: ColourComponent,
-    U: ConvertComponent,
+    U: UnsignedComponent,
 {
     fn from(rgb: RGB<F>) -> Self {
         (&rgb).into()
@@ -97,16 +97,7 @@ where
 impl<F, U> From<&URGB<U>> for RGB<F>
 where
     F: ColourComponent,
-    U: ConvertComponent
-        + Default
-        + UpperHex
-        + num_traits_plus::num_traits::Bounded
-        + num_traits_plus::num_traits::Unsigned
-        + num_traits_plus::num_traits::FromPrimitive
-        + num_traits_plus::NumberConstants
-        + Ord
-        + Copy
-        + 'static,
+    U: UnsignedComponent,
 {
     fn from(urgb: &URGB<U>) -> Self {
         let v: Vec<F> = urgb.iter().map(|u| u.to_fcc()).collect();
@@ -117,16 +108,7 @@ where
 impl<F, U> From<URGB<U>> for RGB<F>
 where
     F: ColourComponent,
-    U: ConvertComponent
-        + Default
-        + UpperHex
-        + num_traits_plus::num_traits::Bounded
-        + num_traits_plus::num_traits::Unsigned
-        + num_traits_plus::num_traits::FromPrimitive
-        + num_traits_plus::NumberConstants
-        + Ord
-        + Copy
-        + 'static,
+    U: UnsignedComponent,
 {
     fn from(urgb: URGB<U>) -> Self {
         (&urgb).into()
@@ -135,22 +117,8 @@ where
 
 impl<U, V> From<&URGB<V>> for URGB<U>
 where
-    U: ConvertComponent
-        + num_traits_plus::NumberConstants
-        + num_traits_plus::num_traits::FromPrimitive
-        + num_traits_plus::num_traits::NumCast
-        + std::ops::Shl<usize, Output = U>
-        + Copy,
-    V: ConvertComponent
-        + Default
-        + UpperHex
-        + Ord
-        + num_traits_plus::num_traits::Unsigned
-        + num_traits_plus::NumberConstants
-        + num_traits_plus::num_traits::FromPrimitive
-        + num_traits_plus::num_traits::ToPrimitive
-        + Copy
-        + 'static,
+    U: UnsignedComponent,
+    V: UnsignedComponent,
 {
     fn from(urgb: &URGB<V>) -> Self {
         if U::BYTES == V::BYTES {
@@ -166,19 +134,19 @@ where
     }
 }
 
-impl<U: Copy> From<&URGB<U>> for (U, U, U) {
+impl<U: UnsignedComponent> From<&URGB<U>> for (U, U, U) {
     fn from(urgb: &URGB<U>) -> (U, U, U) {
         (urgb[0], urgb[1], urgb[2])
     }
 }
 
-impl<U: Copy> From<&URGB<U>> for [U; 3] {
+impl<U: UnsignedComponent> From<&URGB<U>> for [U; 3] {
     fn from(urgb: &URGB<U>) -> [U; 3] {
         urgb.0
     }
 }
 
-impl<U> Index<u8> for URGB<U> {
+impl<U: UnsignedComponent> Index<u8> for URGB<U> {
     type Output = U;
 
     fn index(&self, index: u8) -> &U {
