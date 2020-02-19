@@ -29,7 +29,9 @@ impl ConvertComponent for u8 {}
 
 impl ConvertComponent for u16 {}
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
+#[derive(
+    Serialize, Deserialize, Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub struct URGB<U>([U; 3]);
 
 impl<U> URGB<U>
@@ -49,19 +51,19 @@ where
     }
 }
 
-impl HueConstants for URGB<u8> {
-    const RED: Self = Self([0xFF, 0, 0]);
-    const GREEN: Self = Self([0, 0xFF, 0]);
-    const BLUE: Self = Self([0, 0, 0xFF]);
+impl<U: num_traits_plus::NumberConstants> HueConstants for URGB<U> {
+    const RED: Self = Self([U::MAX, U::ZERO, U::ZERO]);
+    const GREEN: Self = Self([U::ZERO, U::MAX, U::ZERO]);
+    const BLUE: Self = Self([U::ZERO, U::ZERO, U::MAX]);
 
-    const CYAN: Self = Self([0, 0xFF, 0xFF]);
-    const MAGENTA: Self = Self([0xFF, 0, 0xFF]);
-    const YELLOW: Self = Self([0xFF, 0xFF, 0]);
+    const CYAN: Self = Self([U::ZERO, U::MAX, U::MAX]);
+    const MAGENTA: Self = Self([U::MAX, U::ZERO, U::MAX]);
+    const YELLOW: Self = Self([U::MAX, U::MAX, U::ZERO]);
 }
 
-impl RGBConstants for URGB<u8> {
-    const WHITE: Self = Self([0, 0, 0]);
-    const BLACK: Self = Self([0xFF, 0xFF, 0xFF]);
+impl<U: num_traits_plus::NumberConstants> RGBConstants for URGB<U> {
+    const WHITE: Self = Self([U::ZERO, U::ZERO, U::ZERO]);
+    const BLACK: Self = Self([U::MAX, U::MAX, U::MAX]);
 }
 
 impl<U: Copy> From<&[U]> for URGB<U> {
@@ -131,6 +133,39 @@ where
     }
 }
 
+impl<U, V> From<&URGB<V>> for URGB<U>
+where
+    U: ConvertComponent
+        + num_traits_plus::NumberConstants
+        + num_traits_plus::num_traits::FromPrimitive
+        + num_traits_plus::num_traits::NumCast
+        + std::ops::Shl<usize, Output = U>
+        + Copy,
+    V: ConvertComponent
+        + Default
+        + UpperHex
+        + Ord
+        + num_traits_plus::num_traits::Unsigned
+        + num_traits_plus::NumberConstants
+        + num_traits_plus::num_traits::FromPrimitive
+        + num_traits_plus::num_traits::ToPrimitive
+        + Copy
+        + 'static,
+{
+    fn from(urgb: &URGB<V>) -> Self {
+        if U::BYTES == V::BYTES {
+            Self([
+                U::from::<V>(urgb.0[0]).unwrap(),
+                U::from::<V>(urgb.0[1]).unwrap(),
+                U::from::<V>(urgb.0[2]).unwrap(),
+            ])
+        } else {
+            let rgb: RGB<f64> = urgb.into();
+            rgb.into()
+        }
+    }
+}
+
 impl<U: Copy> From<&URGB<U>> for (U, U, U) {
     fn from(urgb: &URGB<U>) -> (U, U, U) {
         (urgb[0], urgb[1], urgb[2])
@@ -174,5 +209,12 @@ mod test {
         assert_eq!(URGB::<u8>::RED, URGB::from(&RGB::<f64>::RED));
         assert_eq!(URGB::<u8>::CYAN, URGB::from(&RGB::<f64>::CYAN));
         assert_eq!(URGB::<u8>::YELLOW, URGB::from(RGB::<f64>::YELLOW));
+    }
+
+    #[test]
+    fn from_urgb_to_urgb() {
+        assert_eq!(URGB::<u8>::RED, URGB::<u8>::from(&URGB::<u16>::RED));
+        assert_eq!(URGB::<u8>::RED, URGB::<u8>::from(&URGB::<u8>::RED));
+        assert_eq!(URGB::<u16>::RED, URGB::<u16>::from(&URGB::<u8>::RED));
     }
 }
