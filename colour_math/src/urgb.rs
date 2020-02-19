@@ -73,6 +73,30 @@ impl<U: UnsignedComponent> From<&[U]> for URGB<U> {
     }
 }
 
+impl<U: UnsignedComponent> From<&[U; 3]> for URGB<U> {
+    fn from(array: &[U; 3]) -> Self {
+        Self([array[0], array[1], array[2]])
+    }
+}
+
+impl<U: UnsignedComponent> From<[U; 3]> for URGB<U> {
+    fn from(array: [U; 3]) -> Self {
+        Self(array)
+    }
+}
+
+impl<U: UnsignedComponent> From<&(U, U, U)> for URGB<U> {
+    fn from(tuple: &(U, U, U)) -> Self {
+        Self([tuple.0, tuple.1, tuple.2])
+    }
+}
+
+impl<U: UnsignedComponent> From<(U, U, U)> for URGB<U> {
+    fn from(tuple: (U, U, U)) -> Self {
+        Self([tuple.0, tuple.1, tuple.2])
+    }
+}
+
 impl<U, F> From<&RGB<F>> for URGB<U>
 where
     F: ColourComponent,
