@@ -20,6 +20,7 @@ pub mod urgb;
 
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
+pub use crate::urgb::{RGB16, RGB8, URGB};
 
 pub trait HueConstants: Sized {
     const RED: Self;

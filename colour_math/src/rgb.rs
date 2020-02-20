@@ -4,13 +4,11 @@ use std::{
     cmp::Ordering,
     convert::From,
     ops::{Add, Index, Mul},
-    str::FromStr,
 };
-
-use regex::Regex;
 
 pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
+use crate::urgb::URGB;
 use crate::{HueConstants, RGBConstants};
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
@@ -138,7 +136,7 @@ impl<F: ColourComponent> RGB<F> {
     }
 
     pub fn pango_string(&self) -> String {
-        RGB8::from(*self).pango_string()
+        URGB::<u8>::from(*self).pango_string()
     }
 }
 
@@ -369,99 +367,6 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 }
 
-#[derive(Debug)]
-pub enum RGBError {
-    MalformedText(String),
-}
-
-impl std::fmt::Display for RGBError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RGBError::MalformedText(string) => write!(f, "Malformed text: {}", string),
-        }
-    }
-}
-
-impl std::error::Error for RGBError {}
-
-impl From<std::num::ParseIntError> for RGBError {
-    fn from(error: std::num::ParseIntError) -> Self {
-        RGBError::MalformedText(format!("{}", error))
-    }
-}
-
-pub type RGB16 = crate::urgb::URGB<u16>;
-
-
-
-lazy_static! {
-    pub static ref RGB16_RE: Regex = Regex::new(
-        r#"RGB(16)?\((red=)?0x(?P<red>[a-fA-F0-9]+), (green=)?0x(?P<green>[a-fA-F0-9]+), (blue=)?0x(?P<blue>[a-fA-F0-9]+)\)"#
-    ).unwrap();
-    pub static ref RGB16_BASE_10_RE: Regex = Regex::new(
-        r#"RGB(16)?\((red=)?(?P<red>\d+), (green=)?(?P<green>\d+), (blue=)?(?P<blue>\d+)\)"#
-    ).unwrap();
-    pub static ref RGB_PANGO_RE: Regex = Regex::new(
-        r#"#(?P<red>[a-fA-F0-9][a-fA-F0-9])(?P<green>[a-fA-F0-9][a-fA-F0-9])(?P<blue>[a-fA-F0-9][a-fA-F0-9])"#
-    ).unwrap();
-}
-
-impl FromStr for RGB16 {
-    type Err = RGBError;
-
-    fn from_str(string: &str) -> Result<Self, Self::Err> {
-        if let Some(captures) = RGB16_RE.captures(string) {
-            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 16)?;
-            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 16)?;
-            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 16)?;
-            Ok(RGB16::from([red, green, blue]))
-        } else if let Some(captures) = RGB16_BASE_10_RE.captures(string) {
-            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 10)?;
-            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 10)?;
-            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 10)?;
-            Ok(RGB16::from([red, green, blue]))
-        } else {
-            Err(RGBError::MalformedText(string.to_string()))
-        }
-    }
-}
-
-
-
-
-impl std::fmt::Display for RGB16 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "RGB16(red=0x{:04X}, green=0x{:04X}, blue=0x{:04X})",
-            self[0], self[1], self[2]
-        )
-    }
-}
-
-pub type RGB8 = crate::urgb::URGB<u8>;
-
-
-
-impl FromStr for RGB8 {
-    type Err = RGBError;
-
-    fn from_str(string: &str) -> Result<Self, Self::Err> {
-        if let Some(captures) = RGB_PANGO_RE.captures(string) {
-            let red = u8::from_str_radix(captures.name("red").unwrap().as_str(), 16)?;
-            let green = u8::from_str_radix(captures.name("green").unwrap().as_str(), 16)?;
-            let blue = u8::from_str_radix(captures.name("blue").unwrap().as_str(), 16)?;
-            Ok(RGB8::from([red, green, blue]))
-        } else {
-            Err(RGBError::MalformedText(string.to_string()))
-        }
-    }
-}
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -469,44 +374,22 @@ mod tests {
     #[test]
     fn rgb16_to_and_from_rgb() {
         assert_eq!(
-            RGB16::from([0xffff, 0xffff, 0x0]),
+            URGB::<u16>::from([0xffff, 0xffff, 0x0]),
             RGB::<f64>::YELLOW.into()
         );
-        assert_eq!(RGB::<f32>::CYAN, RGB16::from([0, 0xffff, 0xffff]).into());
-    }
-
-    #[test]
-    fn rgb16_from_str() {
         assert_eq!(
-            RGB16::from_str("RGB16(red=0xF800, green=0xFA00, blue=0xF600)").unwrap(),
-            RGB16::from([0xF800, 0xFA00, 0xF600])
-        );
-        assert_eq!(
-            RGB16::from_str("RGB16(0xF800, 0xFA00, 0xF600)").unwrap(),
-            RGB16::from([0xF800, 0xFA00, 0xF600])
-        );
-        assert_eq!(
-            RGB16::from_str("RGB16(red=78, green=2345, blue=5678)").unwrap(),
-            RGB16::from([78, 2345, 5678])
-        );
-        assert_eq!(
-            RGB16::from_str("RGB16(128, 45670, 600)").unwrap(),
-            RGB16::from([128, 45670, 600])
+            RGB::<f32>::CYAN,
+            URGB::<u16>::from([0, 0xffff, 0xffff]).into()
         );
     }
 
     #[test]
     fn rgb8_to_and_from_rgb() {
-        assert_eq!(RGB8::from([0xff, 0xff, 0x0]), RGB::<f64>::YELLOW.into());
-        assert_eq!(RGB::<f32>::CYAN, RGB8::from([0, 0xff, 0xff]).into());
-    }
-
-    #[test]
-    fn rgb8_from_str() {
         assert_eq!(
-            RGB8::from_str("#F8A0F6)").unwrap(),
-            RGB8::from([0xF8, 0xA0, 0xF6])
+            URGB::<u8>::from([0xff, 0xff, 0x0]),
+            RGB::<f64>::YELLOW.into()
         );
+        assert_eq!(RGB::<f32>::CYAN, URGB::<u8>::from([0, 0xff, 0xff]).into());
     }
 
     #[test]
