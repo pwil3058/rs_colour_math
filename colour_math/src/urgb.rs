@@ -202,7 +202,7 @@ lazy_static! {
     ).unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum URGBError {
     MalformedText(String),
 }
@@ -220,6 +220,16 @@ impl std::error::Error for URGBError {}
 impl From<std::num::ParseIntError> for URGBError {
     fn from(error: std::num::ParseIntError) -> Self {
         URGBError::MalformedText(format!("{}", error))
+    }
+}
+
+impl std::fmt::Display for URGB<u8> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RGB8(red=0x{:02X}, green=0x{:02X}, blue=0x{:02X})",
+            self[0], self[1], self[2]
+        )
     }
 }
 
@@ -252,7 +262,7 @@ impl std::fmt::Display for URGB<u16> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "URGB<u16>(red=0x{:04X}, green=0x{:04X}, blue=0x{:04X})",
+            "RGB16(red=0x{:04X}, green=0x{:04X}, blue=0x{:04X})",
             self[0], self[1], self[2]
         )
     }
@@ -331,10 +341,28 @@ mod test {
     }
 
     #[test]
+    fn rgb16_to_from_str() {
+        for tuple in [(0xFFFF, 0x8000, 0x6000)].iter() {
+            let urgb: URGB<u16> = tuple.into();
+            let string: String = urgb.to_string();
+            assert_eq!(Ok(urgb), URGB::<u16>::from_str(&string));
+        }
+    }
+
+    #[test]
     fn rgb8_from_pango_str() {
         assert_eq!(
             URGB::<u8>::from_str("#F8A0F6)").unwrap(),
             URGB::<u8>::from([0xF8, 0xA0, 0xF6])
         );
+    }
+
+    #[test]
+    fn rgb8_to_from_str() {
+        for tuple in [(0xFF, 0x80, 0x60)].iter() {
+            let urgb: URGB<u8> = tuple.into();
+            let string: String = urgb.to_string();
+            assert_eq!(Ok(urgb), URGB::<u8>::from_str(&string));
+        }
     }
 }
