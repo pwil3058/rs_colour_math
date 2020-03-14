@@ -9,7 +9,7 @@ use std::{
 use gtk::prelude::*;
 
 use pw_gix::{
-    gtkx::menu::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
+    gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder},
     sav_state::MaskedCondns,
     wrapper::*,
 };
@@ -31,7 +31,6 @@ pub struct GtkHueWheel {
     hue_wheel: RefCell<HueWheel<f64>>,
     chosen_item: RefCell<Option<String>>,
     attribute_selector: Rc<AttributeSelector>,
-    //attribute: Cell<ScalarAttribute>,
     popup_menu: ManagedMenu,
     callbacks: RefCell<HashMap<String, Vec<PopupCallback>>>,
     zoom: Cell<f64>,
@@ -40,13 +39,6 @@ pub struct GtkHueWheel {
 }
 
 impl GtkHueWheel {
-    pub fn new(menu_items: &[MenuItemSpec], attributes: &[ScalarAttribute]) -> Rc<Self> {
-        GtkHueWheelBuilder::new()
-            .attributes(attributes)
-            .menu_item_specs(menu_items)
-            .build()
-    }
-
     fn decr_zoom(&self) {
         let new_zoom = (self.zoom.get() - 0.025).max(1.0);
         self.zoom.set(new_zoom);
@@ -133,18 +125,21 @@ impl GtkHueWheel {
 }
 
 #[derive(Default)]
-pub struct GtkHueWheelBuilder {
-    menu_item_specs: Vec<MenuItemSpec>,
+pub struct GtkHueWheelBuilder<'c> {
+    menu_item_specs: &'c [(&'static str, &'c str, Option<&'c gtk::Image>, &'c str, u64)],
     attributes: Vec<ScalarAttribute>,
 }
 
-impl GtkHueWheelBuilder {
+impl<'c> GtkHueWheelBuilder<'c> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn menu_item_specs(&mut self, menu_item_specs: &[MenuItemSpec]) -> &mut Self {
-        self.menu_item_specs.extend(menu_item_specs.iter().cloned());
+    pub fn menu_item_specs(
+        &mut self,
+        menu_item_specs: &'c [(&'static str, &'c str, Option<&'c gtk::Image>, &'c str, u64)],
+    ) -> &mut Self {
+        self.menu_item_specs = menu_item_specs;
         self
     }
 
@@ -194,23 +189,17 @@ impl GtkHueWheelBuilder {
             last_xy: Cell::new(None),
         });
 
-        for spec in self.menu_item_specs.iter() {
+        for &(name, label, image, tooltip, condns) in self.menu_item_specs.iter() {
             let gtk_hue_wheel_c = Rc::clone(&gtk_hue_wheel);
-            let name_c = spec.name().to_string();
+            let name_c = name.to_string();
             gtk_hue_wheel
                 .popup_menu
-                .append_item(
-                    spec.name(),
-                    spec.label(),
-                    spec.image(),
-                    spec.tooltip(),
-                    spec.condns(),
-                )
+                .append_item(name, label, image, tooltip, condns)
                 .connect_activate(move |_| gtk_hue_wheel_c.menu_item_selected(&name_c));
             gtk_hue_wheel
                 .callbacks
                 .borrow_mut()
-                .insert(spec.name().to_string(), vec![]);
+                .insert(name.to_string(), vec![]);
         }
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);

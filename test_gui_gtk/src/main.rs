@@ -44,7 +44,10 @@ fn main() {
     let colour_editor = ColourEditorBuilder::new().build();
     vbox.pack_start(&colour_editor.pwo(), true, true, 0);
 
-    let gtk_hue_wheel = GtkHueWheelBuilder::new().attributes(&attributes).build();
+    let gtk_hue_wheel = GtkHueWheelBuilder::new()
+        .attributes(&attributes)
+        .menu_item_specs(&[("add", "Add", None, "Add something", 0)])
+        .build();
     vbox.pack_start(&gtk_hue_wheel.pwo(), true, true, 0);
 
     vbox.show_all();
