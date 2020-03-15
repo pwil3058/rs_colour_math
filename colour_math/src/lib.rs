@@ -22,7 +22,7 @@ pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 pub use crate::urgb::{RGB16, RGB8, URGB};
 
-pub trait HueConstants: Sized {
+pub trait HueConstants: Sized + Copy {
     const RED: Self;
     const GREEN: Self;
     const BLUE: Self;
@@ -35,7 +35,7 @@ pub trait HueConstants: Sized {
     const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
 }
 
-pub trait RGBConstants: HueConstants {
+pub trait RGBConstants: HueConstants + Copy {
     const WHITE: Self;
     const BLACK: Self;
 

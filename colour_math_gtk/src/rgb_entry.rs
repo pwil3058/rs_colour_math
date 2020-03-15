@@ -99,7 +99,7 @@ where
                 .initial_value(self.initial_rgb[index as u8])
                 .build();
             let label = gtk::Label::new(Some(label));
-            label.set_widget_colour_rgb(&(*rgb).into());
+            label.set_widget_colour_rgb(rgb);
             hbox.pack_start(&label, true, true, 0);
             hbox.pack_start(&entry.pwo(), false, false, 0);
             v.push(entry);

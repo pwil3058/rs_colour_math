@@ -199,7 +199,7 @@ impl GtkHueWheelBuilder {
             gtk_hue_wheel
                 .callbacks
                 .borrow_mut()
-                .insert(name.to_string(), vec![]);
+                .insert((*name).to_string(), vec![]);
         }
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);

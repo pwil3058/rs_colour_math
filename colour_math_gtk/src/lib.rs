@@ -37,7 +37,7 @@ pub mod coloured {
     #[allow(deprecated)]
     pub trait Colourable: gtk::WidgetExt {
         fn set_widget_colour<C: ColourInterface<f64>>(&self, colour: &C) {
-            self.set_widget_colour_rgb(&colour.rgb().into())
+            self.set_widget_colour_rgb(&colour.rgb())
         }
 
         fn set_widget_colour_rgb(&self, rgb: &RGB) {
