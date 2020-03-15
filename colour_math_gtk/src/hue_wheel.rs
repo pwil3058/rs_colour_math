@@ -9,7 +9,7 @@ use std::{
 use gtk::prelude::*;
 
 use pw_gix::{
-    gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder},
+    gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
     sav_state::MaskedCondns,
     wrapper::*,
 };
@@ -125,21 +125,21 @@ impl GtkHueWheel {
 }
 
 #[derive(Default)]
-pub struct GtkHueWheelBuilder<'c> {
-    menu_item_specs: &'c [(&'static str, &'c str, Option<&'c gtk::Image>, &'c str, u64)],
+pub struct GtkHueWheelBuilder {
+    menu_item_specs: Vec<(&'static str, MenuItemSpec, u64)>,
     attributes: Vec<ScalarAttribute>,
 }
 
-impl<'c> GtkHueWheelBuilder<'c> {
+impl GtkHueWheelBuilder {
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn menu_item_specs(
         &mut self,
-        menu_item_specs: &'c [(&'static str, &'c str, Option<&'c gtk::Image>, &'c str, u64)],
+        menu_item_specs: &[(&'static str, MenuItemSpec, u64)],
     ) -> &mut Self {
-        self.menu_item_specs = menu_item_specs;
+        self.menu_item_specs = menu_item_specs.to_vec();
         self
     }
 
@@ -189,12 +189,12 @@ impl<'c> GtkHueWheelBuilder<'c> {
             last_xy: Cell::new(None),
         });
 
-        for &(name, label, image, tooltip, condns) in self.menu_item_specs.iter() {
+        for (name, menu_item_spec, condns) in self.menu_item_specs.iter() {
             let gtk_hue_wheel_c = Rc::clone(&gtk_hue_wheel);
-            let name_c = name.to_string();
+            let name_c = (*name).to_string();
             gtk_hue_wheel
                 .popup_menu
-                .append_item(name, label, image, tooltip, condns)
+                .append_item(*name, &menu_item_spec, *condns)
                 .connect_activate(move |_| gtk_hue_wheel_c.menu_item_selected(&name_c));
             gtk_hue_wheel
                 .callbacks

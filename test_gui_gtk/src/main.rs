@@ -46,7 +46,7 @@ fn main() {
 
     let gtk_hue_wheel = GtkHueWheelBuilder::new()
         .attributes(&attributes)
-        .menu_item_specs(&[("add", "Add", None, "Add something", 0)])
+        .menu_item_specs(&[("add", ("Add", None, Some("Add something")).into(), 0)])
         .build();
     vbox.pack_start(&gtk_hue_wheel.pwo(), true, true, 0);
 
