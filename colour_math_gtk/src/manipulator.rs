@@ -258,16 +258,16 @@ impl RGBManipulatorGUIBuilder {
             vbox,
             rgb_manipulator,
             drawing_area,
-            incr_value_btn: gtk::Button::new_with_label("Value++"),
-            decr_value_btn: gtk::Button::new_with_label("Value--"),
-            hue_left_btn: gtk::Button::new_with_label("<"),
-            hue_right_btn: gtk::Button::new_with_label(">"),
-            decr_chroma_btn: gtk::Button::new_with_label("Chroma--"),
-            incr_chroma_btn: gtk::Button::new_with_label("Chroma++"),
+            incr_value_btn: gtk::Button::with_label("Value++"),
+            decr_value_btn: gtk::Button::with_label("Value--"),
+            hue_left_btn: gtk::Button::with_label("<"),
+            hue_right_btn: gtk::Button::with_label(">"),
+            decr_chroma_btn: gtk::Button::with_label("Chroma--"),
+            incr_chroma_btn: gtk::Button::with_label("Chroma++"),
             delta_size: Cell::new(DeltaSize::Normal),
             samples: RefCell::new(vec![]),
-            auto_match_btn: gtk::Button::new_with_label("Auto Match"),
-            auto_match_on_paste_btn: gtk::CheckButton::new_with_label("On Paste?"),
+            auto_match_btn: gtk::Button::with_label("Auto Match"),
+            auto_match_on_paste_btn: gtk::CheckButton::with_label("On Paste?"),
             popup_menu: WrappedMenu::new(&[]),
             popup_menu_posn: Cell::new((0.0, 0.0).into()),
             change_callbacks: RefCell::new(Vec::new()),
@@ -323,9 +323,9 @@ impl RGBManipulatorGUIBuilder {
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui.vbox.connect_key_press_event(move |_, event| {
             let key = event.get_keyval();
-            if key == gdk::enums::key::Shift_L {
+            if key == gdk::keys::constants::Shift_L {
                 rgbm_gui_c.delta_size.set(DeltaSize::Large);
-            } else if key == gdk::enums::key::Shift_R {
+            } else if key == gdk::keys::constants::Shift_R {
                 rgbm_gui_c.delta_size.set(DeltaSize::Small);
             };
             gtk::Inhibit(false)
@@ -333,7 +333,7 @@ impl RGBManipulatorGUIBuilder {
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui.vbox.connect_key_release_event(move |_, event| {
             let key = event.get_keyval();
-            if key == gdk::enums::key::Shift_L || key == gdk::enums::key::Shift_R {
+            if key == gdk::keys::constants::Shift_L || key == gdk::keys::constants::Shift_R {
                 rgbm_gui_c.delta_size.set(DeltaSize::Normal);
             };
             gtk::Inhibit(false)

@@ -288,7 +288,7 @@ pub mod attributes {
 
             let mut first: Option<gtk::RadioButton> = None;
             for attr in self.attributes.iter() {
-                let button = gtk::RadioButton::new_with_label(&attr.to_string());
+                let button = gtk::RadioButton::with_label(&attr.to_string());
                 asrb.gtk_box.pack_start(&button, false, false, 0);
                 if let Some(ref first) = first {
                     button.join_group(Some(first))
