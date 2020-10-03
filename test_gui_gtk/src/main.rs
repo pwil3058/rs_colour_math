@@ -1,8 +1,9 @@
 // Copyright 2020 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use gtk::prelude::*;
-
-use pw_gix::wrapper::*;
+use pw_gix::{
+    gtk::{self, prelude::*},
+    wrapper::*,
+};
 
 use colour_math_gtk::{
     attributes::{AttributeSelectorBuilder, ColourAttributeDisplayStackBuilder},

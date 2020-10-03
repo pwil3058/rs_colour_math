@@ -6,9 +6,9 @@ use std::{
     rc::Rc,
 };
 
-use gtk::prelude::*;
-
 use pw_gix::{
+    cairo, gdk,
+    gtk::{self, prelude::*},
     gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
     sav_state::MaskedCondns,
     wrapper::*,

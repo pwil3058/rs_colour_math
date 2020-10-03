@@ -2,9 +2,8 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use gtk::prelude::*;
-
 use pw_gix::{
+    gtk::{self, prelude::*},
     gtkx::entry::{HexEntry, HexEntryBuilder},
     wrapper::*,
 };

@@ -2,6 +2,8 @@
 
 use std::cell::Cell;
 
+use pw_gix::cairo;
+
 use colour_math::{
     attributes::drawing::{self, Cartesian},
     ColourInterface, RGBConstants,
@@ -18,7 +20,7 @@ pub trait CairoSetColour {
     fn set_source_colour_rgb(&self, rgb: &RGB);
 }
 
-impl CairoSetColour for cairo::Context {
+impl CairoSetColour for pw_gix::cairo::Context {
     fn set_source_colour<C: ColourInterface<f64>>(self, colour: &C) {
         self.set_source_colour_rgb(&colour.rgb());
     }

@@ -7,11 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cairo-rs = "0.9.0"
-gdk = "0.13.0"
-gdk-pixbuf = "0.9.0"
-gtk = "0.9.0"
-
 normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
 pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
 

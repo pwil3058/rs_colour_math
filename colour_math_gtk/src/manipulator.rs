@@ -4,10 +4,12 @@ use std::{
     rc::Rc,
 };
 
-use gtk::prelude::*;
-use gtk::DrawingAreaBuilder;
-
-use pw_gix::{gtkx::menu::WrappedMenu, wrapper::*};
+use pw_gix::{
+    cairo, gdk, gdk_pixbuf,
+    gtk::{self, prelude::*, DrawingAreaBuilder},
+    gtkx::menu::WrappedMenu,
+    wrapper::*,
+};
 
 use colour_math::{manipulator::RGBManipulatorBuilder, RGBConstants};
 

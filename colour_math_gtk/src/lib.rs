@@ -15,6 +15,7 @@ pub mod colour {
         attributes::ColourAttributeDisplayIfce, urgb::URGB, ColourInterface, HueConstants,
         RGBConstants, ScalarAttribute, I_BLUE, I_GREEN, I_RED,
     };
+    use pw_gix::gdk;
     pub type RGB = colour_math::rgb::RGB<f64>;
     pub type RGBManipulator = colour_math::manipulator::RGBManipulator<f64>;
 
@@ -29,8 +30,7 @@ pub mod colour {
 }
 
 pub mod coloured {
-    use gtk;
-    use gtk::prelude::*;
+    use pw_gix::gtk::{self, prelude::*};
 
     use crate::colour::*;
 
@@ -91,9 +91,10 @@ pub mod attributes {
         rc::Rc,
     };
 
-    use gtk::{BoxExt, RadioButtonExt, ToggleButtonExt, WidgetExt};
-
-    pub use pw_gix::wrapper::*;
+    pub use pw_gix::{
+        gtk::{self, BoxExt, RadioButtonExt, ToggleButtonExt, WidgetExt},
+        wrapper::*,
+    };
 
     use colour_math_cairo::{Drawer, Size};
 
