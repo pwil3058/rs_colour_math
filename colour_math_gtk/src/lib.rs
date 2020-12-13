@@ -12,12 +12,16 @@ pub mod angles {
 
 pub mod colour {
     pub use colour_math::{
-        attributes::ColourAttributeDisplayIfce, urgb::URGB, ColourInterface, HueConstants,
-        RGBConstants, ScalarAttribute, I_BLUE, I_GREEN, I_RED,
+        attributes::{hue_wheel::Shape, ColourAttributeDisplayIfce},
+        urgb::{UnsignedComponent, URGB},
+        ColourInterface, HueConstants, RGBConstants, ScalarAttribute, I_BLUE, I_GREEN, I_RED,
     };
     use pw_gix::gdk;
     pub type RGB = colour_math::rgb::RGB<f64>;
     pub type RGBManipulator = colour_math::manipulator::RGBManipulator<f64>;
+    pub type RGBManipulatorBuilder = colour_math::manipulator::RGBManipulatorBuilder<f64>;
+    pub type ColouredShape = colour_math::attributes::hue_wheel::ColouredShape<f64>;
+    pub type HueWheel = colour_math::attributes::hue_wheel::HueWheel<f64>;
 
     pub fn rgba_from_rgb(rgb: &RGB) -> gdk::RGBA {
         gdk::RGBA {

@@ -7,11 +7,11 @@ use pw_gix::{
 
 use colour_math_gtk::{
     attributes::{AttributeSelectorBuilder, ColourAttributeDisplayStackBuilder},
-    colour::{ScalarAttribute, RGB},
+    colour::{ColouredShape, HueConstants, ScalarAttribute, Shape, RGB},
     colour_edit::ColourEditorBuilder,
     hue_wheel::GtkHueWheelBuilder,
-    manipulator::RGBManipulatorGUIBuilder,
-    rgb_entry::RGBHexEntryBuilder,
+    //manipulator::RGBManipulatorGUIBuilder,
+    //rgb_entry::RGBHexEntryBuilder,
 };
 
 fn main() {
@@ -33,14 +33,14 @@ fn main() {
     cads.set_target_colour(Some(&RGB::from([0.7, 0.4, 0.7])));
     vbox.pack_start(&cads.pwo(), true, true, 0);
 
-    let rgb_entry = RGBHexEntryBuilder::<u8>::new().build();
-    vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
-
-    let rgb_entry = RGBHexEntryBuilder::<u16>::new().build();
-    vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
-
-    let colour_manipulator = RGBManipulatorGUIBuilder::new().build();
-    vbox.pack_start(&colour_manipulator.pwo(), true, true, 0);
+    // let rgb_entry = RGBHexEntryBuilder::<u8>::new().build();
+    // vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
+    //
+    // let rgb_entry = RGBHexEntryBuilder::<u16>::new().build();
+    // vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
+    //
+    // let colour_manipulator = RGBManipulatorGUIBuilder::new().build();
+    // vbox.pack_start(&colour_manipulator.pwo(), true, true, 0);
 
     let colour_editor = ColourEditorBuilder::new().build();
     vbox.pack_start(&colour_editor.pwo(), true, true, 0);
@@ -50,6 +50,18 @@ fn main() {
         .menu_item_specs(&[("add", ("Add", None, Some("Add something")).into(), 0)])
         .build();
     vbox.pack_start(&gtk_hue_wheel.pwo(), true, true, 0);
+    gtk_hue_wheel.add_item(ColouredShape::new(
+        RGB::RED,
+        "Red",
+        "Pure Red",
+        Shape::Square,
+    ));
+    gtk_hue_wheel.add_item(ColouredShape::new(
+        RGB::YELLOW,
+        "Yellow",
+        "Pure Yellow",
+        Shape::Diamond,
+    ));
 
     vbox.show_all();
     win.add(&vbox);

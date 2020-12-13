@@ -14,13 +14,12 @@ use pw_gix::{
     wrapper::*,
 };
 
-use colour_math::{
-    attributes::hue_wheel::{ColouredShape, HueWheel},
-    ScalarAttribute,
-};
 use colour_math_cairo::*;
 
-use crate::attributes::{AttributeSelector, AttributeSelectorBuilder};
+use crate::{
+    attributes::{AttributeSelector, AttributeSelectorBuilder},
+    colour::{ColouredShape, HueWheel, ScalarAttribute},
+};
 
 type PopupCallback = Box<dyn Fn(&str)>;
 
@@ -28,7 +27,7 @@ type PopupCallback = Box<dyn Fn(&str)>;
 pub struct GtkHueWheel {
     vbox: gtk::Box,
     drawing_area: gtk::DrawingArea,
-    hue_wheel: RefCell<HueWheel<f64>>,
+    hue_wheel: RefCell<HueWheel>,
     chosen_item: RefCell<Option<String>>,
     attribute_selector: Rc<AttributeSelector>,
     popup_menu: ManagedMenu,
@@ -78,7 +77,7 @@ impl GtkHueWheel {
         self.origin_offset.set(self.origin_offset.get() + delta);
     }
 
-    pub fn add_item(&self, coloured_item: ColouredShape<f64>) {
+    pub fn add_item(&self, coloured_item: ColouredShape) {
         self.hue_wheel.borrow_mut().add_item(coloured_item);
         self.drawing_area.queue_draw();
     }

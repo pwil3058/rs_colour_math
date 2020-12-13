@@ -11,13 +11,11 @@ use pw_gix::{
     wrapper::*,
 };
 
-use colour_math::{manipulator::RGBManipulatorBuilder, RGBConstants};
-
 use colour_math_cairo::Point;
 
 use crate::{
     angles::Degrees,
-    colour::{ColourInterface, RGBManipulator, RGB},
+    colour::{ColourInterface, RGBConstants, RGBManipulator, RGBManipulatorBuilder, RGB},
     coloured::Colourable,
 };
 

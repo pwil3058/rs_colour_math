@@ -8,10 +8,8 @@ use pw_gix::{
     wrapper::*,
 };
 
-use colour_math::urgb::UnsignedComponent;
-
 use crate::{
-    colour::{HueConstants, RGB, URGB},
+    colour::{HueConstants, UnsignedComponent, RGB, URGB},
     coloured::Colourable,
 };
 
