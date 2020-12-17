@@ -62,6 +62,12 @@ fn main() {
         "Pure Yellow",
         Shape::Diamond,
     ));
+    gtk_hue_wheel.add_item(ColouredShape::new(
+        RGB::from([0.5, 0.5, 0.5]),
+        "Grey",
+        "Midle Grey",
+        Shape::Circle,
+    ));
 
     vbox.show_all();
     win.add(&vbox);

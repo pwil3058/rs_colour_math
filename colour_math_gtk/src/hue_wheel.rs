@@ -32,30 +32,17 @@ pub struct GtkHueWheel {
     attribute_selector: Rc<AttributeSelector>,
     popup_menu: ManagedMenu,
     callbacks: RefCell<HashMap<String, Vec<PopupCallback>>>,
-    zoom: Cell<f64>,
     origin_offset: Cell<Point>,
     last_xy: Cell<Option<Point>>,
 }
 
 impl GtkHueWheel {
-    fn decr_zoom(&self) {
-        let new_zoom = (self.zoom.get() - 0.025).max(1.0);
-        self.zoom.set(new_zoom);
-    }
-
-    fn incr_zoom(&self) {
-        let new_zoom = (self.zoom.get() + 0.025).min(10.0);
-        self.zoom.set(new_zoom);
-    }
-
     fn current_transform_matrix(&self) -> cairo::Matrix {
-        let zoom = self.zoom.get();
         let origin_offset = self.origin_offset.get();
         let mut ctm = CairoCartesian::cartesian_transform_matrix(
             self.drawing_area.get_allocated_width() as f64,
             self.drawing_area.get_allocated_height() as f64,
         );
-        ctm.scale(zoom, zoom);
         ctm.translate(origin_offset.x, origin_offset.y);
         ctm
     }
@@ -184,7 +171,6 @@ impl GtkHueWheelBuilder {
             popup_menu,
             callbacks: RefCell::new(HashMap::new()),
             origin_offset: Cell::new(Point::default()),
-            zoom: Cell::new(1.0),
             last_xy: Cell::new(None),
         });
 
@@ -237,12 +223,12 @@ impl GtkHueWheelBuilder {
                     if device.get_source() == gdk::InputSource::Mouse {
                         match scroll_event.get_direction() {
                             gdk::ScrollDirection::Up => {
-                                gtk_hue_wheel_c.decr_zoom();
+                                gtk_hue_wheel_c.hue_wheel.borrow_mut().decr_zoom();
                                 da.queue_draw();
                                 return gtk::Inhibit(true);
                             }
                             gdk::ScrollDirection::Down => {
-                                gtk_hue_wheel_c.incr_zoom();
+                                gtk_hue_wheel_c.hue_wheel.borrow_mut().incr_zoom();
                                 da.queue_draw();
                                 return gtk::Inhibit(true);
                             }

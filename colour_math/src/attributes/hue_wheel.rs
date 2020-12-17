@@ -8,6 +8,32 @@ use crate::{ColourComponent, ColourInterface, HueConstants, RGBConstants, Scalar
 
 use super::drawing::{Cartesian, Point};
 
+pub struct Zoom<F: FloatPlus> {
+    scale: F,
+}
+
+impl<F: FloatPlus> Zoom<F> {
+    pub fn decr(&mut self) {
+        let new_scale = (self.scale - F::from(0.025).unwrap()).max(F::ONE);
+        self.scale = new_scale;
+    }
+
+    pub fn incr(&mut self) {
+        let new_scale = (self.scale + F::from(0.025).unwrap()).min(F::from(10.0).unwrap());
+        self.scale = new_scale;
+    }
+
+    pub fn scale(&self) -> F {
+        self.scale
+    }
+}
+
+impl<F: FloatPlus> Default for Zoom<F> {
+    fn default() -> Self {
+        Self { scale: F::ONE }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Shape {
     Circle,
@@ -82,18 +108,25 @@ impl<F: ColourComponent + ShapeConsts> ColouredShape<F> {
         &self.id
     }
 
-    fn xy(&self, scalar_attribute: ScalarAttribute) -> Point<F> {
+    fn xy(&self, scalar_attribute: ScalarAttribute, zoom: &Zoom<F>) -> Point<F> {
         match self.cached_point {
-            CachedPoint::Hued(point) => point * self.rgb.scalar_attribute(scalar_attribute),
-            CachedPoint::Grey(point) => point,
+            CachedPoint::Hued(point) => {
+                point * self.rgb.scalar_attribute(scalar_attribute) * zoom.scale()
+            }
+            CachedPoint::Grey(point) => point * zoom.scale(),
         }
     }
 
-    pub fn draw_shape(&self, scalar_attribute: ScalarAttribute, cartesian: &impl Cartesian<F>) {
+    pub fn draw_shape(
+        &self,
+        scalar_attribute: ScalarAttribute,
+        zoom: &Zoom<F>,
+        cartesian: &impl Cartesian<F>,
+    ) {
         cartesian.set_fill_colour(self.rgb);
         cartesian.set_line_colour(self.rgb.best_foreground_rgb());
         cartesian.set_line_width(F::from(0.01).unwrap());
-        let xy = self.xy(scalar_attribute);
+        let xy = self.xy(scalar_attribute, zoom);
         match self.shape {
             Shape::Circle => {
                 cartesian.draw_circle(xy, F::SHAPE_RADIUS, true);
@@ -115,8 +148,13 @@ impl<F: ColourComponent + ShapeConsts> ColouredShape<F> {
         }
     }
 
-    fn proximity_to(&self, point: Point<F>, scalar_attribute: ScalarAttribute) -> Proximity<F> {
-        let delta = self.xy(scalar_attribute) - point;
+    fn proximity_to(
+        &self,
+        point: Point<F>,
+        scalar_attribute: ScalarAttribute,
+        zoom: &Zoom<F>,
+    ) -> Proximity<F> {
+       let delta = self.xy(scalar_attribute, zoom) - point;
         let distance = delta.hypot();
         match self.shape {
             Shape::Circle | Shape::BackSight => {
@@ -182,18 +220,18 @@ impl<F: ColourComponent + ShapeConsts> PartialEq for ColouredShape<F> {
 impl<F: ColourComponent + ShapeConsts> Eq for ColouredShape<F> {}
 
 pub trait Graticule<F: ColourComponent + ShapeConsts> {
-    fn draw_rings(num_rings: u32, cartesian: &impl Cartesian<F>) {
+    fn draw_rings(num_rings: u32, zoom: &Zoom<F>, cartesian: &impl Cartesian<F>) {
         cartesian.set_line_width(F::from(0.01).unwrap());
         cartesian.set_line_colour(RGB::WHITE); // * F::from(0.25).unwrap());
         let divisor = F::from_u32(num_rings).unwrap();
         let centre = Point::<F>::default();
         for num in 1..=num_rings {
             let radius: F = F::from(num).unwrap() / divisor;
-            cartesian.draw_circle(centre, radius, false);
+            cartesian.draw_circle(centre, radius * zoom.scale(), false);
         }
     }
 
-    fn draw_spokes(start_ring: F, cartesian: &impl Cartesian<F>) {
+    fn draw_spokes(start_ring: F, zoom: &Zoom<F>, cartesian: &impl Cartesian<F>) {
         cartesian.set_line_width(F::from(0.015).unwrap());
         let mut hue = RGB::<F>::RED.hue().unwrap();
         for _ in 0..13 {
@@ -201,21 +239,22 @@ pub trait Graticule<F: ColourComponent + ShapeConsts> {
             let angle = hue.angle();
             let start: Point<F> = (angle, start_ring).into();
             let end: Point<F> = (angle, F::ONE).into();
-            cartesian.draw_line(&[start, end]);
+            cartesian.draw_line(&[start * zoom.scale(), end * zoom.scale()]);
             hue = hue + Degrees::DEG_30;
         }
     }
 
-    fn draw_graticule(&self, cartesian: &impl Cartesian<F>) {
+    fn draw_graticule(&self, zoom: &Zoom<F>, cartesian: &impl Cartesian<F>) {
         cartesian.set_background_colour(RGB::WHITE * F::HALF);
-        Self::draw_spokes(F::from(0.1).unwrap(), cartesian);
-        Self::draw_rings(10, cartesian);
+        Self::draw_spokes(F::from(0.1).unwrap(), zoom, cartesian);
+        Self::draw_rings(10, zoom, cartesian);
     }
 }
 
 pub struct HueWheel<F: ColourComponent + ShapeConsts> {
     shapes: Vec<ColouredShape<F>>,
     target: Option<ColouredShape<F>>,
+    zoom: Zoom<F>,
 }
 
 impl<F: ColourComponent + ShapeConsts> Default for HueWheel<F> {
@@ -223,6 +262,7 @@ impl<F: ColourComponent + ShapeConsts> Default for HueWheel<F> {
         Self {
             shapes: vec![],
             target: None,
+            zoom: Zoom::<F>::default(),
         }
     }
 }
@@ -234,13 +274,21 @@ impl<F: ColourComponent + ShapeConsts> HueWheel<F> {
         Self::default()
     }
 
+    pub fn decr_zoom(&mut self) {
+        self.zoom.decr();
+    }
+
+    pub fn incr_zoom(&mut self) {
+        self.zoom.incr();
+    }
+
     pub fn draw(&self, scalar_attribute: ScalarAttribute, cartesian: &impl Cartesian<F>) {
-        self.draw_graticule(cartesian);
+        self.draw_graticule(&self.zoom, cartesian);
         for shape in self.shapes.iter() {
-            shape.draw_shape(scalar_attribute, cartesian);
+            shape.draw_shape(scalar_attribute, &self.zoom, cartesian);
         }
         if let Some(ref target) = self.target {
-            target.draw_shape(scalar_attribute, cartesian)
+            target.draw_shape(scalar_attribute, &self.zoom, cartesian)
         }
     }
 
@@ -251,7 +299,7 @@ impl<F: ColourComponent + ShapeConsts> HueWheel<F> {
     ) -> Option<(&ColouredShape<F>, Proximity<F>)> {
         let mut nearest: Option<(&ColouredShape<F>, Proximity<F>)> = None;
         for shape in self.shapes.iter() {
-            let proximity = shape.proximity_to(point, scalar_attribute);
+            let proximity = shape.proximity_to(point, scalar_attribute, &self.zoom);
             if let Some((_, nearest_so_far)) = nearest {
                 if proximity < nearest_so_far {
                     nearest = Some((shape, proximity));
