@@ -245,6 +245,17 @@ impl<F: ColourComponent> From<&[u8]> for RGB<F> {
     }
 }
 
+impl<F: ColourComponent> From<&[u8; 3]> for RGB<F> {
+    fn from(array: &[u8; 3]) -> Self {
+        let divisor = F::from(255.0).unwrap();
+        Self([
+            F::from_u8(array[0]).unwrap() / divisor,
+            F::from_u8(array[1]).unwrap() / divisor,
+            F::from_u8(array[2]).unwrap() / divisor,
+        ])
+    }
+}
+
 impl<F: ColourComponent> From<&RGB<F>> for (F, F, F) {
     fn from(rgb: &RGB<F>) -> (F, F, F) {
         (rgb[0], rgb[1], rgb[2])
