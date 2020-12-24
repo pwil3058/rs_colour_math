@@ -17,8 +17,11 @@ impl ColourInterface<f64> for U8Pixel {
         }
     }
 
-    fn rgba(&self, _: f64) -> [f64; 4] {
-        unimplemented!();
+    fn rgba(&self) -> [f64; 4] {
+        match self {
+            U8Pixel::RGB { rgb } => rgb.rgba(),
+            U8Pixel::RGBA { rgb, alpha } => [rgb[0], rgb[1], rgb[2], *alpha as f64 / 255.0],
+        }
     }
 
     fn hue(&self) -> Option<Hue<f64>> {

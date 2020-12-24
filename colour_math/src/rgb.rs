@@ -283,9 +283,8 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         *self
     }
 
-    fn rgba(&self, alpha: F) -> [F; 4] {
-        debug_assert!(alpha.is_proportion());
-        [self.0[0], self.0[1], self.0[2], alpha]
+    fn rgba(&self) -> [F; 4] {
+        [self.0[0], self.0[1], self.0[2], F::ONE]
     }
 
     fn hue(&self) -> Option<Hue<F>> {

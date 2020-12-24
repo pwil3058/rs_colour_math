@@ -102,7 +102,7 @@ impl std::fmt::Display for ScalarAttribute {
 pub trait ColourInterface<F: ColourComponent> {
     fn rgb(&self) -> RGB<F>;
 
-    fn rgba(&self, alpha: F) -> [F; 4];
+    fn rgba(&self) -> [F; 4];
 
     fn hue(&self) -> Option<Hue<F>>;
 
