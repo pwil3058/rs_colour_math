@@ -16,6 +16,7 @@ pub mod hue;
 pub mod image;
 pub mod manipulator;
 pub mod rgb;
+pub mod rgba;
 pub mod urgb;
 
 pub use crate::hue::Hue;
