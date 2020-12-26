@@ -134,6 +134,14 @@ impl<F: ColourComponent> From<&[F; 4]> for RGBA<F> {
     }
 }
 
+impl<F: ColourComponent> From<&[F]> for RGBA<F> {
+    fn from(array: &[F]) -> Self {
+        debug_assert!(array.len() == 4);
+        debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
+        Self([array[0], array[1], array[2], array[3]])
+    }
+}
+
 impl<F: ColourComponent> From<&[u8]> for RGBA<F> {
     fn from(array: &[u8]) -> Self {
         debug_assert_eq!(array.len(), 3);
@@ -159,9 +167,9 @@ impl<F: ColourComponent> From<&[u8; 4]> for RGBA<F> {
     }
 }
 
-impl<F: ColourComponent> From<&RGBA<F>> for (F, F, F) {
-    fn from(rgb: &RGBA<F>) -> (F, F, F) {
-        (rgb[0], rgb[1], rgb[2])
+impl<F: ColourComponent> From<&RGBA<F>> for (F, F, F, F) {
+    fn from(rgb: &RGBA<F>) -> (F, F, F, F) {
+        (rgb[0], rgb[1], rgb[2], rgb[3])
     }
 }
 
@@ -174,21 +182,21 @@ impl<F: ColourComponent> From<&RGBA<F>> for [F; 4] {
 impl<F: ColourComponent, G: ColourComponent> From<&RGBA<F>> for RGBA<G> {
     fn from(rgb: &RGBA<F>) -> RGBA<G> {
         Self([
-            G::from::<F>(rgb[0]).unwrap(),
-            G::from::<F>(rgb[1]).unwrap(),
-            G::from::<F>(rgb[2]).unwrap(),
-            G::from::<F>(rgb[3]).unwrap(),
+            G::from(rgb[0]).unwrap(),
+            G::from(rgb[1]).unwrap(),
+            G::from(rgb[2]).unwrap(),
+            G::from(rgb[3]).unwrap(),
         ])
     }
 }
 
 impl<F: ColourComponent> ColourInterface<F> for RGBA<F> {
     fn rgb(&self) -> RGB<F> {
-        [self.0[0], self.0[1], self.0[2]].into()
+        (&self.0[0..3]).into()
     }
 
     fn rgba(&self) -> RGBA<F> {
-        [self.0[0], self.0[1], self.0[2], self.0[3]].into()
+        *self
     }
 
     fn hue(&self) -> Option<Hue<F>> {
