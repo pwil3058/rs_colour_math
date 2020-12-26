@@ -18,6 +18,7 @@ pub mod manipulator;
 pub mod rgb;
 pub mod rgba;
 pub mod urgb;
+pub mod urgba;
 
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
