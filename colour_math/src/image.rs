@@ -1,5 +1,38 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+#[derive(Debug, Clone, Copy)]
+pub struct XY {
+    pub x: usize,
+    pub y: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Size {
+    pub width: usize,
+    pub height: usize,
+}
+
+pub trait Filter<P: Copy + 'static> {
+    fn filter(&self, pixel: &P) -> P;
+}
+
+pub trait ImageIfce<'a, P: Copy + 'static> {
+    fn with_data(size: &Size, pixels: &[P]) -> Self;
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
+    fn sub_image(&self, start: XY, size: Size) -> Self;
+    fn pixels<I: Iterator<Item = &'a P>>(&self) -> I;
+    fn rows<I: Iterator<Item = &'a [P]>>(&self) -> I;
+    fn filtered<F: Filter<P>>(&self, filter: F) -> Self;
+
+    fn size(&self) -> Size {
+        Size {
+            width: self.width(),
+            height: self.height(),
+        }
+    }
+}
+
 use crate::rgb::*;
 use crate::ColourComponent;
 
