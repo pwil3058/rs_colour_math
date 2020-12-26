@@ -6,10 +6,11 @@ use std::{
     ops::{Add, Index, Mul},
 };
 
-pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
+pub use crate::{
+    chroma, hue::*, rgba::RGBA, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
+    RGBConstants, I_BLUE, I_GREEN, I_RED,
+};
 
-use crate::urgb::URGB;
-use crate::{HueConstants, RGBConstants};
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
 
@@ -283,8 +284,8 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         *self
     }
 
-    fn rgba(&self) -> [F; 4] {
-        [self.0[0], self.0[1], self.0[2], F::ONE]
+    fn rgba(&self) -> RGBA<F> {
+        [self.0[0], self.0[1], self.0[2], F::ONE].into()
     }
 
     fn hue(&self) -> Option<Hue<F>> {

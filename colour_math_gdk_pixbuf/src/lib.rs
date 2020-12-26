@@ -1,6 +1,6 @@
 // Copyright 2020 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use colour_math::{ColourInterface, Hue, RGB};
+use colour_math::{ColourInterface, Hue, RGB, RGBA};
 use normalised_angles::Degrees;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -17,10 +17,10 @@ impl ColourInterface<f64> for U8Pixel {
         }
     }
 
-    fn rgba(&self) -> [f64; 4] {
+    fn rgba(&self) -> RGBA<f64> {
         match self {
             U8Pixel::RGB { rgb } => rgb.rgba(),
-            U8Pixel::RGBA { rgb, alpha } => [rgb[0], rgb[1], rgb[2], *alpha as f64 / 255.0],
+            U8Pixel::RGBA { rgb, alpha } => [rgb[0], rgb[1], rgb[2], *alpha as f64 / 255.0].into(),
         }
     }
 

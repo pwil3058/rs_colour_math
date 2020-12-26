@@ -22,7 +22,9 @@ pub mod urgba;
 
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
+pub use crate::rgba::RGBA;
 pub use crate::urgb::{RGB16, RGB8, URGB};
+pub use crate::urgba::{RGBA16, RGBA8, URGBA};
 
 pub trait HueConstants: Sized + Copy {
     const RED: Self;
@@ -104,7 +106,7 @@ impl std::fmt::Display for ScalarAttribute {
 pub trait ColourInterface<F: ColourComponent> {
     fn rgb(&self) -> RGB<F>;
 
-    fn rgba(&self) -> [F; 4];
+    fn rgba(&self) -> RGBA<F>;
 
     fn hue(&self) -> Option<Hue<F>>;
 
