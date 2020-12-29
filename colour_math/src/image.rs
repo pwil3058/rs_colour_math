@@ -1,4 +1,5 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+//use std::slice::Iter;
 
 #[derive(Debug, Clone, Copy)]
 pub struct XY {
@@ -17,18 +18,62 @@ pub trait Filter<P: Copy + 'static> {
 }
 
 pub trait ImageIfce<'a, P: Copy + 'static> {
-    fn with_data(size: &Size, pixels: &[P]) -> Self;
+    //type PixelIterator: Iterator<Item = &'a P>;
+    //type RowIterator: Iterator<Item = &'a [P]>;
+
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn sub_image(&self, start: XY, size: Size) -> Self;
-    fn pixels<I: Iterator<Item = &'a P>>(&self) -> I;
-    fn rows<I: Iterator<Item = &'a [P]>>(&self) -> I;
+    fn pixels(&self) -> &[P];
+    //fn rows(&self) -> Self::RowIterator;
     fn filtered<F: Filter<P>>(&self, filter: F) -> Self;
 
     fn size(&self) -> Size {
         Size {
             width: self.width(),
             height: self.height(),
+        }
+    }
+}
+
+pub struct GenericImage<P> {
+    width: usize,
+    height: usize,
+    _pixels: Vec<P>,
+}
+
+impl<'a, P: Copy + 'static> ImageIfce<'a, P> for GenericImage<P> {
+    //type PixelIterator = std::slice::Iter<'a, P>;
+    //type RowIterator = std::slice::Iter<'a, &'a [P]>;
+
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    fn sub_image(&self, _start: XY, _size: Size) -> Self {
+        unimplemented!("later")
+    }
+
+    fn pixels(&self) -> &[P] {
+        &self._pixels[..]
+    }
+
+    //fn rows(&self) -> Self::RowIterator {
+    //    unimplemented!("later")
+    //}
+
+    fn filtered<F: Filter<P>>(&self, _filter: F) -> Self {
+        unimplemented!("later")
+    }
+
+    fn size(&self) -> Size {
+        Size {
+            width: self.width,
+            height: self.height,
         }
     }
 }
