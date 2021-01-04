@@ -18,11 +18,11 @@ pub trait Filter<P: Copy + 'static> {
 }
 
 pub trait ImageIfce<'a, P: Copy + 'static>:
-    std::ops::Index<usize, Output = [P]> + std::ops::IndexMut<usize>
+    std::ops::Index<usize, Output = [P]> + std::ops::IndexMut<usize> + Sized
 {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
-    fn sub_image(&self, start: XY, size: Size) -> Self;
+    fn sub_image(&self, start: XY, size: Size) -> Option<Self>;
     fn pixels(&self) -> &[P];
     fn filtered<F: Filter<P>>(&self, filter: F) -> Self;
 
@@ -67,8 +67,12 @@ impl<'a, P: Copy + 'static> ImageIfce<'a, P> for GenericImage<P> {
         self.height
     }
 
-    fn sub_image(&self, _start: XY, _size: Size) -> Self {
-        unimplemented!("later")
+    fn sub_image(&self, start: XY, _size: Size) -> Option<Self> {
+        if start.x > self.width || start.y > self.height {
+            None
+        } else {
+            unimplemented!("later")
+        }
     }
 
     fn pixels(&self) -> &[P] {
