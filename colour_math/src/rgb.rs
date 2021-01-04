@@ -373,7 +373,7 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
         }
     }
 
-    fn best_foreground_rgb(&self) -> Self {
+    fn best_foreground_rgb(&self) -> RGB<F> {
         if self[I_RED] * F::from(0.299).unwrap()
             + self[I_GREEN] * F::from(0.587).unwrap()
             + self[I_BLUE] * F::from(0.114).unwrap()

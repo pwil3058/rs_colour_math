@@ -17,15 +17,13 @@ pub trait Filter<P: Copy + 'static> {
     fn filter(&self, pixel: &P) -> P;
 }
 
-pub trait ImageIfce<'a, P: Copy + 'static> {
-    //type PixelIterator: Iterator<Item = &'a P>;
-    //type RowIterator: Iterator<Item = &'a [P]>;
-
+pub trait ImageIfce<'a, P: Copy + 'static>:
+    std::ops::Index<usize, Output = [P]> + std::ops::IndexMut<usize>
+{
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn sub_image(&self, start: XY, size: Size) -> Self;
     fn pixels(&self) -> &[P];
-    //fn rows(&self) -> Self::RowIterator;
     fn filtered<F: Filter<P>>(&self, filter: F) -> Self;
 
     fn size(&self) -> Size {
@@ -39,13 +37,28 @@ pub trait ImageIfce<'a, P: Copy + 'static> {
 pub struct GenericImage<P> {
     width: usize,
     height: usize,
-    _pixels: Vec<P>,
+    pixels: Vec<P>,
+}
+
+impl<P> std::ops::Index<usize> for GenericImage<P> {
+    type Output = [P];
+
+    fn index(&self, row: usize) -> &[P] {
+        let start = self.width * row;
+        debug_assert!(start < self.pixels.len());
+        &self.pixels[start..start + self.width]
+    }
+}
+
+impl<P> std::ops::IndexMut<usize> for GenericImage<P> {
+    fn index_mut(&mut self, row: usize) -> &mut [P] {
+        let start = self.width * row;
+        debug_assert!(start < self.pixels.len());
+        &mut self.pixels[start..start + self.width]
+    }
 }
 
 impl<'a, P: Copy + 'static> ImageIfce<'a, P> for GenericImage<P> {
-    //type PixelIterator = std::slice::Iter<'a, P>;
-    //type RowIterator = std::slice::Iter<'a, &'a [P]>;
-
     fn width(&self) -> usize {
         self.width
     }
@@ -59,12 +72,8 @@ impl<'a, P: Copy + 'static> ImageIfce<'a, P> for GenericImage<P> {
     }
 
     fn pixels(&self) -> &[P] {
-        &self._pixels[..]
+        &self.pixels[..]
     }
-
-    //fn rows(&self) -> Self::RowIterator {
-    //    unimplemented!("later")
-    //}
 
     fn filtered<F: Filter<P>>(&self, _filter: F) -> Self {
         unimplemented!("later")
