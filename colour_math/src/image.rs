@@ -37,8 +37,8 @@ impl Size {
     }
 }
 
-pub trait Filter<P: Copy + 'static> {
-    fn filter(&self, pixel: &P) -> P;
+pub trait Transformer<P: Copy + 'static> {
+    fn transform(&self, pixel: &P) -> P;
 }
 
 pub trait ImageIfce<'a, P: Copy + Default + 'static>:
@@ -49,7 +49,7 @@ pub trait ImageIfce<'a, P: Copy + Default + 'static>:
     fn height(&self) -> usize;
     fn sub_image(&self, start: XY, size: Size) -> Option<Self>;
     fn pixels(&self) -> &[P];
-    fn filtered<F: Filter<P>>(&self, filter: F) -> Self;
+    fn transformed<T: Transformer<P>>(&self, transformer: T) -> Self;
 
     fn size(&self) -> Size {
         Size {
@@ -128,8 +128,12 @@ impl<'a, P: Copy + Default + 'static> ImageIfce<'a, P> for GenericImage<P> {
         &self.pixels[..]
     }
 
-    fn filtered<F: Filter<P>>(&self, filter: F) -> Self {
-        let pixels: Vec<P> = self.pixels.iter().map(|p| filter.filter(p)).collect();
+    fn transformed<T: Transformer<P>>(&self, transformer: T) -> Self {
+        let pixels: Vec<P> = self
+            .pixels
+            .iter()
+            .map(|p| transformer.transform(p))
+            .collect();
         debug_assert_eq!(pixels.len(), self.size().area());
         Self {
             width: self.width,
@@ -272,8 +276,8 @@ mod image_tests {
         phantom_data: PhantomData<P>,
     }
 
-    impl Filter<RGB<f64>> for ToMonochrome<RGB<f64>> {
-        fn filter(&self, pixel: &RGB<f64>) -> RGB<f64> {
+    impl Transformer<RGB<f64>> for ToMonochrome<RGB<f64>> {
+        fn transform(&self, pixel: &RGB<f64>) -> RGB<f64> {
             pixel.monochrome_rgb()
         }
     }
@@ -328,7 +332,7 @@ mod image_tests {
     }
 
     #[test]
-    fn filtered_image() {
+    fn transformed_image() {
         let mut v = Vec::<RGB<f64>>::with_capacity(6);
         v.extend(&RGB::<f64>::PRIMARIES);
         v.extend(&RGB::<f64>::SECONDARIES);
@@ -336,13 +340,13 @@ mod image_tests {
         for pixel in image.pixels() {
             assert!(!pixel.is_grey());
         }
-        let filtered = image.filtered(ToMonochrome::default());
-        for pixel in filtered.pixels() {
+        let transformed = image.transformed(ToMonochrome::default());
+        for pixel in transformed.pixels() {
             assert!(pixel.is_grey());
         }
         for i in 0..2 {
             for j in 0..3 {
-                assert_eq!(image[i][j].value(), filtered[i][j].value())
+                assert_eq!(image[i][j].value(), transformed[i][j].value())
             }
         }
     }
