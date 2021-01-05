@@ -1,25 +1,50 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::slice::Iter;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct XY {
     pub x: usize,
     pub y: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+impl From<(usize, usize)> for XY {
+    fn from(tuple: (usize, usize)) -> Self {
+        Self {
+            x: tuple.0,
+            y: tuple.1,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Size {
     pub width: usize,
     pub height: usize,
+}
+
+impl From<(usize, usize)> for Size {
+    fn from(tuple: (usize, usize)) -> Self {
+        Self {
+            width: tuple.0,
+            height: tuple.1,
+        }
+    }
+}
+
+impl Size {
+    pub fn area(&self) -> usize {
+        self.width * self.height
+    }
 }
 
 pub trait Filter<P: Copy + 'static> {
     fn filter(&self, pixel: &P) -> P;
 }
 
-pub trait ImageIfce<'a, P: Copy + 'static>:
+pub trait ImageIfce<'a, P: Copy + Default + 'static>:
     std::ops::Index<usize, Output = [P]> + std::ops::IndexMut<usize> + Sized
 {
+    fn new(width: usize, height: usize) -> Self;
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn sub_image(&self, start: XY, size: Size) -> Option<Self>;
@@ -34,6 +59,7 @@ pub trait ImageIfce<'a, P: Copy + 'static>:
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GenericImage<P> {
     width: usize,
     height: usize,
@@ -58,7 +84,17 @@ impl<P> std::ops::IndexMut<usize> for GenericImage<P> {
     }
 }
 
-impl<'a, P: Copy + 'static> ImageIfce<'a, P> for GenericImage<P> {
+impl<'a, P: Copy + Default + 'static> ImageIfce<'a, P> for GenericImage<P> {
+    fn new(width: usize, height: usize) -> Self {
+        debug_assert!(width > 0 && height > 0);
+        let pixels = vec![P::default(); width * height];
+        Self {
+            width,
+            height,
+            pixels,
+        }
+    }
+
     fn width(&self) -> usize {
         self.width
     }
@@ -67,11 +103,24 @@ impl<'a, P: Copy + 'static> ImageIfce<'a, P> for GenericImage<P> {
         self.height
     }
 
-    fn sub_image(&self, start: XY, _size: Size) -> Option<Self> {
-        if start.x > self.width || start.y > self.height {
-            None
+    fn sub_image(&self, start: XY, size: Size) -> Option<Self> {
+        if size.area() > 0 && start.x < self.width && start.y < self.height {
+            let width = size.width.min(self.width - start.x);
+            let height = size.height.min(self.height - start.y);
+            let end_col = start.x + width;
+            let end_row = start.y + height;
+            let mut pixels: Vec<P> = Vec::<P>::with_capacity(width * height);
+            for i in start.y..end_row {
+                let row = &self[i];
+                pixels.extend(&row[start.x..end_col]);
+            }
+            Some(Self {
+                width,
+                height,
+                pixels,
+            })
         } else {
-            unimplemented!("later")
+            None
         }
     }
 
@@ -181,5 +230,48 @@ impl<F: ColourComponent> From<(&[u8], usize, usize)> for OpaqueImage<F> {
             }
         }
         Self { pixels, width }
+    }
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::*;
+
+    #[test]
+    fn new_image() {
+        let image = GenericImage::<RGB<f64>>::new(6, 4);
+        assert_eq!(
+            image.size(),
+            Size {
+                width: 6,
+                height: 4
+            }
+        );
+        assert_eq!(image.size().area(), image.pixels.len());
+        for i in 0..image.height() {
+            for j in 0..image.width() {
+                assert_eq!(image[i][j], RGB::<f64>::BLACK);
+            }
+        }
+    }
+
+    #[test]
+    fn sub_image() {
+        let mut image = GenericImage::<RGB<f64>>::new(6, 4);
+        assert_eq!(image.sub_image(XY::default(), Size::default()), None);
+        assert_eq!(image.sub_image(XY::from((6, 0)), image.size()), None);
+        assert_eq!(image.sub_image(XY::from((0, 4)), image.size()), None);
+        image[1][1] = RGB::<f64>::YELLOW;
+        let sub_image = image.sub_image(XY::default(), image.size()).unwrap();
+        assert_eq!(image, sub_image);
+        image[2][2] = RGB::<f64>::RED;
+        assert_ne!(image, sub_image);
+        let sub_image = image.sub_image(XY::from((1, 1)), image.size()).unwrap();
+        assert_eq!(
+            sub_image.size(),
+            Size::from((image.width() - 1, image.height() - 1))
+        );
+        assert_eq!(sub_image[0][0], RGB::<f64>::YELLOW);
+        assert_eq!(sub_image[1][1], RGB::<f64>::RED);
     }
 }
