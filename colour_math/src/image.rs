@@ -128,8 +128,14 @@ impl<'a, P: Copy + Default + 'static> ImageIfce<'a, P> for GenericImage<P> {
         &self.pixels[..]
     }
 
-    fn filtered<F: Filter<P>>(&self, _filter: F) -> Self {
-        unimplemented!("later")
+    fn filtered<F: Filter<P>>(&self, filter: F) -> Self {
+        let pixels: Vec<P> = self.pixels.iter().map(|p| filter.filter(p)).collect();
+        debug_assert_eq!(pixels.len(), self.size().area());
+        Self {
+            width: self.width,
+            height: self.height,
+            pixels,
+        }
     }
 
     fn size(&self) -> Size {
@@ -140,8 +146,30 @@ impl<'a, P: Copy + Default + 'static> ImageIfce<'a, P> for GenericImage<P> {
     }
 }
 
+impl<P: Copy> From<(Size, Vec<P>)> for GenericImage<P> {
+    fn from(data: (Size, Vec<P>)) -> Self {
+        debug_assert_eq!(data.0.area(), data.1.len());
+        Self {
+            width: data.0.width,
+            height: data.0.height,
+            pixels: data.1,
+        }
+    }
+}
+
+impl<P: Copy> From<(Size, &[P])> for GenericImage<P> {
+    fn from(data: (Size, &[P])) -> Self {
+        debug_assert_eq!(data.0.area(), data.1.len());
+        Self {
+            width: data.0.width,
+            height: data.0.height,
+            pixels: data.1.to_vec(),
+        }
+    }
+}
+
 use crate::rgb::*;
-use crate::ColourComponent;
+use crate::{ColourComponent, ColourInterface};
 
 pub struct OpaqueImage<F: ColourComponent> {
     pixels: Vec<RGB<F>>,
@@ -236,6 +264,19 @@ impl<F: ColourComponent> From<(&[u8], usize, usize)> for OpaqueImage<F> {
 #[cfg(test)]
 mod image_tests {
     use super::*;
+    use crate::{rgb::RGB, ColourInterface};
+    use serde::export::PhantomData;
+
+    #[derive(Default)]
+    struct ToMonochrome<P: Copy + ColourInterface<f64>> {
+        phantom_data: PhantomData<P>,
+    }
+
+    impl Filter<RGB<f64>> for ToMonochrome<RGB<f64>> {
+        fn filter(&self, pixel: &RGB<f64>) -> RGB<f64> {
+            pixel.monochrome_rgb()
+        }
+    }
 
     #[test]
     fn new_image() {
@@ -256,6 +297,17 @@ mod image_tests {
     }
 
     #[test]
+    fn new_image_from_data() {
+        let mut v = Vec::<RGB<f64>>::with_capacity(6);
+        v.extend(&RGB::<f64>::PRIMARIES);
+        v.extend(&RGB::<f64>::SECONDARIES);
+        let image = GenericImage::<RGB<f64>>::from((Size::from((3, 2)), v));
+        assert_eq!(image[0][0], RGB::<f64>::RED);
+        assert_eq!(image[0][2], RGB::<f64>::BLUE);
+        assert_eq!(image[1][2], RGB::<f64>::YELLOW);
+    }
+
+    #[test]
     fn sub_image() {
         let mut image = GenericImage::<RGB<f64>>::new(6, 4);
         assert_eq!(image.sub_image(XY::default(), Size::default()), None);
@@ -273,5 +325,25 @@ mod image_tests {
         );
         assert_eq!(sub_image[0][0], RGB::<f64>::YELLOW);
         assert_eq!(sub_image[1][1], RGB::<f64>::RED);
+    }
+
+    #[test]
+    fn filtered_image() {
+        let mut v = Vec::<RGB<f64>>::with_capacity(6);
+        v.extend(&RGB::<f64>::PRIMARIES);
+        v.extend(&RGB::<f64>::SECONDARIES);
+        let image = GenericImage::<RGB<f64>>::from((Size::from((3, 2)), v));
+        for pixel in image.pixels() {
+            assert!(!pixel.is_grey());
+        }
+        let filtered = image.filtered(ToMonochrome::default());
+        for pixel in filtered.pixels() {
+            assert!(pixel.is_grey());
+        }
+        for i in 0..2 {
+            for j in 0..3 {
+                assert_eq!(image[i][j].value(), filtered[i][j].value())
+            }
+        }
     }
 }
