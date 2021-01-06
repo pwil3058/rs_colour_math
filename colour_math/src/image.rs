@@ -42,14 +42,42 @@ pub trait Transformer<P: Copy + 'static> {
 }
 
 pub trait ImageIfce<'a, P: Copy + Default + 'static>:
-    std::ops::Index<usize, Output = [P]> + std::ops::IndexMut<usize> + Sized
+    std::ops::Index<usize, Output = [P]>
+    + std::ops::IndexMut<usize>
+    + std::convert::From<(Vec<P>, usize)>
+    + Sized
 {
     fn new(width: usize, height: usize) -> Self;
     fn width(&self) -> usize;
     fn height(&self) -> usize;
-    fn sub_image(&self, start: XY, size: Size) -> Option<Self>;
     fn pixels(&self) -> &[P];
-    fn transformed<T: Transformer<P>>(&self, transformer: T) -> Self;
+
+    fn sub_image(&self, start: XY, size: Size) -> Option<Self> {
+        if size.area() > 0 && start.x < self.width() && start.y < self.height() {
+            let width = size.width.min(self.width() - start.x);
+            let height = size.height.min(self.height() - start.y);
+            let end_col = start.x + width;
+            let end_row = start.y + height;
+            let mut pixels: Vec<P> = Vec::<P>::with_capacity(width * height);
+            for i in start.y..end_row {
+                let row = &self[i];
+                pixels.extend(&row[start.x..end_col]);
+            }
+            Some((pixels, width).into())
+        } else {
+            None
+        }
+    }
+
+    fn transformed<T: Transformer<P>>(&self, transformer: T) -> Self {
+        let pixels: Vec<P> = self
+            .pixels()
+            .iter()
+            .map(|p| transformer.transform(p))
+            .collect();
+        debug_assert_eq!(pixels.len(), self.size().area());
+        (pixels, self.width()).into()
+    }
 
     fn size(&self) -> Size {
         Size {
@@ -103,49 +131,25 @@ impl<'a, P: Copy + Default + 'static> ImageIfce<'a, P> for GenericImage<P> {
         self.height
     }
 
-    fn sub_image(&self, start: XY, size: Size) -> Option<Self> {
-        if size.area() > 0 && start.x < self.width && start.y < self.height {
-            let width = size.width.min(self.width - start.x);
-            let height = size.height.min(self.height - start.y);
-            let end_col = start.x + width;
-            let end_row = start.y + height;
-            let mut pixels: Vec<P> = Vec::<P>::with_capacity(width * height);
-            for i in start.y..end_row {
-                let row = &self[i];
-                pixels.extend(&row[start.x..end_col]);
-            }
-            Some(Self {
-                width,
-                height,
-                pixels,
-            })
-        } else {
-            None
-        }
-    }
-
     fn pixels(&self) -> &[P] {
         &self.pixels[..]
-    }
-
-    fn transformed<T: Transformer<P>>(&self, transformer: T) -> Self {
-        let pixels: Vec<P> = self
-            .pixels
-            .iter()
-            .map(|p| transformer.transform(p))
-            .collect();
-        debug_assert_eq!(pixels.len(), self.size().area());
-        Self {
-            width: self.width,
-            height: self.height,
-            pixels,
-        }
     }
 
     fn size(&self) -> Size {
         Size {
             width: self.width,
             height: self.height,
+        }
+    }
+}
+
+impl<P: Copy> From<(Vec<P>, usize)> for GenericImage<P> {
+    fn from(data: (Vec<P>, usize)) -> Self {
+        debug_assert_eq!(data.0.len() % data.1, 0);
+        Self {
+            width: data.1,
+            height: data.0.len() / data.1,
+            pixels: data.0,
         }
     }
 }
@@ -180,26 +184,28 @@ pub struct OpaqueImage<F: ColourComponent> {
     width: usize,
 }
 
-impl<F: ColourComponent> OpaqueImage<F> {
-    pub fn new(width: usize, height: usize, rgb: RGB<F>) -> Self {
+impl<'a, F: ColourComponent + 'static> ImageIfce<'a, RGB<F>> for OpaqueImage<F> {
+    fn new(width: usize, height: usize) -> Self {
         Self {
-            pixels: vec![rgb; width * height],
+            pixels: vec![RGB::default(); width * height],
             width,
         }
     }
 
-    pub fn width(self) -> usize {
+    fn width(&self) -> usize {
         self.width
     }
 
-    pub fn height(self) -> usize {
+    fn height(&self) -> usize {
         self.pixels.len() / self.width()
     }
 
-    pub fn pixels(&self) -> impl Iterator<Item = &RGB<F>> {
-        self.pixels.iter()
+    fn pixels(&self) -> &[RGB<F>] {
+        &self.pixels[..]
     }
+}
 
+impl<F: ColourComponent> OpaqueImage<F> {
     pub fn average_value(&self) -> F {
         let sum: F = self.pixels.iter().map(|p| p.value()).sum();
         sum / F::from_usize(self.pixels.len()).unwrap()
@@ -231,6 +237,16 @@ impl<F: ColourComponent> std::ops::IndexMut<usize> for OpaqueImage<F> {
         let start = self.width * row;
         debug_assert!(start < self.pixels.len());
         &mut self.pixels[start..start + self.width]
+    }
+}
+
+impl<F: ColourComponent> From<(Vec<RGB<F>>, usize)> for OpaqueImage<F> {
+    fn from(data: (Vec<RGB<F>>, usize)) -> Self {
+        debug_assert_eq!(data.0.len() % data.1, 0);
+        Self {
+            width: data.1,
+            pixels: data.0,
+        }
     }
 }
 
