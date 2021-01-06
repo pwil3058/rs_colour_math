@@ -12,6 +12,7 @@ pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
 pub mod attributes;
 pub mod chroma;
+pub mod hcv;
 pub mod hue;
 pub mod image;
 pub mod manipulator;
