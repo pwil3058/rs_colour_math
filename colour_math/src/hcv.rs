@@ -1,8 +1,10 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::chroma::HueData;
-use crate::{ColourComponent, HueConstants, RGBConstants};
+use crate::{chroma, ColourComponent, HueConstants, RGBConstants, RGB};
 use normalised_angles::Degrees;
+use std::convert::TryFrom;
+use std::io::Read;
 
 #[derive(Debug, Clone, Copy)]
 pub struct HCV<F: ColourComponent> {
@@ -107,4 +109,48 @@ impl<F: ColourComponent> RGBConstants for HCV<F> {
         chroma: F::ZERO,
         sum: F::ZERO,
     };
+}
+
+impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
+    fn from(rgb: &RGB<F>) -> Self {
+        let xy = rgb.xy();
+        let hypot = xy.0.hypot(xy.1);
+        let sum = rgb.iter().copied().sum();
+        if hypot > F::ZERO {
+            let io = rgb.indices_value_order();
+            let second = chroma::calc_other_from_xy_alt(xy);
+            let chroma = (hypot * chroma::calc_chroma_correction(second)).min(F::ONE);
+            Self {
+                hue_data: Some(HueData { io, second }),
+                chroma,
+                sum,
+            }
+        } else {
+            Self {
+                hue_data: None,
+                chroma: F::ZERO,
+                sum,
+            }
+        }
+    }
+}
+
+impl<F: ColourComponent> TryFrom<&HCV<F>> for RGB<F> {
+    type Error = (RGB<F>, RGB<F>, RGB<F>);
+
+    fn try_from(hcv: &HCV<F>) -> Result<Self, Self::Error> {
+        if let Some(hue_data) = hcv.hue_data {
+            if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(hcv.sum, hcv.chroma) {
+                Ok(rgb)
+            } else {
+                let rgb_one = hue_data.min_sum_rgb_for_chroma(hcv.chroma);
+                let rgb_two = hue_data.max_sum_rgb_for_chroma(hcv.chroma);
+                let rgb_three: RGB<F> = hue_data.max_sum_rgb_for_chroma(hcv.sum);
+                Err((rgb_one, rgb_two, rgb_three))
+            }
+        } else {
+            let value = hcv.sum / F::THREE;
+            Ok(RGB::from([value, value, value]))
+        }
+    }
 }
