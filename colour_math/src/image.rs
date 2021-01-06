@@ -69,7 +69,7 @@ pub struct GenericImage<P> {
 impl<P> std::ops::Index<usize> for GenericImage<P> {
     type Output = [P];
 
-    fn index(&self, row: usize) -> &[P] {
+    fn index(&self, row: usize) -> &Self::Output {
         let start = self.width * row;
         debug_assert!(start < self.pixels.len());
         &self.pixels[start..start + self.width]
@@ -77,7 +77,7 @@ impl<P> std::ops::Index<usize> for GenericImage<P> {
 }
 
 impl<P> std::ops::IndexMut<usize> for GenericImage<P> {
-    fn index_mut(&mut self, row: usize) -> &mut [P] {
+    fn index_mut(&mut self, row: usize) -> &mut Self::Output {
         let start = self.width * row;
         debug_assert!(start < self.pixels.len());
         &mut self.pixels[start..start + self.width]
