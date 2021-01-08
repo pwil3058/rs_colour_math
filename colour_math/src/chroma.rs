@@ -31,12 +31,12 @@ pub fn calc_other_from_xy<F: ColourComponent>(xy: (F, F)) -> F {
         debug_assert!(divisor != F::ZERO);
         let x = xy.0 * F::SQRT_3 / divisor;
         if xy.0 >= F::ZERO {
-            (F::ONE - x) * F::TWO
+            ((F::ONE - x) * F::TWO).min(F::ONE)
         } else {
-            -(F::TWO * x + F::ONE)
+            (-(F::TWO * x + F::ONE)).min(F::ONE)
         }
     } else {
-        F::HALF + xy.0 * F::SIN_120 / xy.1.abs()
+        (F::HALF + xy.0 * F::SIN_120 / xy.1.abs()).min(F::ONE)
     }
 }
 
@@ -55,12 +55,12 @@ pub fn calc_other_from_xy_alt<F: ColourComponent>(xy: (F, F)) -> F {
             let divisor = xy.0.abs() * F::SQRT_3 + xy.1.abs();
             let x = xy.0 * F::SQRT_3 / divisor;
             if xy.0 >= F::ZERO {
-                (F::ONE - x) * F::TWO
+                ((F::ONE - x) * F::TWO).min(F::ONE)
             } else {
-                -(x * F::TWO + F::ONE)
+                (-(x * F::TWO + F::ONE)).min(F::ONE)
             }
         } else if x_sqrt_3 < xy.1.abs() {
-            F::HALF + xy.0 * F::SIN_120 / xy.1.abs()
+            (F::HALF + xy.0 * F::SIN_120 / xy.1.abs()).min(F::ONE)
         } else if xy.0 > F::ZERO {
             F::ONE // yellow or magenta
         } else {
@@ -79,10 +79,13 @@ pub fn sum_range_for_chroma<F: ColourComponent>(other: F, chroma: F) -> (F, F) {
     debug_assert!(other.is_proportion(), "other: {:?}", other);
     debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
     if chroma == F::ONE {
-        (F::ONE + other, F::ONE + other)
+        ((F::ONE + other).min(F::TWO), (F::ONE + other).min(F::TWO))
     } else {
         let temp = other * chroma;
-        (chroma + temp, F::THREE + temp - F::TWO * chroma)
+        (
+            (chroma + temp).min(F::THREE),
+            (F::THREE + temp - F::TWO * chroma).min(F::THREE),
+        )
     }
 }
 
@@ -92,9 +95,9 @@ pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
     if sum == F::ZERO || sum == F::THREE {
         F::ZERO
     } else if sum < F::ONE + other {
-        sum / (F::ONE + other)
+        (sum / (F::ONE + other)).min(F::ONE)
     } else if sum > F::ONE + other {
-        (F::THREE - sum) / (F::TWO - other)
+        ((F::THREE - sum) / (F::TWO - other)).min(F::ONE)
     } else {
         F::ONE
     }
@@ -171,18 +174,18 @@ impl<F: ColourComponent> TryFrom<(F, F)> for HueData<F> {
                 let x = xy.0 * F::SQRT_3 / divisor;
                 if xy.0 >= F::ZERO {
                     Ok(Self {
-                        second: (F::ONE - x) * F::TWO,
+                        second: ((F::ONE - x) * F::TWO).min(F::ONE),
                         io: if xy.1 > F::ZERO { [0, 1, 2] } else { [0, 2, 1] },
                     })
                 } else {
                     Ok(Self {
-                        second: -(x * F::TWO + F::ONE),
+                        second: (-(x * F::TWO + F::ONE)).min(F::ONE),
                         io: if xy.1 > F::ZERO { [1, 2, 0] } else { [2, 1, 0] },
                     })
                 }
             } else if x_sqrt_3 < xy.1.abs() {
                 Ok(Self {
-                    second: F::HALF + xy.0 * F::SIN_120 / xy.1.abs(),
+                    second: (F::HALF + xy.0 * F::SIN_120 / xy.1.abs()).min(F::ONE),
                     io: if xy.1 > F::ZERO { [1, 0, 2] } else { [2, 0, 1] },
                 })
             } else if xy.0 > F::ZERO {
@@ -277,7 +280,7 @@ impl<F: ColourComponent> HueData<F> {
             } else {
                 array[self.io[0] as usize] = F::ONE;
                 array[self.io[1] as usize] = F::ONE;
-                array[self.io[2] as usize] = (sum - F::TWO).min(F::ONE);
+                array[self.io[2] as usize] = (sum - F::TWO).max(F::ZERO).min(F::ONE);
             }
         } else if sum < F::ONE + self.second {
             let divisor = F::ONE + self.second;
@@ -286,9 +289,11 @@ impl<F: ColourComponent> HueData<F> {
         } else if sum > F::ONE + self.second {
             let chroma = (F::THREE - sum) / (F::TWO - self.second);
             let oc = self.second * chroma;
-            array[self.io[0] as usize] = ((sum + F::TWO * chroma - oc) / F::THREE).min(F::ONE);
-            array[self.io[1] as usize] = (sum + F::TWO * oc - chroma) / F::THREE;
-            array[self.io[2] as usize] = (sum - oc - chroma) / F::THREE;
+            array[self.io[0] as usize] =
+                ((sum + F::TWO * chroma - oc).max(F::ZERO) / F::THREE).min(F::ONE);
+            array[self.io[1] as usize] =
+                ((sum + F::TWO * oc - chroma).max(F::ZERO) / F::THREE).min(F::ONE);
+            array[self.io[2] as usize] = ((sum - oc - chroma).max(F::ZERO) / F::THREE).min(F::ONE);
         } else {
             array[self.io[0] as usize] = F::ONE;
             array[self.io[1] as usize] = self.second;
@@ -311,7 +316,7 @@ impl<F: ColourComponent> HueData<F> {
             array[self.io[1] as usize] = chroma;
         } else {
             array[self.io[0] as usize] = chroma;
-            array[self.io[1] as usize] = chroma * self.second;
+            array[self.io[1] as usize] = (chroma * self.second).min(F::ONE);
         };
         array.into()
     }
@@ -335,7 +340,8 @@ impl<F: ColourComponent> HueData<F> {
         } else {
             array[self.io[0] as usize] = F::ONE;
             array[self.io[2] as usize] = F::ONE - chroma;
-            array[self.io[1] as usize] = chroma * self.second + array[self.io[2] as usize];
+            array[self.io[1] as usize] =
+                (chroma * self.second + array[self.io[2] as usize]).min(F::ONE);
         };
         array.into()
     }
@@ -383,6 +389,8 @@ impl<F: ColourComponent> HueData<F> {
         if array[self.io[0] as usize] > F::ONE || array[self.io[2] as usize] < F::ZERO {
             return None;
         } else {
+            debug_assert!(array[self.io[0] as usize] >= array[self.io[1] as usize]);
+            debug_assert!(array[self.io[2] as usize] <= array[self.io[1] as usize]);
             // NB: because floats only approximate real numbers trying to
             // set chroma too small (but non zero) results in a drift
             // in the hue angle of the resulting RGB. When this
@@ -396,7 +404,7 @@ impl<F: ColourComponent> HueData<F> {
                     if (rgb_second - self.second).abs() / rgb_second
                         > F::from(0.000_000_000_1).unwrap()
                     {
-                        let value = sum / F::THREE;
+                        let value = (sum / F::THREE).min(F::ONE);
                         array = [value, value, value];
                     }
                 }
