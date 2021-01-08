@@ -1,12 +1,11 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::chroma::HueData;
-use crate::{chroma, ColourComponent, HueConstants, RGBConstants, RGB};
+use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, RGB};
 use normalised_angles::Degrees;
 use std::convert::TryFrom;
-use std::io::Read;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HCV<F: ColourComponent> {
     hue_data: Option<HueData<F>>,
     chroma: F,
@@ -63,7 +62,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const BLUE: Self = Self {
         hue_data: Some(HueData {
             second: F::ZERO,
-            io: [2, 1, 0],
+            io: [2, 0, 1],
         }),
         chroma: F::ONE,
         sum: F::ONE,
@@ -113,9 +112,11 @@ impl<F: ColourComponent> RGBConstants for HCV<F> {
 
 impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
     fn from(rgb: &RGB<F>) -> Self {
+        debug_assert!(rgb.is_valid());
         let xy = rgb.xy();
         let hypot = xy.0.hypot(xy.1);
         let sum = rgb.iter().copied().sum();
+        debug_assert!(sum <= F::THREE);
         if hypot > F::ZERO {
             let io = rgb.indices_value_order();
             let second = chroma::calc_other_from_xy_alt(xy);
@@ -136,21 +137,95 @@ impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
 }
 
 impl<F: ColourComponent> TryFrom<&HCV<F>> for RGB<F> {
-    type Error = (RGB<F>, RGB<F>, RGB<F>);
+    type Error = String;
 
     fn try_from(hcv: &HCV<F>) -> Result<Self, Self::Error> {
         if let Some(hue_data) = hcv.hue_data {
             if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(hcv.sum, hcv.chroma) {
                 Ok(rgb)
             } else {
-                let rgb_one = hue_data.min_sum_rgb_for_chroma(hcv.chroma);
-                let rgb_two = hue_data.max_sum_rgb_for_chroma(hcv.chroma);
-                let rgb_three: RGB<F> = hue_data.max_sum_rgb_for_chroma(hcv.sum);
-                Err((rgb_one, rgb_two, rgb_three))
+                // This can possibly be due floating point arithmetic's inability to properly
+                // represent reals resulting in the HCV having a chroma value slightly higher
+                // than that which is possible for the hue and sum so we'll check if the RGB
+                // with the maximum chroma for the hue and sum is approximately equal to the HCV's
+                // chroma and if so use that.
+                let rgb = hue_data.max_chroma_rgb_for_sum(hcv.sum);
+                if rgb
+                    .chroma()
+                    .approx_eq(&hcv.chroma, Some(F::from(0.000_000_000_01).unwrap()))
+                {
+                    Ok(rgb)
+                } else {
+                    Err("This HCV does not represent a valid colour".to_string())
+                }
             }
         } else {
+            debug_assert_eq!(hcv.chroma, F::ZERO);
             let value = hcv.sum / F::THREE;
+            debug_assert!(value >= F::ZERO && value <= F::ONE);
             Ok(RGB::from([value, value, value]))
+        }
+    }
+}
+
+#[cfg(test)]
+mod hcv_tests {
+    use super::*;
+    use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
+
+    #[test]
+    fn create_hcv_consts() {
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::RED), HCV::RED);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::GREEN), HCV::GREEN);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::BLUE), HCV::BLUE);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::CYAN), HCV::CYAN);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::MAGENTA), HCV::MAGENTA);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::YELLOW), HCV::YELLOW);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::WHITE), HCV::WHITE);
+        assert_eq!(HCV::<f64>::from(&RGB::<f64>::BLACK), HCV::BLACK);
+    }
+
+    #[test]
+    fn create_rgb_consts() {
+        assert_eq!(RGB::<f64>::try_from(&HCV::<f64>::RED).unwrap(), RGB::RED);
+        assert_eq!(
+            RGB::<f64>::try_from(&HCV::<f64>::GREEN).unwrap(),
+            RGB::GREEN
+        );
+        assert_eq!(RGB::<f64>::try_from(&HCV::<f64>::BLUE).unwrap(), RGB::BLUE);
+        assert_eq!(RGB::<f64>::try_from(&HCV::<f64>::CYAN).unwrap(), RGB::CYAN);
+        assert_eq!(
+            RGB::<f64>::try_from(&HCV::<f64>::MAGENTA).unwrap(),
+            RGB::MAGENTA
+        );
+        assert_eq!(
+            RGB::<f64>::try_from(&HCV::<f64>::YELLOW).unwrap(),
+            RGB::YELLOW
+        );
+        assert_eq!(
+            RGB::<f64>::try_from(&HCV::<f64>::WHITE).unwrap(),
+            RGB::WHITE
+        );
+        assert_eq!(
+            RGB::<f64>::try_from(&HCV::<f64>::BLACK).unwrap(),
+            RGB::BLACK
+        );
+    }
+
+    #[test]
+    fn from_to_rgb() {
+        let values = vec![0.0_f64, 0.001, 0.01, 0.499, 0.5, 0.99, 0.999, 1.0];
+        for red in values.iter() {
+            for green in values.iter() {
+                for blue in values.iter() {
+                    let rgb_in: RGB<f64> = [*red, *green, *blue].into();
+                    println!("[{}, {}, {}] -> {:?}", red, green, blue, rgb_in);
+                    let hcv = HCV::<f64>::from(&rgb_in);
+                    println!("{:?}", hcv);
+                    let rgb_out = RGB::<f64>::try_from(&hcv).unwrap();
+                    assert_approx_eq!(rgb_in, rgb_out);
+                }
+            }
         }
     }
 }

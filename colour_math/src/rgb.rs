@@ -33,6 +33,10 @@ impl<F: ColourComponent> RGBConstants for RGB<F> {
 }
 
 impl<F: ColourComponent> RGB<F> {
+    pub(crate) fn is_valid(&self) -> bool {
+        self.0.iter().all(|x| (*x).is_proportion())
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &F> {
         self.0.iter()
     }
