@@ -1,9 +1,11 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::chroma::HueData;
-use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, RGB};
+use crate::urgb::UnsignedComponent;
+use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, RGB, URGB};
 use normalised_angles::Degrees;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
+use std::io::Read;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HCV<F: ColourComponent> {
@@ -177,6 +179,22 @@ impl<F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>> for RGB<F> {
     }
 }
 
+impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> From<&URGB<U>> for HCV<F> {
+    fn from(urgb: &URGB<U>) -> Self {
+        let rgb: RGB<F> = urgb.into();
+        Self::from(&rgb)
+    }
+}
+
+impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>> for URGB<U> {
+    type Error = String;
+
+    fn try_from(hcv: &HCV<F>) -> Result<Self, Self::Error> {
+        let rgb: RGB<F> = hcv.try_into()?;
+        Ok(Self::from(rgb))
+    }
+}
+
 #[cfg(test)]
 mod hcv_tests {
     use super::*;
@@ -192,6 +210,18 @@ mod hcv_tests {
         assert_eq!(HCV::<f64>::from(&RGB::<f64>::YELLOW), HCV::YELLOW);
         assert_eq!(HCV::<f64>::from(&RGB::<f64>::WHITE), HCV::WHITE);
         assert_eq!(HCV::<f64>::from(&RGB::<f64>::BLACK), HCV::BLACK);
+    }
+
+    #[test]
+    fn create_hcv_consts_u8() {
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::RED), HCV::RED);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::GREEN), HCV::GREEN);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::BLUE), HCV::BLUE);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::CYAN), HCV::CYAN);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::MAGENTA), HCV::MAGENTA);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::YELLOW), HCV::YELLOW);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::WHITE), HCV::WHITE);
+        assert_eq!(HCV::<f64>::from(&URGB::<u8>::BLACK), HCV::BLACK);
     }
 
     #[test]
