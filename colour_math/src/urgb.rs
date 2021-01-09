@@ -68,8 +68,8 @@ impl<U: UnsignedComponent> HueConstants for URGB<U> {
 }
 
 impl<U: UnsignedComponent> RGBConstants for URGB<U> {
-    const WHITE: Self = Self([U::ZERO, U::ZERO, U::ZERO]);
-    const BLACK: Self = Self([U::MAX, U::MAX, U::MAX]);
+    const WHITE: Self = Self([U::MAX, U::MAX, U::MAX]);
+    const BLACK: Self = Self([U::ZERO, U::ZERO, U::ZERO]);
 }
 
 impl<U: UnsignedComponent> From<&[U]> for URGB<U> {
