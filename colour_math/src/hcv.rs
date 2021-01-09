@@ -136,7 +136,19 @@ impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
     }
 }
 
-impl<F: ColourComponent> TryFrom<&HCV<F>> for RGB<F> {
+pub trait ChromaTolerance {
+    const COMA_TOLERANCE: Self;
+}
+
+impl ChromaTolerance for f32 {
+    const COMA_TOLERANCE: Self = 0.000_001;
+}
+
+impl ChromaTolerance for f64 {
+    const COMA_TOLERANCE: Self = 0.000_000_000_01;
+}
+
+impl<F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>> for RGB<F> {
     type Error = String;
 
     fn try_from(hcv: &HCV<F>) -> Result<Self, Self::Error> {
@@ -150,10 +162,7 @@ impl<F: ColourComponent> TryFrom<&HCV<F>> for RGB<F> {
                 // with the maximum chroma for the hue and sum is approximately equal to the HCV's
                 // chroma and if so use that.
                 let rgb = hue_data.max_chroma_rgb_for_sum(hcv.sum);
-                if rgb
-                    .chroma()
-                    .approx_eq(&hcv.chroma, Some(F::from(0.000_000_000_01).unwrap()))
-                {
+                if rgb.chroma().approx_eq(&hcv.chroma, Some(F::COMA_TOLERANCE)) {
                     Ok(rgb)
                 } else {
                     Err("This HCV does not represent a valid colour".to_string())
@@ -213,7 +222,24 @@ mod hcv_tests {
     }
 
     #[test]
-    fn from_to_rgb() {
+    fn from_to_rgb_f32() {
+        let values = vec![0.0_f32, 0.001, 0.01, 0.499, 0.5, 0.99, 0.999, 1.0];
+        for red in values.iter() {
+            for green in values.iter() {
+                for blue in values.iter() {
+                    let rgb_in: RGB<f32> = [*red, *green, *blue].into();
+                    println!("[{}, {}, {}] -> {:?}", red, green, blue, rgb_in);
+                    let hcv = HCV::<f32>::from(&rgb_in);
+                    println!("{:?}", hcv);
+                    let rgb_out = RGB::<f32>::try_from(&hcv).unwrap();
+                    assert_approx_eq!(rgb_in, rgb_out);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn from_to_rgb_f64() {
         let values = vec![0.0_f64, 0.001, 0.01, 0.499, 0.5, 0.99, 0.999, 1.0];
         for red in values.iter() {
             for green in values.iter() {
