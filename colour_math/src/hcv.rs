@@ -5,7 +5,6 @@ use crate::urgb::UnsignedComponent;
 use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, RGB, URGB};
 use normalised_angles::Degrees;
 use std::convert::{TryFrom, TryInto};
-use std::io::Read;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HCV<F: ColourComponent> {
@@ -252,6 +251,33 @@ mod hcv_tests {
     }
 
     #[test]
+    fn create_urgb_consts() {
+        assert_eq!(URGB::<u8>::try_from(&HCV::<f64>::RED).unwrap(), URGB::RED);
+        assert_eq!(
+            URGB::<u8>::try_from(&HCV::<f64>::GREEN).unwrap(),
+            URGB::GREEN
+        );
+        assert_eq!(URGB::<u8>::try_from(&HCV::<f64>::BLUE).unwrap(), URGB::BLUE);
+        assert_eq!(URGB::<u8>::try_from(&HCV::<f64>::CYAN).unwrap(), URGB::CYAN);
+        assert_eq!(
+            URGB::<u8>::try_from(&HCV::<f64>::MAGENTA).unwrap(),
+            URGB::MAGENTA
+        );
+        assert_eq!(
+            URGB::<u8>::try_from(&HCV::<f64>::YELLOW).unwrap(),
+            URGB::YELLOW
+        );
+        assert_eq!(
+            URGB::<u8>::try_from(&HCV::<f64>::WHITE).unwrap(),
+            URGB::WHITE
+        );
+        assert_eq!(
+            URGB::<u8>::try_from(&HCV::<f64>::BLACK).unwrap(),
+            URGB::BLACK
+        );
+    }
+
+    #[test]
     fn from_to_rgb_f32() {
         let values = vec![0.0_f32, 0.001, 0.01, 0.499, 0.5, 0.99, 0.999, 1.0];
         for red in values.iter() {
@@ -280,6 +306,23 @@ mod hcv_tests {
                     println!("{:?}", hcv);
                     let rgb_out = RGB::<f64>::try_from(&hcv).unwrap();
                     assert_approx_eq!(rgb_in, rgb_out);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn from_to_rgb_u8() {
+        let values = vec![0u8, 1, 2, 127, 128, 253, 254, 255];
+        for red in values.iter() {
+            for green in values.iter() {
+                for blue in values.iter() {
+                    let urgb_in: URGB<u8> = [*red, *green, *blue].into();
+                    println!("[{}, {}, {}] -> {:?}", red, green, blue, urgb_in);
+                    let hcv = HCV::<f64>::from(&urgb_in);
+                    println!("{:?}", hcv);
+                    let urgb_out = URGB::<u8>::try_from(&hcv).unwrap();
+                    assert_eq!(urgb_in, urgb_out);
                 }
             }
         }
