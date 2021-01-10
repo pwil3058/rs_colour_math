@@ -6,7 +6,7 @@ use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants
 use normalised_angles::Degrees;
 use std::convert::{TryFrom, TryInto};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct HCV<F: ColourComponent> {
     hue_data: Option<HueData<F>>,
     chroma: F,
@@ -198,6 +198,12 @@ impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>
 mod hcv_tests {
     use super::*;
     use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
+
+    #[test]
+    fn default_hcv_is_black() {
+        assert_eq!(HCV::<f64>::default(), HCV::BLACK);
+        assert_eq!(HCV::<f32>::default(), HCV::BLACK);
+    }
 
     #[test]
     fn create_hcv_consts() {
