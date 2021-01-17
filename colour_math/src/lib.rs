@@ -104,6 +104,36 @@ impl std::fmt::Display for ScalarAttribute {
     }
 }
 
+pub trait HueIfce<F: ColourComponent> {
+    fn hue_angle(&self) -> Degrees<F>;
+    fn chroma_correction(&self) -> F;
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F);
+    fn max_chroma_for_sum(&self, sum: F) -> F;
+
+    fn max_chroma_rgb(&self) -> RGB<F>;
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F>;
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
+    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>>;
+
+    fn value_range_for_chroma(&self, chroma: F) -> (F, F) {
+        let (min, max) = self.sum_range_for_chroma(chroma);
+        ((min / F::THREE).min(F::ONE), (max / F::THREE).min(F::ONE))
+    }
+
+    fn max_chroma_for_value(&self, value: F) -> F {
+        self.max_chroma_for_sum(value * F::THREE)
+    }
+
+    fn max_chroma_rgb_for_value(&self, value: F) -> RGB<F> {
+        self.max_chroma_rgb_for_sum(value * F::THREE)
+    }
+
+    fn rgb_for_value_and_chroma(&self, value: F, chroma: F) -> Option<RGB<F>> {
+        self.rgb_for_sum_and_chroma(value * F::THREE, chroma)
+    }
+}
+
 pub trait ColourInterface<F: ColourComponent> {
     fn rgb(&self) -> RGB<F>;
 

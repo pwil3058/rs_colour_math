@@ -1,7 +1,7 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::convert::TryFrom;
 
-use crate::{chroma::HueData, rgb::RGB, ColourComponent, ColourInterface};
+use crate::{chroma::HueData, rgb::RGB, ColourComponent, ColourInterface, HueIfce};
 use normalised_angles::Degrees;
 
 #[derive(Default)]
@@ -198,7 +198,7 @@ impl<F: ColourComponent> RGBManipulatorBuilder<F> {
 
 #[cfg(test)]
 mod test {
-    use crate::{ColourInterface, HueConstants, RGBConstants};
+    use crate::{ColourInterface, HueConstants, HueIfce, RGBConstants};
     use num_traits_plus::{assert_approx_eq, float_plus::*};
 
     #[test]
@@ -227,25 +227,21 @@ mod test {
         let mut manipulator = super::RGBManipulator::<f64>::new(true);
         assert!(!manipulator.incr_chroma(0.1));
         manipulator.set_rgb(&[0.75, 0.5, 0.75].into());
-        let saved_hue_data = manipulator.hue_data;
+        let saved_hue_data = manipulator.hue_data.unwrap();
         let incr = 0.1;
-        let mut expected = (manipulator.chroma + incr).min(crate::chroma::max_chroma_for_sum(
-            saved_hue_data.unwrap().second,
-            manipulator.sum,
-        ));
+        let mut expected =
+            (manipulator.chroma + incr).min(saved_hue_data.max_chroma_for_sum(manipulator.sum));
         while manipulator.incr_chroma(incr) {
             assert_approx_eq!(manipulator.chroma, expected, 0.00000000001);
-            expected = (manipulator.chroma + incr).min(crate::chroma::max_chroma_for_sum(
-                saved_hue_data.unwrap().second,
-                manipulator.sum,
-            ));
+            expected =
+                (manipulator.chroma + incr).min(saved_hue_data.max_chroma_for_sum(manipulator.sum));
             assert_eq!(manipulator.sum, 2.0);
-            assert_eq!(manipulator.hue_data, saved_hue_data);
+            assert_eq!(manipulator.hue_data, Some(saved_hue_data));
         }
         assert!(!manipulator.rgb.is_grey());
         assert_eq!(manipulator.chroma, 1.0);
         assert_eq!(manipulator.sum, 2.0);
-        assert_eq!(manipulator.hue_data, saved_hue_data);
+        assert_eq!(manipulator.hue_data, Some(saved_hue_data));
     }
 
     #[test]

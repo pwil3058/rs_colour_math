@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 
 use normalised_angles::*;
 
-use crate::{rgb::RGB, ColourComponent, HueConstants};
+use crate::{rgb::RGB, ColourComponent, HueConstants, HueIfce};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if Degrees::PRIMARIES.contains(&abs_angle) {
@@ -73,34 +73,6 @@ pub(crate) fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
     debug_assert!(other.is_proportion(), "other: {:?}", other);
     // Careful of fact floats only approximate real numbers
     (F::ONE + other * other - other).sqrt().min(F::ONE).recip()
-}
-
-pub fn sum_range_for_chroma<F: ColourComponent>(other: F, chroma: F) -> (F, F) {
-    debug_assert!(other.is_proportion(), "other: {:?}", other);
-    debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-    if chroma == F::ONE {
-        ((F::ONE + other).min(F::TWO), (F::ONE + other).min(F::TWO))
-    } else {
-        let temp = other * chroma;
-        (
-            (chroma + temp).min(F::THREE),
-            (F::THREE + temp - F::TWO * chroma).min(F::THREE),
-        )
-    }
-}
-
-pub fn max_chroma_for_sum<F: ColourComponent>(other: F, sum: F) -> F {
-    debug_assert!(other.is_proportion(), "other: {:?}", other);
-    debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-    if sum == F::ZERO || sum == F::THREE {
-        F::ZERO
-    } else if sum < F::ONE + other {
-        (sum / (F::ONE + other)).min(F::ONE)
-    } else if sum > F::ONE + other {
-        ((F::THREE - sum) / (F::TWO - other)).min(F::ONE)
-    } else {
-        F::ONE
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -212,8 +184,8 @@ impl<F: ColourComponent> std::default::Default for HueData<F> {
     }
 }
 
-impl<F: ColourComponent> HueData<F> {
-    pub fn hue_angle(&self) -> Degrees<F> {
+impl<F: ColourComponent> HueIfce<F> for HueData<F> {
+    fn hue_angle(&self) -> Degrees<F> {
         if self.second == F::ZERO {
             match self.io[0] {
                 0 => Degrees::RED,
@@ -245,18 +217,47 @@ impl<F: ColourComponent> HueData<F> {
         }
     }
 
-    pub fn chroma_correction(&self) -> F {
+    fn chroma_correction(&self) -> F {
         calc_chroma_correction(self.second)
     }
 
-    pub fn max_chroma_rgb(&self) -> RGB<F> {
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F) {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ONE {
+            (
+                (F::ONE + self.second).min(F::TWO),
+                (F::ONE + self.second).min(F::TWO),
+            )
+        } else {
+            let temp = self.second * chroma;
+            (
+                (chroma + temp).min(F::THREE),
+                (F::THREE + temp - F::TWO * chroma).min(F::THREE),
+            )
+        }
+    }
+
+    fn max_chroma_for_sum(&self, sum: F) -> F {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO || sum == F::THREE {
+            F::ZERO
+        } else if sum < F::ONE + self.second {
+            (sum / (F::ONE + self.second)).min(F::ONE)
+        } else if sum > F::ONE + self.second {
+            ((F::THREE - sum) / (F::TWO - self.second)).min(F::ONE)
+        } else {
+            F::ONE
+        }
+    }
+
+    fn max_chroma_rgb(&self) -> RGB<F> {
         let mut array = [F::ZERO, F::ZERO, F::ZERO];
         array[self.io[0] as usize] = F::ONE;
         array[self.io[1] as usize] = self.second;
         array.into()
     }
 
-    pub fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
         let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
         if sum == F::ZERO {
@@ -301,7 +302,7 @@ impl<F: ColourComponent> HueData<F> {
         array.into()
     }
 
-    pub fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
         debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
         if chroma == F::ZERO {
@@ -321,7 +322,7 @@ impl<F: ColourComponent> HueData<F> {
         array.into()
     }
 
-    pub fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
         debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
         if chroma == F::ZERO {
@@ -346,7 +347,7 @@ impl<F: ColourComponent> HueData<F> {
         array.into()
     }
 
-    pub fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
+    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
         debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
         let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
@@ -416,12 +417,9 @@ impl<F: ColourComponent> HueData<F> {
 
 #[cfg(test)]
 mod test {
-    use crate::chroma::{
-        calc_chroma_correction, calc_other_from_xy, max_chroma_for_sum, sum_range_for_chroma,
-        HueData,
-    };
+    use crate::chroma::{calc_chroma_correction, calc_other_from_xy, HueData};
     use crate::rgb::*;
-    use crate::{ColourComponent, HueConstants, RGBConstants};
+    use crate::{ColourComponent, HueConstants, HueIfce, RGBConstants};
     use normalised_angles::Degrees;
     use num_traits_plus::{assert_approx_eq, float_plus::*};
 
@@ -663,23 +661,27 @@ mod test {
     #[test]
     fn max_chroma_and_sum_ranges() {
         for other in OTHER_VALUES.iter() {
+            let hue_data = HueData::<f64> {
+                second: *other,
+                io: [0, 1, 2],
+            };
             assert_eq!(
-                super::sum_range_for_chroma::<f64>(*other, 0.0),
+                hue_data.sum_range_for_chroma(0.0),
                 (0.0, 3.0),
                 "other: {}",
                 other
             );
             assert_eq!(
-                super::sum_range_for_chroma::<f64>(*other, 1.0),
+                hue_data.sum_range_for_chroma(1.0),
                 (1.0 + *other, 1.0 + *other),
                 "other: {}",
                 other
             );
             for chroma in NON_ZERO_VALUES.iter() {
-                let (shade, tint) = super::sum_range_for_chroma(*other, *chroma);
-                let max_chroma = super::max_chroma_for_sum(*other, shade);
+                let (shade, tint) = hue_data.sum_range_for_chroma(*chroma);
+                let max_chroma = hue_data.max_chroma_for_sum(shade);
                 assert_approx_eq!(max_chroma, *chroma);
-                let max_chroma = super::max_chroma_for_sum(*other, tint);
+                let max_chroma = hue_data.max_chroma_for_sum(tint);
                 assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
             }
         }
@@ -833,9 +835,9 @@ mod test {
                             *second,
                             rgb
                         );
-                        let chroma_correction = calc_chroma_correction(rgb_other);
+                        let chroma_correction = hue_data.chroma_correction();
                         let rgb_chroma = xy.0.hypot(xy.1) * chroma_correction;
-                        let max_chroma = max_chroma_for_sum(*second, *sum);
+                        let max_chroma = hue_data.max_chroma_for_sum(*sum);
                         assert_approx_eq!(rgb_chroma, max_chroma, 0.000000000000001);
                     }
                 }
@@ -892,7 +894,7 @@ mod test {
                                 assert_approx_eq!(rgb_chroma, *chroma, 0.000000000000001);
                             }
                         } else {
-                            let (shade_sum, tint_sum) = sum_range_for_chroma(*other, *chroma);
+                            let (shade_sum, tint_sum) = hue_data.sum_range_for_chroma(*chroma);
                             assert!(
                                 *sum < shade_sum || *sum > tint_sum,
                                 "{} < {} < {} :: chroma: {} other: {} io: {:?}",

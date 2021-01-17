@@ -2,7 +2,9 @@
 
 use crate::chroma::HueData;
 use crate::urgb::UnsignedComponent;
-use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, RGB, URGB};
+use crate::{
+    chroma, ColourComponent, ColourInterface, HueConstants, HueIfce, RGBConstants, RGB, URGB,
+};
 use normalised_angles::Degrees;
 use std::convert::{TryFrom, TryInto};
 
