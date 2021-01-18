@@ -26,7 +26,7 @@ macro_rules! connect_button {
             let delta = ced_c.delta_size.get().$delta();
             let changed = ced_c.rgb_manipulator.borrow_mut().$apply(delta);
             if changed {
-                let new_rgb = *ced_c.rgb_manipulator.borrow().rgb();
+                let new_rgb = ced_c.rgb_manipulator.borrow().rgb();
                 ced_c.set_rgb_and_inform(&new_rgb);
             } else {
                 btn.error_bell();
@@ -132,7 +132,7 @@ impl RGBManipulatorGUI {
     }
 
     fn draw(&self, cairo_context: &cairo::Context) {
-        let rgb = *self.rgb_manipulator.borrow().rgb();
+        let rgb = self.rgb_manipulator.borrow().rgb();
         cairo_context.set_source_rgb(rgb[0], rgb[1], rgb[2]);
         cairo_context.paint();
         for sample in self.samples.borrow().iter() {
@@ -189,7 +189,7 @@ impl RGBManipulatorGUI {
     }
 
     pub fn rgb(&self) -> RGB {
-        *self.rgb_manipulator.borrow().rgb()
+        self.rgb_manipulator.borrow().rgb()
     }
 
     pub fn connect_changed<F: Fn(RGB) + 'static>(&self, callback: F) {
