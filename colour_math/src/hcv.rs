@@ -9,9 +9,9 @@ use normalised_angles::Degrees;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct HCV<F: ColourComponent> {
-    hue_data: Option<HueData<F>>,
-    chroma: F,
-    sum: F,
+    pub(crate) hue_data: Option<HueData<F>>,
+    pub(crate) chroma: F,
+    pub(crate) sum: F,
 }
 
 impl<F: ColourComponent> HCV<F> {
@@ -22,11 +22,8 @@ impl<F: ColourComponent> HCV<F> {
         }
     }
 
-    pub fn hue_data(&self) -> Option<&HueData<F>> {
-        match self.hue_data {
-            Some(ref hue_data) => Some(hue_data),
-            None => None,
-        }
+    pub fn hue_data(&self) -> Option<HueData<F>> {
+        self.hue_data
     }
 
     pub fn chroma(&self) -> F {
