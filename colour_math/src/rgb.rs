@@ -15,7 +15,7 @@ use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
-pub struct RGB<F: ColourComponent>([F; 3]);
+pub struct RGB<F: ColourComponent>(pub(crate) [F; 3]);
 
 impl<F: ColourComponent> HueConstants for RGB<F> {
     const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);

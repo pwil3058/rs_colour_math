@@ -6,7 +6,6 @@ use crate::{
     chroma, ColourComponent, ColourInterface, HueConstants, HueIfce, RGBConstants, RGB, URGB,
 };
 use normalised_angles::Degrees;
-use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct HCV<F: ColourComponent> {
@@ -151,13 +150,11 @@ impl ChromaTolerance for f64 {
     const COMA_TOLERANCE: Self = 0.000_000_000_01;
 }
 
-impl<F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>> for RGB<F> {
-    type Error = String;
-
-    fn try_from(hcv: &HCV<F>) -> Result<Self, Self::Error> {
+impl<F: ColourComponent + ChromaTolerance> From<&HCV<F>> for RGB<F> {
+    fn from(hcv: &HCV<F>) -> Self {
         if let Some(hue_data) = hcv.hue_data {
             if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(hcv.sum, hcv.chroma) {
-                Ok(rgb)
+                rgb
             } else {
                 // This can possibly be due floating point arithmetic's inability to properly
                 // represent reals resulting in the HCV having a chroma value slightly higher
@@ -166,16 +163,16 @@ impl<F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>> for RGB<F> {
                 // chroma and if so use that.
                 let rgb = hue_data.max_chroma_rgb_for_sum(hcv.sum);
                 if rgb.chroma().approx_eq(&hcv.chroma, Some(F::COMA_TOLERANCE)) {
-                    Ok(rgb)
+                    rgb
                 } else {
-                    Err("This HCV does not represent a valid colour".to_string())
+                    panic!("This HCV does not represent a valid colour")
                 }
             }
         } else {
             debug_assert_eq!(hcv.chroma, F::ZERO);
             let value = hcv.sum / F::THREE;
             debug_assert!(value >= F::ZERO && value <= F::ONE);
-            Ok(RGB::from([value, value, value]))
+            RGB::from([value, value, value])
         }
     }
 }
@@ -187,12 +184,10 @@ impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> From<&URGB<U>> 
     }
 }
 
-impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> TryFrom<&HCV<F>> for URGB<U> {
-    type Error = String;
-
-    fn try_from(hcv: &HCV<F>) -> Result<Self, Self::Error> {
-        let rgb: RGB<F> = hcv.try_into()?;
-        Ok(Self::from(rgb))
+impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> From<&HCV<F>> for URGB<U> {
+    fn from(hcv: &HCV<F>) -> Self {
+        let rgb: RGB<F> = hcv.into();
+        Self::from(rgb)
     }
 }
 
@@ -233,56 +228,26 @@ mod hcv_tests {
 
     #[test]
     fn create_rgb_consts() {
-        assert_eq!(RGB::<f64>::try_from(&HCV::<f64>::RED).unwrap(), RGB::RED);
-        assert_eq!(
-            RGB::<f64>::try_from(&HCV::<f64>::GREEN).unwrap(),
-            RGB::GREEN
-        );
-        assert_eq!(RGB::<f64>::try_from(&HCV::<f64>::BLUE).unwrap(), RGB::BLUE);
-        assert_eq!(RGB::<f64>::try_from(&HCV::<f64>::CYAN).unwrap(), RGB::CYAN);
-        assert_eq!(
-            RGB::<f64>::try_from(&HCV::<f64>::MAGENTA).unwrap(),
-            RGB::MAGENTA
-        );
-        assert_eq!(
-            RGB::<f64>::try_from(&HCV::<f64>::YELLOW).unwrap(),
-            RGB::YELLOW
-        );
-        assert_eq!(
-            RGB::<f64>::try_from(&HCV::<f64>::WHITE).unwrap(),
-            RGB::WHITE
-        );
-        assert_eq!(
-            RGB::<f64>::try_from(&HCV::<f64>::BLACK).unwrap(),
-            RGB::BLACK
-        );
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::RED), RGB::RED);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::GREEN), RGB::GREEN);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::BLUE), RGB::BLUE);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::CYAN), RGB::CYAN);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::MAGENTA), RGB::MAGENTA);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::YELLOW), RGB::YELLOW);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::WHITE), RGB::WHITE);
+        assert_eq!(RGB::<f64>::from(&HCV::<f64>::BLACK), RGB::BLACK);
     }
 
     #[test]
     fn create_urgb_consts() {
-        assert_eq!(URGB::<u8>::try_from(&HCV::<f64>::RED).unwrap(), URGB::RED);
-        assert_eq!(
-            URGB::<u8>::try_from(&HCV::<f64>::GREEN).unwrap(),
-            URGB::GREEN
-        );
-        assert_eq!(URGB::<u8>::try_from(&HCV::<f64>::BLUE).unwrap(), URGB::BLUE);
-        assert_eq!(URGB::<u8>::try_from(&HCV::<f64>::CYAN).unwrap(), URGB::CYAN);
-        assert_eq!(
-            URGB::<u8>::try_from(&HCV::<f64>::MAGENTA).unwrap(),
-            URGB::MAGENTA
-        );
-        assert_eq!(
-            URGB::<u8>::try_from(&HCV::<f64>::YELLOW).unwrap(),
-            URGB::YELLOW
-        );
-        assert_eq!(
-            URGB::<u8>::try_from(&HCV::<f64>::WHITE).unwrap(),
-            URGB::WHITE
-        );
-        assert_eq!(
-            URGB::<u8>::try_from(&HCV::<f64>::BLACK).unwrap(),
-            URGB::BLACK
-        );
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::RED), URGB::RED);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::GREEN), URGB::GREEN);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::BLUE), URGB::BLUE);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::CYAN), URGB::CYAN);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::MAGENTA), URGB::MAGENTA);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::YELLOW), URGB::YELLOW);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::WHITE), URGB::WHITE);
+        assert_eq!(URGB::<u8>::from(&HCV::<f64>::BLACK), URGB::BLACK);
     }
 
     #[test]
@@ -295,7 +260,7 @@ mod hcv_tests {
                     println!("[{}, {}, {}] -> {:?}", red, green, blue, rgb_in);
                     let hcv = HCV::<f32>::from(&rgb_in);
                     println!("{:?}", hcv);
-                    let rgb_out = RGB::<f32>::try_from(&hcv).unwrap();
+                    let rgb_out = RGB::<f32>::from(&hcv);
                     assert_approx_eq!(rgb_in, rgb_out);
                 }
             }
@@ -312,7 +277,7 @@ mod hcv_tests {
                     println!("[{}, {}, {}] -> {:?}", red, green, blue, rgb_in);
                     let hcv = HCV::<f64>::from(&rgb_in);
                     println!("{:?}", hcv);
-                    let rgb_out = RGB::<f64>::try_from(&hcv).unwrap();
+                    let rgb_out = RGB::<f64>::from(&hcv);
                     assert_approx_eq!(rgb_in, rgb_out);
                 }
             }
@@ -329,7 +294,7 @@ mod hcv_tests {
                     println!("[{}, {}, {}] -> {:?}", red, green, blue, urgb_in);
                     let hcv = HCV::<f64>::from(&urgb_in);
                     println!("{:?}", hcv);
-                    let urgb_out = URGB::<u8>::try_from(&hcv).unwrap();
+                    let urgb_out = URGB::<u8>::from(&hcv);
                     assert_eq!(urgb_in, urgb_out);
                 }
             }

@@ -21,6 +21,7 @@ pub mod rgba;
 pub mod urgb;
 pub mod urgba;
 
+pub use crate::hcv::HCV;
 pub use crate::hue::Hue;
 pub use crate::rgb::RGB;
 pub use crate::rgba::RGBA;
