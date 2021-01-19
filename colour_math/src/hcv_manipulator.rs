@@ -318,6 +318,100 @@ mod hcv_manipulator_tests {
     #[test]
     fn rotate_rgb_favouring_chroma() {
         let mut manipulator = ColourManipulatorBuilder::<f64>::new()
+            .rotation_policy(RotationPolicy::FavourChroma)
+            .build();
+        for delta in [
+            -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+        ]
+        .iter()
+        {
+            assert!(!manipulator.rotate((*delta).into()));
+        }
+        // pure colours
+        for rgb in crate::rgb::RGB::<f64>::PRIMARIES
+            .iter()
+            .chain(crate::rgb::RGB::SECONDARIES.iter())
+        {
+            manipulator.set_rgb(rgb);
+            for delta in [
+                -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+            ]
+            .iter()
+            {
+                let cur_chroma = manipulator.hcv.chroma;
+                let cur_sum = manipulator.hcv.sum;
+                let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
+                assert!(manipulator.rotate((*delta).into()));
+                assert_approx_eq!(cur_chroma, manipulator.hcv.chroma);
+                let (min_sum, max_sum) = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .sum_range_for_chroma(cur_chroma);
+                assert!(
+                    cur_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || max_sum.approx_eq(&manipulator.hcv.sum, None)
+                );
+                let expected_angle = cur_angle + (*delta).into();
+                assert_approx_eq!(
+                    expected_angle,
+                    manipulator.hcv.hue_data.unwrap().hue_angle(),
+                    0.000000000000001
+                );
+            }
+        }
+        // shades and tints
+        for array in [
+            [0.5_f64, 0.0, 0.0],
+            [0.0, 0.5, 0.0],
+            [0.0, 0.0, 0.5],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.0, 0.5],
+            [0.0, 0.5, 0.5],
+            [1.0, 0.5, 0.5],
+            [0.5, 1.0, 0.5],
+            [0.5, 0.5, 1.0],
+            [1.0, 1.0, 0.5],
+            [1.0, 0.5, 1.0],
+            [0.5, 1.0, 1.0],
+        ]
+        .iter()
+        {
+            manipulator.set_rgb(&(*array).into());
+            for delta in [
+                -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+            ]
+            .iter()
+            {
+                let cur_chroma = manipulator.hcv.chroma;
+                let cur_sum = manipulator.hcv.sum;
+                let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
+                assert!(manipulator.rotate((*delta).into()));
+                assert_approx_eq!(cur_chroma, manipulator.hcv.chroma, 0.000000000000001);
+                let (min_sum, max_sum) = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .sum_range_for_chroma(cur_chroma);
+                assert!(
+                    cur_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || max_sum.approx_eq(&manipulator.hcv.sum, None)
+                );
+                let expected_angle = cur_angle + (*delta).into();
+                assert_approx_eq!(
+                    expected_angle,
+                    manipulator.hcv.hue_data.unwrap().hue_angle(),
+                    0.000000000000001
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn rotate_rgb_favouring_value() {
+        let mut manipulator = ColourManipulatorBuilder::<f64>::new()
             .rotation_policy(RotationPolicy::FavourValue)
             .build();
         for delta in [
@@ -338,11 +432,19 @@ mod hcv_manipulator_tests {
             ]
             .iter()
             {
-                //let cur_chroma = manipulator.chroma;
+                let cur_chroma = manipulator.hcv.chroma;
                 let cur_sum = manipulator.hcv.sum;
                 let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
                 assert!(manipulator.rotate((*delta).into()));
-                //assert_approx_eq!(cur_chroma, manipulator.chroma);
+                let max_chroma = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .max_chroma_for_sum(manipulator.hcv.sum);
+                assert!(
+                    cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                        || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                );
                 assert_approx_eq!(cur_sum, manipulator.hcv.sum);
                 let expected_angle = cur_angle + (*delta).into();
                 assert_approx_eq!(
@@ -375,11 +477,19 @@ mod hcv_manipulator_tests {
             ]
             .iter()
             {
-                //let cur_chroma = manipulator.chroma;
+                let cur_chroma = manipulator.hcv.chroma;
                 let cur_sum = manipulator.hcv.sum;
                 let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
                 assert!(manipulator.rotate((*delta).into()));
-                //assert_approx_eq!(cur_chroma, manipulator.chroma, 0.000000000000001);
+                let max_chroma = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .max_chroma_for_sum(manipulator.hcv.sum);
+                assert!(
+                    cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                        || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                );
                 assert_approx_eq!(cur_sum, manipulator.hcv.sum);
                 let expected_angle = cur_angle + (*delta).into();
                 assert_approx_eq!(
