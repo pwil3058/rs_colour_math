@@ -19,7 +19,7 @@ pub struct ColourManipulator<F: ColourComponent + ChromaTolerance> {
     hcv: HCV<F>,
     clamped: bool,
     rotation_policy: RotationPolicy,
-    saved_hue_data: Option<HueData<F>>,
+    saved_hue_data: HueData<F>,
 }
 
 impl<F: ColourComponent + ChromaTolerance> ColourManipulator<F> {
@@ -30,9 +30,9 @@ impl<F: ColourComponent + ChromaTolerance> ColourManipulator<F> {
     pub fn set_hcv(&mut self, hcv: &HCV<F>) {
         self.hcv = *hcv;
         if let Some(hue_data) = self.hcv.hue_data() {
-            self.saved_hue_data = Some(hue_data);
+            self.saved_hue_data = hue_data;
         } else {
-            self.saved_hue_data = None
+            self.saved_hue_data = HueData::default();
         }
     }
 
@@ -49,7 +49,7 @@ impl<F: ColourComponent + ChromaTolerance> ColourManipulator<F> {
             let new_chroma = (cur_chroma - delta).max(F::ZERO);
             if new_chroma == F::ZERO {
                 let hue_data = self.hcv.hue_data.expect("chroma is non zero");
-                self.saved_hue_data = Some(hue_data);
+                self.saved_hue_data = hue_data;
                 self.hcv.hue_data = None;
             }
             self.hcv.chroma = new_chroma;
@@ -84,12 +84,7 @@ impl<F: ColourComponent + ChromaTolerance> ColourManipulator<F> {
                     self.adjust_sum(&hue_data);
                 };
             } else {
-                let hue_data = if let Some(hue_data) = self.saved_hue_data {
-                    hue_data
-                } else {
-                    // Set the hue data to an arbitrary value
-                    HueData::default()
-                };
+                let hue_data = self.saved_hue_data;
                 if self.clamped {
                     let max_chroma = hue_data.max_chroma_for_sum(self.hcv.sum);
                     debug_assert!(max_chroma >= cur_chroma);
@@ -131,7 +126,7 @@ impl<F: ColourComponent + ChromaTolerance> ColourManipulator<F> {
                     }
                 }
                 self.hcv.hue_data = Some(new_hue_data);
-                self.saved_hue_data = Some(new_hue_data);
+                self.saved_hue_data = new_hue_data;
                 true
             }
         } else {
@@ -229,7 +224,7 @@ mod hcv_manipulator_tests {
             assert_eq!(manipulator.hcv.chroma, 0.0);
             assert_eq!(manipulator.hcv.sum, 2.0);
             assert_eq!(manipulator.hcv.hue_data, None);
-            assert_eq!(manipulator.saved_hue_data, saved_hue_data);
+            assert_eq!(manipulator.saved_hue_data, saved_hue_data.unwrap());
         }
     }
 
