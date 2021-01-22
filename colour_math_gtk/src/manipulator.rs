@@ -184,8 +184,12 @@ impl RGBManipulatorGUI {
     }
 
     pub fn reset(&self) {
-        self.samples.borrow_mut().clear();
+        self.delete_samples();
         self.set_rgb_and_inform(&(RGB::WHITE * 0.5));
+    }
+
+    pub fn delete_samples(&self) {
+        self.samples.borrow_mut().clear();
     }
 
     pub fn rgb(&self) -> RGB {

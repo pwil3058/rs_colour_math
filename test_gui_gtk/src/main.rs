@@ -42,7 +42,15 @@ fn main() {
     // let colour_manipulator = RGBManipulatorGUIBuilder::new().build();
     // vbox.pack_start(&colour_manipulator.pwo(), true, true, 0);
 
-    let colour_editor = ColourEditorBuilder::new().build();
+    let button1 = gtk::ButtonBuilder::new().label("Reset").build();
+    let button2 = gtk::ButtonBuilder::new().label("button2").build();
+    let colour_editor = ColourEditorBuilder::new()
+        .attributes(&attributes)
+        .extra_buttons(&[button1.clone(), button2.clone()])
+        .build();
+    colour_editor.connect_changed(move |rgb| cads.set_colour(Some(rgb)));
+    let colour_editor_c = colour_editor.clone();
+    button1.connect_clicked(move |_| colour_editor_c.reset());
     vbox.pack_start(&colour_editor.pwo(), true, true, 0);
 
     let gtk_hue_wheel = GtkHueWheelBuilder::new()

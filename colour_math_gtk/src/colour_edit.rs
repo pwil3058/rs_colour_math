@@ -6,6 +6,7 @@ use pw_gix::{
     wrapper::*,
 };
 
+use crate::colour::RGBConstants;
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
     colour::{ScalarAttribute, RGB},
@@ -13,7 +14,7 @@ use crate::{
     rgb_entry::{RGBHexEntry, RGBHexEntryBuilder},
 };
 
-type ChangeCallback = Box<dyn Fn(RGB)>;
+type ChangeCallback = Box<dyn Fn(&RGB)>;
 
 #[derive(PWO, Wrapper)]
 pub struct ColourEditor {
@@ -22,17 +23,32 @@ pub struct ColourEditor {
     cads: ColourAttributeDisplayStack,
     rgb_entry: Rc<RGBHexEntry<u8>>,
     change_callbacks: RefCell<Vec<ChangeCallback>>,
+    default_colour: RGB,
 }
 
 impl ColourEditor {
-    fn inform_change(&self) {
-        let rgb = self.rgb_manipulator.rgb();
+    pub fn rgb(&self) -> RGB {
+        self.rgb_manipulator.rgb()
+    }
+
+    pub fn set_rgb(&self, rgb: &RGB) {
+        self.rgb_entry.set_rgb(&rgb.into());
+        self.rgb_manipulator.set_rgb(rgb);
+        self.cads.set_colour(Some(rgb));
+    }
+
+    pub fn reset(&self) {
+        self.rgb_manipulator.delete_samples();
+        self.set_rgb(&self.default_colour);
+    }
+
+    fn inform_change(&self, rgb: &RGB) {
         for callback in self.change_callbacks.borrow().iter() {
             callback(rgb)
         }
     }
 
-    pub fn connect_changed<F: Fn(RGB) + 'static>(&self, callback: F) {
+    pub fn connect_changed<F: Fn(&RGB) + 'static>(&self, callback: F) {
         self.change_callbacks.borrow_mut().push(Box::new(callback))
     }
 }
@@ -41,11 +57,27 @@ impl ColourEditor {
 pub struct ColourEditorBuilder {
     attributes: Vec<ScalarAttribute>,
     extra_buttons: Vec<gtk::Button>,
+    default_colour: Option<RGB>,
 }
 
 impl ColourEditorBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn attributes(&mut self, attributes: &[ScalarAttribute]) -> &mut Self {
+        self.attributes = attributes.to_vec();
+        self
+    }
+
+    pub fn extra_buttons(&mut self, extra_buttons: &[gtk::Button]) -> &mut Self {
+        self.extra_buttons = extra_buttons.to_vec();
+        self
+    }
+
+    pub fn default_colour(&mut self, default_colour: &RGB) -> &mut Self {
+        self.default_colour = Some(*default_colour);
+        self
     }
 
     pub fn build(&self) -> Rc<ColourEditor> {
@@ -73,6 +105,11 @@ impl ColourEditorBuilder {
             cads,
             rgb_entry,
             change_callbacks: RefCell::new(Vec::new()),
+            default_colour: if let Some(rgb) = self.default_colour {
+                rgb
+            } else {
+                RGB::WHITE * 0.5
+            },
         });
 
         colour_editor
@@ -92,14 +129,14 @@ impl ColourEditorBuilder {
             let rgb: RGB = rgb.into();
             colour_editor_c.cads.set_colour(Some(&rgb));
             colour_editor_c.rgb_manipulator.set_rgb(&rgb);
-            colour_editor_c.inform_change();
+            colour_editor_c.inform_change(&rgb);
         });
 
         let colour_editor_c = Rc::clone(&colour_editor);
         colour_editor.rgb_manipulator.connect_changed(move |rgb| {
             colour_editor_c.cads.set_colour(Some(&rgb));
             colour_editor_c.rgb_entry.set_rgb(&rgb.into());
-            colour_editor_c.inform_change();
+            colour_editor_c.inform_change(&rgb);
         });
 
         colour_editor
