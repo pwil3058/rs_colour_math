@@ -285,7 +285,7 @@ impl<F: ColourComponent> From<(&[u8], usize, usize)> for OpaqueImage<F> {
 mod image_tests {
     use super::*;
     use crate::{rgb::RGB, ColourInterface};
-    use serde::export::PhantomData;
+    use std::marker::PhantomData;
 
     #[derive(Default)]
     struct ToMonochrome<P: Copy + ColourInterface<f64>> {
