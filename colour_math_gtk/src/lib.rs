@@ -18,8 +18,8 @@ pub mod colour {
     };
     use pw_gix::gdk;
     pub type RGB = colour_math::rgb::RGB<f64>;
-    pub type RGBManipulator = colour_math::manipulator::RGBManipulator<f64>;
-    pub type RGBManipulatorBuilder = colour_math::manipulator::RGBManipulatorBuilder<f64>;
+    pub type ColourManipulator = colour_math::manipulator::ColourManipulator<f64>;
+    pub type ColourManipulatorBuilder = colour_math::manipulator::ColourManipulatorBuilder<f64>;
     pub type ColouredShape = colour_math::attributes::hue_wheel::ColouredShape<f64>;
     pub type HueWheel = colour_math::attributes::hue_wheel::HueWheel<f64>;
 

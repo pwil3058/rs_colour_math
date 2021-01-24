@@ -1,162 +1,191 @@
-// Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::convert::TryFrom;
+// Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use crate::{chroma::HueData, rgb::RGB, ColourComponent, ColourInterface, HueIfce};
-use normalised_angles::Degrees;
+use crate::{chroma::*, hcv::*, rgb::*, ColourComponent, Degrees, HueIfce};
 
-#[derive(Default)]
-pub struct RGBManipulator<F: ColourComponent> {
-    rgb: RGB<F>,
-    hue_data: Option<HueData<F>>,
-    sum: F,
-    chroma: F,
-    clamped: bool,
+#[derive(Clone, Copy)]
+pub enum RotationPolicy {
+    FavourChroma,
+    FavourValue,
 }
 
-impl<F: ColourComponent> RGBManipulator<F> {
-    pub fn new(clamped: bool) -> Self {
-        Self {
-            rgb: [F::ZERO, F::ZERO, F::ZERO].into(),
-            hue_data: None,
-            sum: F::ZERO,
-            chroma: F::ZERO,
-            clamped,
-        }
+impl Default for RotationPolicy {
+    fn default() -> Self {
+        RotationPolicy::FavourChroma
+    }
+}
+
+#[derive(Default)]
+pub struct ColourManipulator<F: ColourComponent + ChromaTolerance> {
+    hcv: HCV<F>,
+    clamped: bool,
+    rotation_policy: RotationPolicy,
+    saved_hue_data: HueData<F>,
+}
+
+impl<F: ColourComponent + ChromaTolerance> ColourManipulator<F> {
+    pub fn rgb(&self) -> RGB<F> {
+        (&self.hcv).into()
     }
 
-    pub fn rgb(&self) -> RGB<F> {
-        self.rgb
+    pub fn set_hcv(&mut self, hcv: &HCV<F>) {
+        self.hcv = *hcv;
+        if let Some(hue_data) = self.hcv.hue_data() {
+            self.saved_hue_data = hue_data;
+        } else {
+            self.saved_hue_data = HueData::default();
+        }
     }
 
     pub fn set_rgb(&mut self, rgb: &RGB<F>) {
-        self.rgb = *rgb;
-        self.sum = rgb.sum();
-        let xy = rgb.xy();
-        if let Ok(hue_data) = HueData::try_from(xy) {
-            self.chroma = (xy.0.hypot(xy.1) * hue_data.chroma_correction()).min(F::ONE);
-            self.hue_data = Some(hue_data);
-        } else {
-            self.chroma = F::ZERO;
-            self.hue_data = None;
-        }
+        self.set_hcv(&rgb.into());
     }
 
     pub fn decr_chroma(&mut self, delta: F) -> bool {
         debug_assert!(delta.is_proportion());
-        if self.chroma == F::ZERO {
+        if self.hcv.chroma == F::ZERO {
             false
         } else {
-            let cur_chroma = self.chroma;
+            let cur_chroma = self.hcv.chroma;
             let new_chroma = (cur_chroma - delta).max(F::ZERO);
-            let hue_data = self.hue_data.expect("chroma is non zero");
-            self.rgb = hue_data
-                .rgb_for_sum_and_chroma(self.sum, new_chroma)
-                .expect("smaller chroma always possible");
-            self.chroma = self.rgb.chroma();
-            cur_chroma != self.chroma
+            if new_chroma == F::ZERO {
+                let hue_data = self.hcv.hue_data.expect("chroma is non zero");
+                self.saved_hue_data = hue_data;
+                self.hcv.hue_data = None;
+            }
+            self.hcv.chroma = new_chroma;
+            cur_chroma != self.hcv.chroma
+        }
+    }
+
+    fn adjust_sum(&mut self, hue_data: &HueData<F>) {
+        let (min_sum, max_sum) = hue_data.sum_range_for_chroma(self.hcv.chroma);
+        if self.hcv.sum < min_sum {
+            self.hcv.sum = min_sum;
+        } else if self.hcv.sum > max_sum {
+            self.hcv.sum = max_sum;
         }
     }
 
     pub fn incr_chroma(&mut self, delta: F) -> bool {
         debug_assert!(delta.is_proportion());
-        if self.chroma == F::ONE {
+        if self.hcv.chroma == F::ONE {
             false
         } else {
-            let cur_chroma = self.chroma;
-            let new_chroma = (cur_chroma + delta).min(F::ONE);
-            let hue_data = if let Some(hue_data) = self.hue_data {
-                hue_data
-            } else {
-                // Set the hue data to an arbitrary value
-                self.hue_data = Some(HueData::default());
-                self.hue_data.expect("we just set it to some")
-            };
-            if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(self.sum, new_chroma) {
-                self.rgb = rgb;
-            } else if self.clamped {
-                self.rgb = hue_data.max_chroma_rgb_for_sum(self.sum);
-            } else {
-                let min_rgb = hue_data.min_sum_rgb_for_chroma(new_chroma);
-                let max_rgb = hue_data.max_sum_rgb_for_chroma(new_chroma);
-                self.rgb = if self.sum < min_rgb.sum() {
-                    min_rgb
-                } else if self.sum > max_rgb.sum() {
-                    max_rgb
+            let cur_chroma = self.hcv.chroma;
+            if let Some(hue_data) = self.hcv.hue_data {
+                if self.clamped {
+                    let max_chroma = hue_data.max_chroma_for_sum(self.hcv.sum);
+                    debug_assert!(
+                        max_chroma > cur_chroma || max_chroma.approx_eq(&cur_chroma, None)
+                    );
+                    self.hcv.chroma = (cur_chroma + delta).min(max_chroma);
                 } else {
-                    hue_data.max_chroma_rgb_for_sum(self.sum)
+                    self.hcv.chroma = (cur_chroma + delta).min(F::ONE);
+                    self.adjust_sum(&hue_data);
                 };
-            };
-            self.chroma = self.rgb.chroma();
-            cur_chroma != self.chroma
+            } else {
+                let hue_data = self.saved_hue_data;
+                if self.clamped {
+                    let max_chroma = hue_data.max_chroma_for_sum(self.hcv.sum);
+                    debug_assert!(max_chroma >= cur_chroma);
+                    self.hcv.chroma = (cur_chroma + delta).min(max_chroma);
+                } else {
+                    self.hcv.chroma = (cur_chroma + delta).min(F::ONE);
+                    self.adjust_sum(&hue_data);
+                };
+                if self.hcv.chroma > F::ZERO {
+                    self.hcv.hue_data = Some(hue_data);
+                }
+            }
+            cur_chroma != self.hcv.chroma
         }
+    }
+
+    fn set_sum_and_adjust_chroma(&mut self, hue_data: &HueData<F>, new_sum: F) {
+        debug_assert_eq!(
+            hue_data,
+            &self.hcv.hue_data.expect("should not be called for greys")
+        );
+        self.hcv.sum = new_sum;
+        self.hcv.chroma = hue_data.max_chroma_for_sum(new_sum);
+        if self.hcv.chroma == F::ZERO {
+            self.hcv.hue_data = None;
+            self.saved_hue_data = *hue_data;
+        }
+    }
+
+    fn set_sum(&mut self, new_sum: F) -> bool {
+        debug_assert!(new_sum >= F::ZERO && new_sum <= F::THREE);
+        let cur_sum = self.hcv.sum;
+        if let Some(hue_data) = self.hcv.hue_data {
+            let (min_sum, max_sum) = hue_data.sum_range_for_chroma(self.hcv.chroma);
+            if new_sum < min_sum {
+                if self.clamped {
+                    self.hcv.sum = min_sum;
+                } else {
+                    self.set_sum_and_adjust_chroma(&hue_data, new_sum);
+                }
+            } else if new_sum > max_sum {
+                if self.clamped {
+                    self.hcv.sum = max_sum;
+                } else {
+                    self.set_sum_and_adjust_chroma(&hue_data, new_sum);
+                }
+            } else {
+                self.hcv.sum = new_sum;
+            }
+        } else {
+            self.hcv.sum = new_sum;
+        }
+        cur_sum != self.hcv.sum
     }
 
     pub fn decr_value(&mut self, delta: F) -> bool {
         debug_assert!(delta.is_proportion());
-        if self.sum == F::ZERO {
+        if self.hcv.sum == F::ZERO {
             false
         } else {
-            let cur_sum = self.sum;
-            let new_sum = (cur_sum - F::THREE * delta).max(F::ZERO);
-            if let Some(hue_data) = self.hue_data {
-                if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
-                    self.rgb = rgb
-                } else if self.clamped {
-                    self.rgb = hue_data.min_sum_rgb_for_chroma(self.chroma);
-                } else {
-                    self.rgb = hue_data.max_chroma_rgb_for_sum(new_sum);
-                };
-            } else {
-                let new_value = new_sum / F::THREE;
-                self.rgb = [new_value, new_value, new_value].into();
-            }
-            self.sum = self.rgb.sum();
-            cur_sum != self.sum
+            let new_sum = (self.hcv.sum - F::THREE * delta).max(F::ZERO);
+            self.set_sum(new_sum)
         }
     }
 
     pub fn incr_value(&mut self, delta: F) -> bool {
         debug_assert!(delta.is_proportion());
-        if self.sum == F::THREE {
+        if self.hcv.sum == F::THREE {
             false
         } else {
-            let cur_sum = self.sum;
-            let new_sum = (cur_sum + F::THREE * delta).min(F::THREE);
-            if let Some(hue_data) = self.hue_data {
-                if let Some(rgb) = hue_data.rgb_for_sum_and_chroma(new_sum, self.chroma) {
-                    self.rgb = rgb
-                } else if self.clamped {
-                    self.rgb = hue_data.max_sum_rgb_for_chroma(self.chroma);
-                } else {
-                    self.rgb = hue_data.max_chroma_rgb_for_sum(new_sum);
-                };
-            } else {
-                let new_value = new_sum / F::THREE;
-                self.rgb = [new_value, new_value, new_value].into();
-            }
-            self.sum = self.rgb.sum();
-            cur_sum != self.sum
+            let new_sum = (self.hcv.sum + F::THREE * delta).min(F::THREE);
+            self.set_sum(new_sum)
         }
     }
 
     pub fn rotate(&mut self, angle: Degrees<F>) -> bool {
-        if let Some(hue_data) = self.hue_data {
+        if let Some(hue_data) = self.hcv.hue_data {
             let hue_angle = hue_data.hue_angle();
             let new_angle = hue_angle + angle;
             let new_hue_data = HueData::<F>::from(new_angle);
             if hue_data == new_hue_data {
                 false
             } else {
-                if let Some(rgb) = new_hue_data.rgb_for_sum_and_chroma(self.sum, self.chroma) {
-                    self.rgb = rgb
-                } else {
-                    // TODO: make secondary effects of manipulation optional
-                    self.rgb = new_hue_data.max_chroma_rgb_for_sum(self.sum);
-                };
-                self.sum = self.rgb.sum();
-                let xy = self.rgb.xy();
-                self.chroma = (xy.0.hypot(xy.1) * new_hue_data.chroma_correction()).min(F::ONE);
-                self.hue_data = Some(new_hue_data);
+                match self.rotation_policy {
+                    RotationPolicy::FavourChroma => {
+                        let (min_sum, max_sum) = new_hue_data.sum_range_for_chroma(self.hcv.chroma);
+                        if self.hcv.sum < min_sum {
+                            self.hcv.sum = min_sum;
+                        } else if self.hcv.sum > max_sum {
+                            self.hcv.sum = max_sum;
+                        }
+                    }
+                    RotationPolicy::FavourValue => {
+                        let max_chroma = new_hue_data.max_chroma_for_sum(self.hcv.sum);
+                        if self.hcv.chroma > max_chroma {
+                            self.hcv.chroma = max_chroma;
+                        }
+                    }
+                }
+                self.hcv.hue_data = Some(new_hue_data);
+                self.saved_hue_data = new_hue_data;
                 true
             }
         } else {
@@ -166,18 +195,30 @@ impl<F: ColourComponent> RGBManipulator<F> {
 }
 
 #[derive(Default)]
-pub struct RGBManipulatorBuilder<F: ColourComponent> {
-    init_rgb: Option<RGB<F>>,
+pub struct ColourManipulatorBuilder<F>
+where
+    F: ColourComponent + ChromaTolerance,
+{
+    init_hcv: Option<HCV<F>>,
     clamped: bool,
+    rotation_policy: RotationPolicy,
 }
 
-impl<F: ColourComponent> RGBManipulatorBuilder<F> {
+impl<F> ColourManipulatorBuilder<F>
+where
+    F: ColourComponent + ChromaTolerance,
+{
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn init_rgb(&mut self, rgb: &RGB<F>) -> &mut Self {
-        self.init_rgb = Some(*rgb);
+        self.init_hcv = Some(rgb.into());
+        self
+    }
+
+    pub fn init_hcv(&mut self, hcv: &HCV<F>) -> &mut Self {
+        self.init_hcv = Some(*hcv);
         self
     }
 
@@ -186,125 +227,233 @@ impl<F: ColourComponent> RGBManipulatorBuilder<F> {
         self
     }
 
-    pub fn build(&self) -> RGBManipulator<F> {
-        let mut rgb_manipulator = RGBManipulator::<F>::default();
-        rgb_manipulator.clamped = self.clamped;
-        if let Some(init_rgb) = self.init_rgb {
-            rgb_manipulator.set_rgb(&init_rgb);
+    pub fn rotation_policy(&mut self, rotation_policy: RotationPolicy) -> &mut Self {
+        self.rotation_policy = rotation_policy;
+        self
+    }
+
+    pub fn build(&self) -> ColourManipulator<F> {
+        let mut manipulator = ColourManipulator::<F>::default();
+        manipulator.clamped = self.clamped;
+        manipulator.rotation_policy = self.rotation_policy;
+        if let Some(init_hcv) = self.init_hcv {
+            manipulator.set_hcv(&init_hcv);
         };
-        rgb_manipulator
+        manipulator
     }
 }
 
 #[cfg(test)]
-mod test {
-    use crate::{ColourInterface, HueConstants, HueIfce, RGBConstants};
+mod hcv_manipulator_tests {
+    use super::*;
     use num_traits_plus::{assert_approx_eq, float_plus::*};
 
     #[test]
-    fn decr_chroma() {
-        let mut manipulator = super::RGBManipulator::<f64>::new(true);
-        assert!(!manipulator.decr_chroma(0.1));
-        manipulator.set_rgb(&crate::rgb::RGB::YELLOW);
-        assert_eq!(manipulator.chroma, 1.0);
-        let saved_hue_data = manipulator.hue_data;
-        let decr = 0.1;
-        let mut expected = (manipulator.chroma - decr).max(0.0);
-        while manipulator.decr_chroma(decr) {
-            assert_approx_eq!(manipulator.chroma, expected, 0.00000000001);
-            expected = (manipulator.chroma - decr).max(0.0);
-            assert_eq!(manipulator.sum, 2.0);
-            assert_eq!(manipulator.hue_data, saved_hue_data);
+    fn set_colour() {
+        let mut manipulator = ColourManipulatorBuilder::<f64>::new().clamped(true).build();
+        for rgb in &RGB::<f64>::SECONDARIES {
+            manipulator.set_rgb(rgb);
+            assert_eq!(manipulator.rgb(), *rgb);
         }
-        assert!(manipulator.rgb.is_grey());
-        assert_eq!(manipulator.chroma, 0.0);
-        assert_eq!(manipulator.sum, 2.0);
-        assert_eq!(manipulator.hue_data, saved_hue_data);
     }
 
     #[test]
-    fn incr_chroma() {
-        let mut manipulator = super::RGBManipulator::<f64>::new(true);
-        assert!(!manipulator.incr_chroma(0.1));
-        manipulator.set_rgb(&[0.75, 0.5, 0.75].into());
-        let saved_hue_data = manipulator.hue_data.unwrap();
-        let incr = 0.1;
-        let mut expected =
-            (manipulator.chroma + incr).min(saved_hue_data.max_chroma_for_sum(manipulator.sum));
-        while manipulator.incr_chroma(incr) {
-            assert_approx_eq!(manipulator.chroma, expected, 0.00000000001);
-            expected =
-                (manipulator.chroma + incr).min(saved_hue_data.max_chroma_for_sum(manipulator.sum));
-            assert_eq!(manipulator.sum, 2.0);
-            assert_eq!(manipulator.hue_data, Some(saved_hue_data));
+    fn decr_chroma() {
+        // clamping should make no difference to chroma decrementing
+        for clamped in &[true, false] {
+            let mut manipulator = ColourManipulatorBuilder::<f64>::new()
+                .clamped(*clamped)
+                .build();
+            assert_eq!(manipulator.hcv, HCV::BLACK);
+            assert!(!manipulator.decr_chroma(0.1));
+            manipulator.set_rgb(&crate::rgb::RGB::YELLOW);
+            assert_eq!(manipulator.hcv.chroma, 1.0);
+            let saved_hue_data = manipulator.hcv.hue_data;
+            let decr = 0.1;
+            let mut expected = (manipulator.hcv.chroma - decr).max(0.0);
+            while manipulator.decr_chroma(decr) {
+                assert_approx_eq!(manipulator.hcv.chroma, expected, 0.00000000001);
+                expected = (manipulator.hcv.chroma - decr).max(0.0);
+                assert_eq!(manipulator.hcv.sum, 2.0);
+                if manipulator.hcv.chroma > 0.0 {
+                    assert_eq!(manipulator.hcv.hue_data, saved_hue_data);
+                }
+            }
+            assert!(manipulator.hcv.is_grey());
+            assert_eq!(manipulator.hcv.chroma, 0.0);
+            assert_eq!(manipulator.hcv.sum, 2.0);
+            assert_eq!(manipulator.hcv.hue_data, None);
+            assert_eq!(manipulator.saved_hue_data, saved_hue_data.unwrap());
         }
-        assert!(!manipulator.rgb.is_grey());
-        assert_eq!(manipulator.chroma, 1.0);
-        assert_eq!(manipulator.sum, 2.0);
-        assert_eq!(manipulator.hue_data, Some(saved_hue_data));
+    }
+
+    #[test]
+    fn incr_chroma_clamped() {
+        let mut manipulator = super::ColourManipulatorBuilder::<f64>::new()
+            .clamped(true)
+            .build();
+        assert_eq!(manipulator.hcv, HCV::BLACK);
+        assert!(!manipulator.incr_chroma(0.1));
+        // Test where clamping makes a difference and where it doesn't
+        for array in &[[0.75_f64, 0.5, 0.0], [0.75, 0.5, 0.75]] {
+            manipulator.set_rgb(&array.into());
+            let start_sum = manipulator.hcv.sum;
+            let saved_hue_data = manipulator.hcv.hue_data.unwrap();
+            let incr = 0.1;
+            let mut expected = (manipulator.hcv.chroma + incr)
+                .min(saved_hue_data.max_chroma_for_sum(manipulator.hcv.sum));
+            while manipulator.incr_chroma(incr) {
+                assert_approx_eq!(manipulator.hcv.chroma, expected, 0.00000000001);
+                expected = (manipulator.hcv.chroma + incr)
+                    .min(saved_hue_data.max_chroma_for_sum(manipulator.hcv.sum));
+                assert_eq!(manipulator.hcv.sum, start_sum);
+                assert_eq!(manipulator.hcv.hue_data, Some(saved_hue_data));
+            }
+            assert!(!manipulator.hcv.is_grey());
+            assert_eq!(
+                manipulator.hcv.chroma,
+                saved_hue_data.max_chroma_for_sum(start_sum)
+            );
+            assert_eq!(manipulator.hcv.sum, start_sum);
+            assert_eq!(manipulator.hcv.hue_data, Some(saved_hue_data));
+        }
+    }
+
+    #[test]
+    fn incr_chroma_unclamped() {
+        let mut manipulator = super::ColourManipulatorBuilder::<f64>::new()
+            .clamped(false)
+            .build();
+        assert_eq!(manipulator.hcv, HCV::BLACK);
+        assert!(manipulator.incr_chroma(0.1));
+        // Test where clamping makes a difference and where it doesn't
+        for array in &[[0.75_f64, 0.5, 0.0], [0.75, 0.5, 0.75]] {
+            manipulator.set_rgb(&array.into());
+            let start_sum = manipulator.hcv.sum;
+            let saved_hue_data = manipulator.hcv.hue_data.unwrap();
+            let incr = 0.1;
+            let mut expected = (manipulator.hcv.chroma + incr).min(1.0);
+            while manipulator.incr_chroma(incr) {
+                assert_approx_eq!(manipulator.hcv.chroma, expected, 0.00000000001);
+                expected = (manipulator.hcv.chroma + incr).min(1.0);
+                let (min_sum, max_sum) =
+                    saved_hue_data.sum_range_for_chroma(manipulator.hcv.chroma);
+                assert!(
+                    manipulator.hcv.sum == start_sum
+                        || manipulator.hcv.sum == min_sum
+                        || manipulator.hcv.sum == max_sum
+                );
+                assert_eq!(manipulator.hcv.hue_data, Some(saved_hue_data));
+            }
+            assert!(!manipulator.hcv.is_grey());
+            assert_eq!(manipulator.hcv.chroma, 1.0);
+            let (min_sum, max_sum) = saved_hue_data.sum_range_for_chroma(manipulator.hcv.chroma);
+            assert!(
+                manipulator.hcv.sum == start_sum
+                    || manipulator.hcv.sum == min_sum
+                    || manipulator.hcv.sum == max_sum
+            );
+            assert_eq!(manipulator.hcv.hue_data, Some(saved_hue_data));
+        }
     }
 
     #[test]
     fn round_trip_chroma() {
-        let mut manipulator = super::RGBManipulator::<f64>::new(true);
+        let mut manipulator = super::ColourManipulatorBuilder::<f64>::new()
+            .clamped(true)
+            .build();
         manipulator.set_rgb(&crate::rgb::RGB::CYAN);
         while manipulator.decr_chroma(0.01) {}
-        assert!(manipulator.rgb.is_grey());
+        assert!(manipulator.hcv.is_grey());
         while manipulator.incr_chroma(0.01) {}
-        assert_eq!(manipulator.rgb, crate::rgb::RGB::CYAN);
+        assert_eq!(manipulator.rgb(), crate::rgb::RGB::CYAN);
     }
 
     #[test]
-    fn incr_decr_sum() {
-        let mut manipulator = super::RGBManipulator::<f64>::new(true);
+    fn incr_decr_sum_clamped() {
+        let mut manipulator = super::ColourManipulatorBuilder::<f64>::new()
+            .clamped(true)
+            .build();
         assert!(!manipulator.decr_value(0.1));
         while manipulator.incr_value(0.1) {}
-        assert_eq!(manipulator.rgb, crate::rgb::RGB::WHITE);
+        assert_eq!(manipulator.hcv, crate::hcv::HCV::WHITE);
         while manipulator.decr_value(0.1) {}
-        assert_eq!(manipulator.rgb, crate::rgb::RGB::BLACK);
+        assert_eq!(manipulator.hcv, crate::hcv::HCV::BLACK);
         manipulator.set_rgb(&crate::rgb::RGB::YELLOW);
         assert!(!manipulator.decr_value(0.1));
         assert!(!manipulator.incr_value(0.1));
-        let cur_value = manipulator.rgb.value();
+        let cur_sum = manipulator.hcv.sum;
         manipulator.decr_chroma(0.5);
-        assert_eq!(cur_value, manipulator.rgb.value());
+        assert_eq!(cur_sum, manipulator.hcv.sum);
         while manipulator.decr_value(0.1) {}
-        assert_approx_eq!(manipulator.rgb, [0.5, 0.5, 0.0].into());
+        assert_approx_eq!(manipulator.rgb(), [0.5, 0.5, 0.0].into());
         while manipulator.incr_value(0.1) {}
-        assert_approx_eq!(manipulator.rgb, [1.0, 1.0, 0.5].into());
+        assert_approx_eq!(manipulator.rgb(), [1.0, 1.0, 0.5].into());
     }
 
     #[test]
-    fn rotate_rgb() {
-        let mut rgb_manipulator = super::RGBManipulator::<f64>::new(true);
+    fn incr_decr_sum_unclamped() {
+        let mut manipulator = super::ColourManipulatorBuilder::<f64>::new()
+            .clamped(false)
+            .build();
+        assert!(!manipulator.decr_value(0.1));
+        while manipulator.incr_value(0.1) {}
+        assert_eq!(manipulator.hcv, crate::hcv::HCV::WHITE);
+        while manipulator.decr_value(0.1) {}
+        assert_eq!(manipulator.hcv, crate::hcv::HCV::BLACK);
+        for hcv in &crate::hcv::HCV::SECONDARIES {
+            manipulator.set_hcv(hcv);
+            while manipulator.incr_value(0.1) {}
+            assert_eq!(manipulator.hcv, crate::hcv::HCV::WHITE);
+            while manipulator.decr_value(0.1) {}
+            assert_eq!(manipulator.hcv, crate::hcv::HCV::BLACK);
+            assert!(manipulator.incr_chroma(1.0));
+            assert_eq!(&manipulator.hcv, hcv);
+        }
+    }
+
+    #[test]
+    fn rotate_rgb_favouring_chroma() {
+        let mut manipulator = ColourManipulatorBuilder::<f64>::new()
+            .rotation_policy(RotationPolicy::FavourChroma)
+            .build();
         for delta in [
             -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
         ]
         .iter()
         {
-            assert!(!rgb_manipulator.rotate((*delta).into()));
+            assert!(!manipulator.rotate((*delta).into()));
         }
         // pure colours
         for rgb in crate::rgb::RGB::<f64>::PRIMARIES
             .iter()
             .chain(crate::rgb::RGB::SECONDARIES.iter())
         {
-            rgb_manipulator.set_rgb(rgb);
+            manipulator.set_rgb(rgb);
             for delta in [
                 -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
             ]
             .iter()
             {
-                //let cur_chroma = rgb_manipulator.chroma;
-                let cur_sum = rgb_manipulator.sum;
-                let cur_angle = rgb_manipulator.hue_data.unwrap().hue_angle();
-                assert!(rgb_manipulator.rotate((*delta).into()));
-                //assert_approx_eq!(cur_chroma, rgb_manipulator.chroma);
-                assert_approx_eq!(cur_sum, rgb_manipulator.sum);
+                let cur_chroma = manipulator.hcv.chroma;
+                let cur_sum = manipulator.hcv.sum;
+                let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
+                assert!(manipulator.rotate((*delta).into()));
+                assert_approx_eq!(cur_chroma, manipulator.hcv.chroma);
+                let (min_sum, max_sum) = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .sum_range_for_chroma(cur_chroma);
+                assert!(
+                    cur_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || max_sum.approx_eq(&manipulator.hcv.sum, None)
+                );
                 let expected_angle = cur_angle + (*delta).into();
                 assert_approx_eq!(
                     expected_angle,
-                    rgb_manipulator.hue_data.unwrap().hue_angle(),
+                    manipulator.hcv.hue_data.unwrap().hue_angle(),
                     0.000000000000001
                 );
             }
@@ -326,22 +475,123 @@ mod test {
         ]
         .iter()
         {
-            rgb_manipulator.set_rgb(&(*array).into());
+            manipulator.set_rgb(&(*array).into());
             for delta in [
                 -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
             ]
             .iter()
             {
-                //let cur_chroma = rgb_manipulator.chroma;
-                let cur_sum = rgb_manipulator.sum;
-                let cur_angle = rgb_manipulator.hue_data.unwrap().hue_angle();
-                assert!(rgb_manipulator.rotate((*delta).into()));
-                //assert_approx_eq!(cur_chroma, rgb_manipulator.chroma, 0.000000000000001);
-                assert_approx_eq!(cur_sum, rgb_manipulator.sum);
+                let cur_chroma = manipulator.hcv.chroma;
+                let cur_sum = manipulator.hcv.sum;
+                let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
+                assert!(manipulator.rotate((*delta).into()));
+                assert_approx_eq!(cur_chroma, manipulator.hcv.chroma, 0.000000000000001);
+                let (min_sum, max_sum) = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .sum_range_for_chroma(cur_chroma);
+                assert!(
+                    cur_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                        || max_sum.approx_eq(&manipulator.hcv.sum, None)
+                );
                 let expected_angle = cur_angle + (*delta).into();
                 assert_approx_eq!(
                     expected_angle,
-                    rgb_manipulator.hue_data.unwrap().hue_angle(),
+                    manipulator.hcv.hue_data.unwrap().hue_angle(),
+                    0.000000000000001
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn rotate_rgb_favouring_value() {
+        let mut manipulator = ColourManipulatorBuilder::<f64>::new()
+            .rotation_policy(RotationPolicy::FavourValue)
+            .build();
+        for delta in [
+            -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+        ]
+        .iter()
+        {
+            assert!(!manipulator.rotate((*delta).into()));
+        }
+        // pure colours
+        for rgb in crate::rgb::RGB::<f64>::PRIMARIES
+            .iter()
+            .chain(crate::rgb::RGB::SECONDARIES.iter())
+        {
+            manipulator.set_rgb(rgb);
+            for delta in [
+                -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+            ]
+            .iter()
+            {
+                let cur_chroma = manipulator.hcv.chroma;
+                let cur_sum = manipulator.hcv.sum;
+                let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
+                assert!(manipulator.rotate((*delta).into()));
+                let max_chroma = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .max_chroma_for_sum(manipulator.hcv.sum);
+                assert!(
+                    cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                        || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                );
+                assert_approx_eq!(cur_sum, manipulator.hcv.sum);
+                let expected_angle = cur_angle + (*delta).into();
+                assert_approx_eq!(
+                    expected_angle,
+                    manipulator.hcv.hue_data.unwrap().hue_angle(),
+                    0.000000000000001
+                );
+            }
+        }
+        // shades and tints
+        for array in [
+            [0.5_f64, 0.0, 0.0],
+            [0.0, 0.5, 0.0],
+            [0.0, 0.0, 0.5],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.0, 0.5],
+            [0.0, 0.5, 0.5],
+            [1.0, 0.5, 0.5],
+            [0.5, 1.0, 0.5],
+            [0.5, 0.5, 1.0],
+            [1.0, 1.0, 0.5],
+            [1.0, 0.5, 1.0],
+            [0.5, 1.0, 1.0],
+        ]
+        .iter()
+        {
+            manipulator.set_rgb(&(*array).into());
+            for delta in [
+                -180.0, -120.0, -60.0, -30.0, -10.0, -5.0, 5.0, 10.0, 30.0, 60.0, 120.0, 180.0,
+            ]
+            .iter()
+            {
+                let cur_chroma = manipulator.hcv.chroma;
+                let cur_sum = manipulator.hcv.sum;
+                let cur_angle = manipulator.hcv.hue_data.unwrap().hue_angle();
+                assert!(manipulator.rotate((*delta).into()));
+                let max_chroma = manipulator
+                    .hcv
+                    .hue_data
+                    .unwrap()
+                    .max_chroma_for_sum(manipulator.hcv.sum);
+                assert!(
+                    cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                        || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0.000000000000001))
+                );
+                assert_approx_eq!(cur_sum, manipulator.hcv.sum);
+                let expected_angle = cur_angle + (*delta).into();
+                assert_approx_eq!(
+                    expected_angle,
+                    manipulator.hcv.hue_data.unwrap().hue_angle(),
                     0.000000000000001
                 );
             }

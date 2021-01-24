@@ -15,7 +15,7 @@ use colour_math_cairo::Point;
 
 use crate::{
     angles::Degrees,
-    colour::{ColourInterface, RGBConstants, RGBManipulator, RGBManipulatorBuilder, RGB},
+    colour::{ColourInterface, ColourManipulator, ColourManipulatorBuilder, RGBConstants, RGB},
     coloured::Colourable,
 };
 
@@ -24,9 +24,9 @@ macro_rules! connect_button {
         let ced_c = Rc::clone(&$ed);
         $ed.$btn.connect_clicked(move |btn| {
             let delta = ced_c.delta_size.get().$delta();
-            let changed = ced_c.rgb_manipulator.borrow_mut().$apply(delta);
+            let changed = ced_c.colour_manipulator.borrow_mut().$apply(delta);
             if changed {
-                let new_rgb = ced_c.rgb_manipulator.borrow().rgb();
+                let new_rgb = ced_c.colour_manipulator.borrow().rgb();
                 ced_c.set_rgb_and_inform(&new_rgb);
             } else {
                 btn.error_bell();
@@ -80,9 +80,9 @@ struct Sample {
 type ChangeCallback = Box<dyn Fn(RGB)>;
 
 #[derive(PWO, Wrapper)]
-pub struct RGBManipulatorGUI {
+pub struct ColourManipulatorGUI {
     vbox: gtk::Box,
-    rgb_manipulator: RefCell<RGBManipulator>,
+    colour_manipulator: RefCell<ColourManipulator>,
     drawing_area: gtk::DrawingArea,
     incr_value_btn: gtk::Button,
     decr_value_btn: gtk::Button,
@@ -99,9 +99,9 @@ pub struct RGBManipulatorGUI {
     change_callbacks: RefCell<Vec<ChangeCallback>>,
 }
 
-impl RGBManipulatorGUI {
+impl ColourManipulatorGUI {
     pub fn set_rgb(&self, rgb: &RGB) {
-        self.rgb_manipulator.borrow_mut().set_rgb(rgb);
+        self.colour_manipulator.borrow_mut().set_rgb(rgb);
         self.incr_value_btn
             .set_widget_colour_rgb(&(*rgb * 0.8 + RGB::WHITE * 0.2));
         self.decr_value_btn.set_widget_colour_rgb(&(*rgb * 0.8));
@@ -132,7 +132,7 @@ impl RGBManipulatorGUI {
     }
 
     fn draw(&self, cairo_context: &cairo::Context) {
-        let rgb = self.rgb_manipulator.borrow().rgb();
+        let rgb = self.colour_manipulator.borrow().rgb();
         cairo_context.set_source_rgb(rgb[0], rgb[1], rgb[2]);
         cairo_context.paint();
         for sample in self.samples.borrow().iter() {
@@ -193,7 +193,7 @@ impl RGBManipulatorGUI {
     }
 
     pub fn rgb(&self) -> RGB {
-        self.rgb_manipulator.borrow().rgb()
+        self.colour_manipulator.borrow().rgb()
     }
 
     pub fn connect_changed<F: Fn(RGB) + 'static>(&self, callback: F) {
@@ -215,13 +215,13 @@ impl Default for ChromaLabel {
 }
 
 #[derive(Default)]
-pub struct RGBManipulatorGUIBuilder {
+pub struct ColourManipulatorGUIBuilder {
     chroma_label: ChromaLabel,
     extra_buttons: Vec<gtk::Button>,
     clamped: bool,
 }
 
-impl RGBManipulatorGUIBuilder {
+impl ColourManipulatorGUIBuilder {
     pub fn new() -> Self {
         Self::default()
     }
@@ -241,7 +241,7 @@ impl RGBManipulatorGUIBuilder {
         self
     }
 
-    pub fn build(&self) -> Rc<RGBManipulatorGUI> {
+    pub fn build(&self) -> Rc<ColourManipulatorGUI> {
         let vbox = gtk::BoxBuilder::new()
             .orientation(gtk::Orientation::Vertical)
             .events(
@@ -251,16 +251,19 @@ impl RGBManipulatorGUIBuilder {
             )
             .receives_default(true)
             .build();
-        let rgb_manipulator =
-            RefCell::new(RGBManipulatorBuilder::new().clamped(self.clamped).build());
+        let colour_manipulator = RefCell::new(
+            ColourManipulatorBuilder::new()
+                .clamped(self.clamped)
+                .build(),
+        );
         let drawing_area = DrawingAreaBuilder::new()
             .events(gdk::EventMask::BUTTON_PRESS_MASK)
             .height_request(150)
             .width_request(150)
             .build();
-        let rgbm_gui = Rc::new(RGBManipulatorGUI {
+        let rgbm_gui = Rc::new(ColourManipulatorGUI {
             vbox,
-            rgb_manipulator,
+            colour_manipulator,
             drawing_area,
             incr_value_btn: gtk::Button::with_label("Value++"),
             decr_value_btn: gtk::Button::with_label("Value--"),

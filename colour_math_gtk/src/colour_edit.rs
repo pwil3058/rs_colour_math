@@ -10,7 +10,7 @@ use crate::colour::RGBConstants;
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
     colour::{ScalarAttribute, RGB},
-    manipulator::{ChromaLabel, RGBManipulatorGUI, RGBManipulatorGUIBuilder},
+    manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
     rgb_entry::{RGBHexEntry, RGBHexEntryBuilder},
 };
 
@@ -19,7 +19,7 @@ type ChangeCallback = Box<dyn Fn(&RGB)>;
 #[derive(PWO, Wrapper)]
 pub struct ColourEditor {
     vbox: gtk::Box,
-    rgb_manipulator: Rc<RGBManipulatorGUI>,
+    colour_manipulator: Rc<ColourManipulatorGUI>,
     cads: ColourAttributeDisplayStack,
     rgb_entry: Rc<RGBHexEntry<u8>>,
     change_callbacks: RefCell<Vec<ChangeCallback>>,
@@ -28,17 +28,17 @@ pub struct ColourEditor {
 
 impl ColourEditor {
     pub fn rgb(&self) -> RGB {
-        self.rgb_manipulator.rgb()
+        self.colour_manipulator.rgb()
     }
 
     pub fn set_rgb(&self, rgb: &RGB) {
         self.rgb_entry.set_rgb(&rgb.into());
-        self.rgb_manipulator.set_rgb(rgb);
+        self.colour_manipulator.set_rgb(rgb);
         self.cads.set_colour(Some(rgb));
     }
 
     pub fn reset(&self) {
-        self.rgb_manipulator.delete_samples();
+        self.colour_manipulator.delete_samples();
         self.set_rgb(&self.default_colour);
     }
 
@@ -85,7 +85,7 @@ impl ColourEditorBuilder {
             .attributes(&self.attributes)
             .build();
         let rgb_entry = RGBHexEntryBuilder::<u8>::new().editable(true).build();
-        let rgb_manipulator = RGBManipulatorGUIBuilder::new()
+        let colour_manipulator = ColourManipulatorGUIBuilder::new()
             .clamped(false)
             .extra_buttons(&self.extra_buttons)
             .chroma_label(if self.attributes.contains(&ScalarAttribute::Greyness) {
@@ -101,7 +101,7 @@ impl ColourEditorBuilder {
 
         let colour_editor = Rc::new(ColourEditor {
             vbox: gtk::Box::new(gtk::Orientation::Vertical, 0),
-            rgb_manipulator,
+            colour_manipulator,
             cads,
             rgb_entry,
             change_callbacks: RefCell::new(Vec::new()),
@@ -120,7 +120,7 @@ impl ColourEditorBuilder {
             .pack_start(&colour_editor.rgb_entry.pwo(), false, false, 0);
         colour_editor
             .vbox
-            .pack_start(&colour_editor.rgb_manipulator.pwo(), true, true, 0);
+            .pack_start(&colour_editor.colour_manipulator.pwo(), true, true, 0);
 
         colour_editor.vbox.show_all();
 
@@ -128,16 +128,18 @@ impl ColourEditorBuilder {
         colour_editor.rgb_entry.connect_value_changed(move |rgb| {
             let rgb: RGB = rgb.into();
             colour_editor_c.cads.set_colour(Some(&rgb));
-            colour_editor_c.rgb_manipulator.set_rgb(&rgb);
+            colour_editor_c.colour_manipulator.set_rgb(&rgb);
             colour_editor_c.inform_change(&rgb);
         });
 
         let colour_editor_c = Rc::clone(&colour_editor);
-        colour_editor.rgb_manipulator.connect_changed(move |rgb| {
-            colour_editor_c.cads.set_colour(Some(&rgb));
-            colour_editor_c.rgb_entry.set_rgb(&rgb.into());
-            colour_editor_c.inform_change(&rgb);
-        });
+        colour_editor
+            .colour_manipulator
+            .connect_changed(move |rgb| {
+                colour_editor_c.cads.set_colour(Some(&rgb));
+                colour_editor_c.rgb_entry.set_rgb(&rgb.into());
+                colour_editor_c.inform_change(&rgb);
+            });
 
         colour_editor
     }
