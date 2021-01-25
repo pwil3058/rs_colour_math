@@ -10,7 +10,7 @@ use colour_math_gtk::{
     colour::{ColouredShape, HueConstants, ScalarAttribute, Shape, RGB},
     colour_edit::ColourEditorBuilder,
     hue_wheel::GtkHueWheelBuilder,
-    //manipulator::RGBManipulatorGUIBuilder,
+    //manipulator::ColourManipulatorGUIBuilder,
     //rgb_entry::RGBHexEntryBuilder,
 };
 
@@ -39,7 +39,7 @@ fn main() {
     // let rgb_entry = RGBHexEntryBuilder::<u16>::new().build();
     // vbox.pack_start(&rgb_entry.pwo(), false, false, 0);
     //
-    // let colour_manipulator = RGBManipulatorGUIBuilder::new().build();
+    // let colour_manipulator = ColourManipulatorGUIBuilder::new().build();
     // vbox.pack_start(&colour_manipulator.pwo(), true, true, 0);
 
     let button1 = gtk::ButtonBuilder::new().label("Reset").build();
