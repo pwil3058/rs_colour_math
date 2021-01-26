@@ -23,7 +23,7 @@ pub mod urgba;
 
 pub use crate::hcv::HCV;
 pub use crate::hue::Hue;
-pub use crate::rgb::RGB;
+pub use crate::rgb::{IndicesValueOrder, RGB};
 pub use crate::rgba::RGBA;
 pub use crate::urgb::{RGB16, RGB8, URGB};
 pub use crate::urgba::{RGBA16, RGBA8, URGBA};

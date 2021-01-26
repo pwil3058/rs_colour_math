@@ -14,6 +14,46 @@ pub use crate::{
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub struct IndicesValueOrder(pub(crate) [u8; 3]);
+
+impl HueConstants for IndicesValueOrder {
+    const RED: Self = Self([I_RED, I_GREEN, I_BLUE]);
+    const GREEN: Self = Self([I_GREEN, I_BLUE, I_RED]);
+    const BLUE: Self = Self([I_BLUE, I_RED, I_GREEN]);
+
+    const CYAN: Self = Self([I_BLUE, I_GREEN, I_RED]);
+    const MAGENTA: Self = Self([I_RED, I_BLUE, I_GREEN]);
+    const YELLOW: Self = Self([I_GREEN, I_RED, I_BLUE]);
+}
+
+impl Index<u8> for IndicesValueOrder {
+    type Output = u8;
+
+    fn index(&self, index: u8) -> &u8 {
+        &self.0[index as usize]
+    }
+}
+
+impl From<[u8; 3]> for IndicesValueOrder {
+    fn from(array: [u8; 3]) -> Self {
+        // debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
+        Self(array)
+    }
+}
+
+impl Default for IndicesValueOrder {
+    fn default() -> Self {
+        Self([I_RED, I_GREEN, I_BLUE])
+    }
+}
+
+impl From<&[u8; 3]> for IndicesValueOrder {
+    fn from(array: &[u8; 3]) -> Self {
+        Self(*array)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<F: ColourComponent>(pub(crate) [F; 3]);
 
@@ -62,26 +102,72 @@ impl<F: ColourComponent> RGB<F> {
         self.x().hypot(self.y())
     }
 
-    pub(crate) fn indices_value_order(self) -> [u8; 3] {
-        if self[I_RED] >= self[I_GREEN] {
-            if self[I_RED] >= self[I_BLUE] {
-                if self[I_GREEN] >= self[I_BLUE] {
-                    [I_RED, I_GREEN, I_BLUE]
-                } else {
-                    [I_RED, I_BLUE, I_GREEN]
-                }
-            } else {
-                [I_BLUE, I_RED, I_GREEN]
-            }
-        } else if self[I_GREEN] >= self[I_BLUE] {
-            if self[I_RED] >= self[I_BLUE] {
-                [I_GREEN, I_RED, I_BLUE]
-            } else {
-                [I_GREEN, I_BLUE, I_RED]
-            }
-        } else {
-            [I_BLUE, I_GREEN, I_RED]
+    pub(crate) fn indices_value_order(self) -> IndicesValueOrder {
+        match self[I_RED]
+            .partial_cmp(&self[I_GREEN])
+            .expect("should be proportions")
+        {
+            Ordering::Greater => match self[I_GREEN]
+                .partial_cmp(&self[I_BLUE])
+                .expect("should be proportions")
+            {
+                Ordering::Greater => IndicesValueOrder([I_RED, I_GREEN, I_BLUE]),
+                Ordering::Less => match self[I_RED]
+                    .partial_cmp(&self[I_BLUE])
+                    .expect("should be proportions")
+                {
+                    Ordering::Greater => IndicesValueOrder([I_RED, I_BLUE, I_GREEN]),
+                    Ordering::Less => IndicesValueOrder([I_BLUE, I_RED, I_GREEN]),
+                    Ordering::Equal => IndicesValueOrder::MAGENTA,
+                },
+                Ordering::Equal => IndicesValueOrder::RED,
+            },
+            Ordering::Less => match self[I_RED]
+                .partial_cmp(&self[I_BLUE])
+                .expect("should be proportions")
+            {
+                Ordering::Greater => IndicesValueOrder([I_GREEN, I_RED, I_BLUE]),
+                Ordering::Less => match self[I_GREEN]
+                    .partial_cmp(&self[I_BLUE])
+                    .expect("should be proportions")
+                {
+                    Ordering::Greater => IndicesValueOrder([I_GREEN, I_BLUE, I_RED]),
+                    Ordering::Less => IndicesValueOrder([I_BLUE, I_GREEN, I_RED]),
+                    Ordering::Equal => IndicesValueOrder::CYAN,
+                },
+                Ordering::Equal => IndicesValueOrder::GREEN,
+            },
+            Ordering::Equal => match self[I_RED]
+                .partial_cmp(&self[I_BLUE])
+                .expect("should be proportions")
+            {
+                Ordering::Greater => IndicesValueOrder::YELLOW,
+                Ordering::Less => IndicesValueOrder::BLUE,
+                Ordering::Equal => IndicesValueOrder::default(), // actually grey
+            },
         }
+        // if self[I_RED] >= self[I_GREEN] {
+        //     if self[I_RED] >= self[I_BLUE] {
+        //         if self[I_GREEN] >= self[I_BLUE] {
+        //             //[I_RED, I_GREEN, I_BLUE].into()
+        //             IndicesValueOrder::RED
+        //         } else {
+        //             //[I_RED, I_BLUE, I_GREEN].into();
+        //             IndicesValueOrder::MAGENTA
+        //         }
+        //     } else {
+        //         //[I_BLUE, I_RED, I_GREEN].into()
+        //         IndicesValueOrder::BLUE
+        //     }
+        // } else if self[I_GREEN] >= self[I_BLUE] {
+        //     if self[I_RED] >= self[I_BLUE] {
+        //         [I_GREEN, I_RED, I_BLUE].into()
+        //     } else {
+        //         [I_GREEN, I_BLUE, I_RED].into()
+        //     }
+        // } else {
+        //     [I_BLUE, I_GREEN, I_RED].into()
+        // }
     }
 
     fn ff(&self, indices: (u8, u8), ks: (F, F)) -> F {
@@ -419,35 +505,35 @@ mod tests {
     fn indices_order() {
         assert_eq!(
             RGB::<f64>::WHITE.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE]
+            [I_RED, I_GREEN, I_BLUE].into()
         );
         assert_eq!(
             RGB::<f64>::BLACK.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE]
+            [I_RED, I_GREEN, I_BLUE].into()
         );
         assert_eq!(
             RGB::<f64>::RED.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE]
+            [I_RED, I_GREEN, I_BLUE].into()
         );
         assert_eq!(
             RGB::<f64>::GREEN.indices_value_order(),
-            [I_GREEN, I_RED, I_BLUE]
+            [I_GREEN, I_RED, I_BLUE].into()
         );
         assert_eq!(
             RGB::<f64>::BLUE.indices_value_order(),
-            [I_BLUE, I_RED, I_GREEN]
+            [I_BLUE, I_RED, I_GREEN].into()
         );
         assert_eq!(
             RGB::<f64>::CYAN.indices_value_order(),
-            [I_GREEN, I_BLUE, I_RED]
+            [I_GREEN, I_BLUE, I_RED].into()
         );
         assert_eq!(
             RGB::<f64>::MAGENTA.indices_value_order(),
-            [I_RED, I_BLUE, I_GREEN]
+            [I_RED, I_BLUE, I_GREEN].into()
         );
         assert_eq!(
             RGB::<f64>::YELLOW.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE]
+            [I_RED, I_GREEN, I_BLUE].into()
         );
     }
 

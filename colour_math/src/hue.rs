@@ -280,37 +280,37 @@ mod test {
             Hue::<f64>::from(Degrees::from(-150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_BLUE, I_GREEN, I_RED]
+            [I_BLUE, I_GREEN, I_RED].into()
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(-90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_BLUE, I_RED, I_GREEN]
+            [I_BLUE, I_RED, I_GREEN].into()
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(-30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_RED, I_BLUE, I_GREEN]
+            [I_RED, I_BLUE, I_GREEN].into()
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE]
+            [I_RED, I_GREEN, I_BLUE].into()
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_GREEN, I_RED, I_BLUE]
+            [I_GREEN, I_RED, I_BLUE].into()
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_GREEN, I_BLUE, I_RED]
+            [I_GREEN, I_BLUE, I_RED].into()
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::RED).max_chroma_rgb,

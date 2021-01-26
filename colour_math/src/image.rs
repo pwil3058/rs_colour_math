@@ -37,7 +37,7 @@ impl Size {
     }
 }
 
-pub trait Transformer<P: Copy + 'static> {
+pub trait Transformer<P: Copy> {
     fn transform(&self, pixel: &P) -> P;
 }
 

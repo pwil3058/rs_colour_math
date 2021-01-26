@@ -1,13 +1,15 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::marker::PhantomData;
 
 use crate::chroma::HueData;
 use crate::urgb::UnsignedComponent;
 use crate::{
-    chroma, ColourComponent, ColourInterface, HueConstants, HueIfce, RGBConstants, RGB, URGB,
+    chroma, image, ColourComponent, ColourInterface, HueConstants, HueIfce, IndicesValueOrder,
+    RGBConstants, RGB, URGB,
 };
 use normalised_angles::Degrees;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HCV<F: ColourComponent> {
     pub(crate) hue_data: Option<HueData<F>>,
     pub(crate) chroma: F,
@@ -43,7 +45,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const RED: Self = Self {
         hue_data: Some(HueData {
             second: F::ZERO,
-            io: [0, 1, 2],
+            io: IndicesValueOrder::RED,
         }),
         chroma: F::ONE,
         sum: F::ONE,
@@ -52,7 +54,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const GREEN: Self = Self {
         hue_data: Some(HueData {
             second: F::ZERO,
-            io: [1, 0, 2],
+            io: IndicesValueOrder::GREEN,
         }),
         chroma: F::ONE,
         sum: F::ONE,
@@ -61,7 +63,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const BLUE: Self = Self {
         hue_data: Some(HueData {
             second: F::ZERO,
-            io: [2, 0, 1],
+            io: IndicesValueOrder::BLUE,
         }),
         chroma: F::ONE,
         sum: F::ONE,
@@ -70,7 +72,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const CYAN: Self = Self {
         hue_data: Some(HueData {
             second: F::ONE,
-            io: [1, 2, 0],
+            io: IndicesValueOrder::CYAN,
         }),
         chroma: F::ONE,
         sum: F::TWO,
@@ -79,7 +81,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const MAGENTA: Self = Self {
         hue_data: Some(HueData {
             second: F::ONE,
-            io: [0, 2, 1],
+            io: IndicesValueOrder::MAGENTA,
         }),
         chroma: F::ONE,
         sum: F::TWO,
@@ -88,7 +90,7 @@ impl<F: ColourComponent> HueConstants for HCV<F> {
     const YELLOW: Self = Self {
         hue_data: Some(HueData {
             second: F::ONE,
-            io: [0, 1, 2],
+            io: IndicesValueOrder::YELLOW,
         }),
         chroma: F::ONE,
         sum: F::TWO,
@@ -185,6 +187,21 @@ impl<U: UnsignedComponent, F: ColourComponent + ChromaTolerance> From<&HCV<F>> f
     fn from(hcv: &HCV<F>) -> Self {
         let rgb: RGB<F> = hcv.into();
         Self::from(rgb)
+    }
+}
+
+#[derive(Default)]
+struct ToMonochrome<F: ColourComponent + ChromaTolerance> {
+    phantom_data: PhantomData<F>,
+}
+
+impl<F: ColourComponent + ChromaTolerance> image::Transformer<HCV<F>> for ToMonochrome<F> {
+    fn transform(&self, pixel: &HCV<F>) -> HCV<F> {
+        HCV {
+            hue_data: None,
+            chroma: F::ZERO,
+            sum: pixel.sum,
+        }
     }
 }
 

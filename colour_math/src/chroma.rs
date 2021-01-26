@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 
 use normalised_angles::*;
 
-use crate::{rgb::RGB, ColourComponent, HueConstants, HueIfce};
+use crate::{rgb::RGB, ColourComponent, HueConstants, HueIfce, IndicesValueOrder};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if Degrees::PRIMARIES.contains(&abs_angle) {
@@ -79,7 +79,39 @@ pub(crate) fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
 pub struct HueData<F: ColourComponent> {
     // TODO: un pub HueData fields
     pub(crate) second: F,
-    pub(crate) io: [u8; 3],
+    pub(crate) io: IndicesValueOrder,
+}
+
+impl<F: ColourComponent> HueConstants for HueData<F> {
+    const RED: Self = Self {
+        second: F::ZERO,
+        io: IndicesValueOrder::RED,
+    };
+
+    const GREEN: Self = Self {
+        second: F::ZERO,
+        io: IndicesValueOrder::GREEN,
+    };
+
+    const BLUE: Self = Self {
+        second: F::ZERO,
+        io: IndicesValueOrder::BLUE,
+    };
+
+    const CYAN: Self = Self {
+        second: F::ONE,
+        io: IndicesValueOrder::CYAN,
+    };
+
+    const MAGENTA: Self = Self {
+        second: F::ONE,
+        io: IndicesValueOrder::MAGENTA,
+    };
+
+    const YELLOW: Self = Self {
+        second: F::ONE,
+        io: IndicesValueOrder::YELLOW,
+    };
 }
 
 impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
@@ -117,7 +149,10 @@ impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
                 (f(-angle - Degrees::GREEN), [2, 1, 0])
             }
         };
-        Self { second, io }
+        Self {
+            second,
+            io: io.into(),
+        }
     }
 }
 
@@ -129,12 +164,12 @@ impl<F: ColourComponent> TryFrom<(F, F)> for HueData<F> {
             if xy.0 > F::ZERO {
                 Ok(Self {
                     second: F::ZERO,
-                    io: [0, 1, 2],
+                    io: [0, 1, 2].into(),
                 }) // red
             } else if xy.0 < F::ZERO {
                 Ok(Self {
                     second: F::ONE,
-                    io: [1, 2, 0],
+                    io: [1, 2, 0].into(),
                 }) // cyan
             } else {
                 Err("Greys have no hue and, ergo, can't generate HueData")
@@ -147,28 +182,48 @@ impl<F: ColourComponent> TryFrom<(F, F)> for HueData<F> {
                 if xy.0 >= F::ZERO {
                     Ok(Self {
                         second: ((F::ONE - x) * F::TWO).min(F::ONE),
-                        io: if xy.1 > F::ZERO { [0, 1, 2] } else { [0, 2, 1] },
+                        io: if xy.1 > F::ZERO {
+                            [0, 1, 2].into()
+                        } else {
+                            [0, 2, 1].into()
+                        },
                     })
                 } else {
                     Ok(Self {
                         second: (-(x * F::TWO + F::ONE)).min(F::ONE),
-                        io: if xy.1 > F::ZERO { [1, 2, 0] } else { [2, 1, 0] },
+                        io: if xy.1 > F::ZERO {
+                            [1, 2, 0].into()
+                        } else {
+                            [2, 1, 0].into()
+                        },
                     })
                 }
             } else if x_sqrt_3 < xy.1.abs() {
                 Ok(Self {
                     second: (F::HALF + xy.0 * F::SIN_120 / xy.1.abs()).min(F::ONE),
-                    io: if xy.1 > F::ZERO { [1, 0, 2] } else { [2, 0, 1] },
+                    io: if xy.1 > F::ZERO {
+                        [1, 0, 2].into()
+                    } else {
+                        [2, 0, 1].into()
+                    },
                 })
             } else if xy.0 > F::ZERO {
                 Ok(Self {
                     second: F::ONE,
-                    io: if xy.1 > F::ZERO { [0, 1, 2] } else { [0, 2, 1] },
+                    io: if xy.1 > F::ZERO {
+                        [0, 1, 2].into()
+                    } else {
+                        [0, 2, 1].into()
+                    },
                 }) // yellow and magenta
             } else {
                 Ok(Self {
                     second: F::ZERO,
-                    io: if xy.1 > F::ZERO { [1, 0, 2] } else { [2, 0, 1] },
+                    io: if xy.1 > F::ZERO {
+                        [1, 0, 2].into()
+                    } else {
+                        [2, 0, 1].into()
+                    },
                 }) // green and blue
             }
         }
@@ -179,7 +234,7 @@ impl<F: ColourComponent> std::default::Default for HueData<F> {
     fn default() -> Self {
         Self {
             second: F::ZERO,
-            io: [0, 1, 2],
+            io: [0, 1, 2].into(),
         }
     }
 }
@@ -206,12 +261,12 @@ impl<F: ColourComponent> HueIfce<F> for HueData<F> {
                 / (F::ONE - self.second + self.second.powi(2)).sqrt();
             let angle = Degrees::asin(sin);
             match self.io {
-                [0, 1, 2] => angle,
-                [1, 0, 2] => Degrees::GREEN - angle,
-                [1, 2, 0] => Degrees::GREEN + angle,
-                [0, 2, 1] => -angle,
-                [2, 0, 1] => Degrees::BLUE + angle,
-                [2, 1, 0] => Degrees::BLUE - angle,
+                IndicesValueOrder([0, 1, 2]) => angle,
+                IndicesValueOrder([1, 0, 2]) => Degrees::GREEN - angle,
+                IndicesValueOrder([1, 2, 0]) => Degrees::GREEN + angle,
+                IndicesValueOrder([0, 2, 1]) => -angle,
+                IndicesValueOrder([2, 0, 1]) => Degrees::BLUE + angle,
+                IndicesValueOrder([2, 1, 0]) => Degrees::BLUE - angle,
                 _ => panic!("illegal colour component indices: {:?}", self.io),
             }
         }
@@ -490,31 +545,55 @@ mod test {
     #[test]
     fn hue_data_from_angle() {
         for (angle, expected, io) in &[
-            (-180.0, 1.0, [2, 1, 0]),
-            (-165.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 1, 0]),
-            (-150.0, 0.5, [2, 1, 0]),
-            (-135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [2, 1, 0]),
-            (-120.0, 0.0, [2, 0, 1]),
-            (-105.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [2, 0, 1]),
-            (-90.0, 0.5, [2, 0, 1]),
-            (-75.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 0, 1]),
-            (-60.0, 1.0, [0, 2, 1]),
-            (-45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 2, 1]),
-            (-30.0, 0.5, [0, 2, 1]),
-            (-15.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [0, 2, 1]),
-            (0.0, 0.0, [0, 1, 2]),
-            (15.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [0, 1, 2]),
-            (30.0, 0.5, [0, 1, 2]),
-            (45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 1, 2]),
-            (60.0, 1.0, [1, 0, 2]),
-            (75.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 0, 2]),
-            (90.0, 0.5, [1, 0, 2]),
-            (105.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [1, 0, 2]),
-            (120.0, 0.0, [1, 2, 0]),
-            (135.0, (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0), [1, 2, 0]),
-            (150.0, 0.5, [1, 2, 0]),
-            (165.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 2, 0]),
-            (180.0, 1.0, [2, 1, 0]),
+            (-180.0, 1.0, [2, 1, 0].into()),
+            (-165.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 1, 0].into()),
+            (-150.0, 0.5, [2, 1, 0].into()),
+            (
+                -135.0,
+                (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
+                [2, 1, 0].into(),
+            ),
+            (-120.0, 0.0, [2, 0, 1].into()),
+            (
+                -105.0,
+                (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
+                [2, 0, 1].into(),
+            ),
+            (-90.0, 0.5, [2, 0, 1].into()),
+            (-75.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 0, 1].into()),
+            (-60.0, 1.0, [0, 2, 1].into()),
+            (-45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 2, 1].into()),
+            (-30.0, 0.5, [0, 2, 1].into()),
+            (
+                -15.0,
+                (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
+                [0, 2, 1].into(),
+            ),
+            (0.0, 0.0, [0, 1, 2].into()),
+            (
+                15.0,
+                (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
+                [0, 1, 2].into(),
+            ),
+            (30.0, 0.5, [0, 1, 2].into()),
+            (45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 1, 2].into()),
+            (60.0, 1.0, [1, 0, 2].into()),
+            (75.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 0, 2].into()),
+            (90.0, 0.5, [1, 0, 2].into()),
+            (
+                105.0,
+                (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
+                [1, 0, 2].into(),
+            ),
+            (120.0, 0.0, [1, 2, 0].into()),
+            (
+                135.0,
+                (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
+                [1, 2, 0].into(),
+            ),
+            (150.0, 0.5, [1, 2, 0].into()),
+            (165.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 2, 0].into()),
+            (180.0, 1.0, [2, 1, 0].into()),
         ] {
             let hue_angle = Degrees::<f64>::from(*angle);
             let hue_data: HueData<f64> = hue_angle.into();
@@ -663,7 +742,7 @@ mod test {
         for other in OTHER_VALUES.iter() {
             let hue_data = HueData::<f64> {
                 second: *other,
-                io: [0, 1, 2],
+                io: [0, 1, 2].into(),
             };
             assert_eq!(
                 hue_data.sum_range_for_chroma(0.0),
@@ -692,7 +771,7 @@ mod test {
         for io in [[0_u8, 1, 2], [0_u8, 2, 1]].iter() {
             let hue_data = HueData::<f64> {
                 second: 0.0,
-                io: *io,
+                io: (*io).into(),
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(1.0), RGB::RED);
             assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -709,7 +788,7 @@ mod test {
         for io in [[1_u8, 0, 2], [1_u8, 2, 0]].iter() {
             let hue_data = HueData::<f64> {
                 second: 0.0,
-                io: *io,
+                io: (*io).into(),
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(1.0), RGB::GREEN);
             assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -726,7 +805,7 @@ mod test {
         for io in [[2_u8, 0, 1], [2_u8, 1, 0]].iter() {
             let hue_data = HueData::<f64> {
                 second: 0.0,
-                io: *io,
+                io: (*io).into(),
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(1.0), RGB::BLUE);
             assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -747,7 +826,7 @@ mod test {
         for io in [[2_u8, 1, 0], [1, 2, 0]].iter() {
             let hue_data = HueData::<f64> {
                 second: 1.0,
-                io: *io,
+                io: (*io).into(),
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(2.0), RGB::CYAN);
             assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -764,7 +843,7 @@ mod test {
         for io in [[2_u8, 0, 1], [0_u8, 2, 1]].iter() {
             let hue_data = HueData::<f64> {
                 second: 1.0,
-                io: *io,
+                io: io.into(),
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(2.0), RGB::MAGENTA);
             assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -781,7 +860,7 @@ mod test {
         for io in [[1_u8, 0, 2], [0_u8, 1, 2]].iter() {
             let hue_data = HueData::<f64> {
                 second: 1.0,
-                io: *io,
+                io: io.into(),
             };
             assert_eq!(hue_data.max_chroma_rgb_for_sum(2.0), RGB::YELLOW);
             assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
@@ -811,7 +890,7 @@ mod test {
             for second in OTHER_VALUES.iter() {
                 let hue_data = HueData::<f64> {
                     second: *second,
-                    io: *io,
+                    io: io.into(),
                 };
                 assert_eq!(hue_data.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
                 assert_eq!(hue_data.max_chroma_rgb_for_sum(3.0), RGB::WHITE);
@@ -827,7 +906,9 @@ mod test {
                         assert_approx_eq!(rgb_other, *second, 0.0000000001);
                         let rgb_io = rgb.indices_value_order();
                         assert!(
-                            *io == rgb_io || rgb[io[1]] == rgb[io[2]] || rgb[io[0]] == rgb[io[1]],
+                            rgb_io == io.into()
+                                || rgb[io[1]] == rgb[io[2]]
+                                || rgb[io[0]] == rgb[io[1]],
                             "{:?} == {:?} :: sum: {} other: {} {:?}",
                             *io,
                             rgb_io,
@@ -859,7 +940,7 @@ mod test {
             for other in OTHER_VALUES.iter() {
                 let hue_data = HueData::<f64> {
                     second: *other,
-                    io: *io,
+                    io: io.into(),
                 };
                 assert_eq!(hue_data.rgb_for_sum_and_chroma(0.0, 0.0), Some(RGB::BLACK));
                 assert_eq!(hue_data.rgb_for_sum_and_chroma(3.0, 0.0), Some(RGB::WHITE));
@@ -878,7 +959,7 @@ mod test {
                                 assert_approx_eq!(rgb_other, *other, 0.0000000001);
                                 let rgb_io = rgb.indices_value_order();
                                 assert!(
-                                    *io == rgb_io
+                                    rgb_io == io.into()
                                         || rgb[io[1]] == rgb[io[2]]
                                         || rgb[io[0]] == rgb[io[1]],
                                     "{:?} == {:?} :: sum: {} chroma: {} other: {} {:?}",
@@ -917,7 +998,7 @@ mod test {
         assert_eq!(
             HueData::<f64> {
                 second: 0.0,
-                io: [0, 1, 2]
+                io: [0, 1, 2].into()
             }
             .min_sum_rgb_for_chroma(1.0),
             RGB::RED
@@ -925,7 +1006,7 @@ mod test {
         assert_eq!(
             HueData::<f64> {
                 second: 0.0,
-                io: [0, 1, 2],
+                io: [0, 1, 2].into(),
             }
             .max_sum_rgb_for_chroma(1.0),
             RGB::RED
@@ -933,7 +1014,7 @@ mod test {
         assert_eq!(
             HueData::<f64> {
                 second: 1.0,
-                io: [0, 1, 2]
+                io: [0, 1, 2].into()
             }
             .min_sum_rgb_for_chroma(1.0),
             RGB::YELLOW
@@ -941,7 +1022,7 @@ mod test {
         assert_eq!(
             HueData::<f64> {
                 second: 1.0,
-                io: [0, 1, 2],
+                io: [0, 1, 2].into(),
             }
             .max_sum_rgb_for_chroma(1.0),
             RGB::YELLOW
@@ -950,7 +1031,7 @@ mod test {
         for second in OTHER_VALUES.iter() {
             let hue_data = HueData::<f64> {
                 second: *second,
-                io,
+                io: io.into(),
             };
             assert_eq!(hue_data.min_sum_rgb_for_chroma(0.0), RGB::BLACK);
             assert_eq!(hue_data.max_sum_rgb_for_chroma(0.0), RGB::WHITE);
