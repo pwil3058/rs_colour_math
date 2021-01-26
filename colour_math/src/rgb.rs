@@ -505,35 +505,35 @@ mod tests {
     fn indices_order() {
         assert_eq!(
             RGB::<f64>::WHITE.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE].into()
+            IndicesValueOrder::default()
         );
         assert_eq!(
             RGB::<f64>::BLACK.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE].into()
+            IndicesValueOrder::default()
         );
         assert_eq!(
             RGB::<f64>::RED.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE].into()
+            IndicesValueOrder::RED
         );
         assert_eq!(
             RGB::<f64>::GREEN.indices_value_order(),
-            [I_GREEN, I_RED, I_BLUE].into()
+            IndicesValueOrder::GREEN
         );
         assert_eq!(
             RGB::<f64>::BLUE.indices_value_order(),
-            [I_BLUE, I_RED, I_GREEN].into()
+            IndicesValueOrder::BLUE
         );
         assert_eq!(
             RGB::<f64>::CYAN.indices_value_order(),
-            [I_GREEN, I_BLUE, I_RED].into()
+            IndicesValueOrder::CYAN
         );
         assert_eq!(
             RGB::<f64>::MAGENTA.indices_value_order(),
-            [I_RED, I_BLUE, I_GREEN].into()
+            IndicesValueOrder::MAGENTA
         );
         assert_eq!(
             RGB::<f64>::YELLOW.indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE].into()
+            IndicesValueOrder::YELLOW
         );
     }
 
