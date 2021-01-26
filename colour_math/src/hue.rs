@@ -13,13 +13,6 @@ use crate::rgb::RGB;
 use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct HueMod<F: ColourComponent> {
-    angle: Option<Degrees<F>>,
-    max_chroma_rgb: RGB<F>,
-    chroma_correction: F,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Hue<F: ColourComponent> {
     angle: Degrees<F>,
     max_chroma_rgb: RGB<F>,

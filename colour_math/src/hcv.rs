@@ -137,6 +137,12 @@ impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
     }
 }
 
+impl<F: ColourComponent> From<RGB<F>> for HCV<F> {
+    fn from(rgb: RGB<F>) -> Self {
+        HCV::from(&rgb)
+    }
+}
+
 pub trait ChromaTolerance {
     const COMA_TOLERANCE: Self;
 }
@@ -173,6 +179,12 @@ impl<F: ColourComponent + ChromaTolerance> From<&HCV<F>> for RGB<F> {
             debug_assert!(value >= F::ZERO && value <= F::ONE);
             RGB::from([value, value, value])
         }
+    }
+}
+
+impl<F: ColourComponent + ChromaTolerance> From<HCV<F>> for RGB<F> {
+    fn from(hcv: HCV<F>) -> Self {
+        RGB::from(&hcv)
     }
 }
 

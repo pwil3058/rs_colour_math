@@ -7,7 +7,7 @@ use std::{
 };
 
 pub use crate::{
-    chroma, hue::*, rgba::RGBA, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
+    chroma, hcv::*, hue::*, rgba::RGBA, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
     RGBConstants, I_BLUE, I_GREEN, I_RED,
 };
 
@@ -103,71 +103,31 @@ impl<F: ColourComponent> RGB<F> {
     }
 
     pub(crate) fn indices_value_order(self) -> IndicesValueOrder {
-        match self[I_RED]
-            .partial_cmp(&self[I_GREEN])
-            .expect("should be proportions")
-        {
-            Ordering::Greater => match self[I_GREEN]
-                .partial_cmp(&self[I_BLUE])
-                .expect("should be proportions")
-            {
+        match self[I_RED].partial_cmp(&self[I_GREEN]).unwrap() {
+            Ordering::Greater => match self[I_GREEN].partial_cmp(&self[I_BLUE]).unwrap() {
                 Ordering::Greater => IndicesValueOrder([I_RED, I_GREEN, I_BLUE]),
-                Ordering::Less => match self[I_RED]
-                    .partial_cmp(&self[I_BLUE])
-                    .expect("should be proportions")
-                {
+                Ordering::Less => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
                     Ordering::Greater => IndicesValueOrder([I_RED, I_BLUE, I_GREEN]),
                     Ordering::Less => IndicesValueOrder([I_BLUE, I_RED, I_GREEN]),
                     Ordering::Equal => IndicesValueOrder::MAGENTA,
                 },
                 Ordering::Equal => IndicesValueOrder::RED,
             },
-            Ordering::Less => match self[I_RED]
-                .partial_cmp(&self[I_BLUE])
-                .expect("should be proportions")
-            {
+            Ordering::Less => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
                 Ordering::Greater => IndicesValueOrder([I_GREEN, I_RED, I_BLUE]),
-                Ordering::Less => match self[I_GREEN]
-                    .partial_cmp(&self[I_BLUE])
-                    .expect("should be proportions")
-                {
+                Ordering::Less => match self[I_GREEN].partial_cmp(&self[I_BLUE]).unwrap() {
                     Ordering::Greater => IndicesValueOrder([I_GREEN, I_BLUE, I_RED]),
                     Ordering::Less => IndicesValueOrder([I_BLUE, I_GREEN, I_RED]),
                     Ordering::Equal => IndicesValueOrder::CYAN,
                 },
                 Ordering::Equal => IndicesValueOrder::GREEN,
             },
-            Ordering::Equal => match self[I_RED]
-                .partial_cmp(&self[I_BLUE])
-                .expect("should be proportions")
-            {
+            Ordering::Equal => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
                 Ordering::Greater => IndicesValueOrder::YELLOW,
                 Ordering::Less => IndicesValueOrder::BLUE,
                 Ordering::Equal => IndicesValueOrder::default(), // actually grey
             },
         }
-        // if self[I_RED] >= self[I_GREEN] {
-        //     if self[I_RED] >= self[I_BLUE] {
-        //         if self[I_GREEN] >= self[I_BLUE] {
-        //             //[I_RED, I_GREEN, I_BLUE].into()
-        //             IndicesValueOrder::RED
-        //         } else {
-        //             //[I_RED, I_BLUE, I_GREEN].into();
-        //             IndicesValueOrder::MAGENTA
-        //         }
-        //     } else {
-        //         //[I_BLUE, I_RED, I_GREEN].into()
-        //         IndicesValueOrder::BLUE
-        //     }
-        // } else if self[I_GREEN] >= self[I_BLUE] {
-        //     if self[I_RED] >= self[I_BLUE] {
-        //         [I_GREEN, I_RED, I_BLUE].into()
-        //     } else {
-        //         [I_GREEN, I_BLUE, I_RED].into()
-        //     }
-        // } else {
-        //     [I_BLUE, I_GREEN, I_RED].into()
-        // }
     }
 
     fn ff(&self, indices: (u8, u8), ks: (F, F)) -> F {
@@ -384,6 +344,10 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
 
     fn rgba(&self) -> RGBA<F> {
         [self.0[0], self.0[1], self.0[2], F::ONE].into()
+    }
+
+    fn hcv(&self) -> HCV<F> {
+        self.into()
     }
 
     fn hue(&self) -> Option<Hue<F>> {

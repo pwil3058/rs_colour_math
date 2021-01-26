@@ -140,6 +140,8 @@ pub trait ColourInterface<F: ColourComponent> {
 
     fn rgba(&self) -> RGBA<F>;
 
+    fn hcv(&self) -> HCV<F>;
+
     fn hue(&self) -> Option<Hue<F>>;
 
     fn hue_angle(&self) -> Option<Degrees<F>>;

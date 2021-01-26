@@ -6,7 +6,7 @@ use std::{
     ops::{Add, Index, Mul},
 };
 
-pub use crate::{chroma, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
+pub use crate::{chroma, hcv::*, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
 
 use crate::{rgb::RGB, HueConstants, RGBConstants};
 
@@ -197,6 +197,10 @@ impl<F: ColourComponent> ColourInterface<F> for RGBA<F> {
 
     fn rgba(&self) -> RGBA<F> {
         *self
+    }
+
+    fn hcv(&self) -> HCV<F> {
+        RGB::from(&self.0[0..3]).into()
     }
 
     fn hue(&self) -> Option<Hue<F>> {
