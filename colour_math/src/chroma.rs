@@ -1,7 +1,9 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 
 use normalised_angles::*;
+use num_traits_plus::float_plus::*;
 
 use crate::{rgb::RGB, ColourComponent, HueConstants, HueIfce, IndicesValueOrder};
 
@@ -75,12 +77,14 @@ pub(crate) fn calc_chroma_correction<F: ColourComponent>(other: F) -> F {
     (F::ONE + other * other - other).sqrt().min(F::ONE).recip()
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
 pub struct HueData<F: ColourComponent> {
     // TODO: un pub HueData fields
     pub(crate) second: F,
     pub(crate) io: IndicesValueOrder,
 }
+
+impl<F: ColourComponent> Eq for HueData<F> {}
 
 impl<F: ColourComponent> HueConstants for HueData<F> {
     const RED: Self = Self {
@@ -112,6 +116,23 @@ impl<F: ColourComponent> HueConstants for HueData<F> {
         second: F::ONE,
         io: IndicesValueOrder::YELLOW,
     };
+}
+
+impl<F: ColourComponent> PartialOrd for HueData<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self.io.cmp(&other.io) {
+            Ordering::Less => Some(Ordering::Less),
+            Ordering::Greater => Some(Ordering::Greater),
+            Ordering::Equal => self.second.partial_cmp(&other.second),
+        }
+    }
+}
+
+impl<F: ColourComponent> Ord for HueData<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other)
+            .expect("restricted range of values means this is OK")
+    }
 }
 
 impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
@@ -486,6 +507,7 @@ mod test {
     use crate::{ColourComponent, HueConstants, HueIfce, RGBConstants};
     use normalised_angles::Degrees;
     use num_traits_plus::{assert_approx_eq, float_plus::*};
+    use std::cmp::Ordering;
     use std::convert::TryFrom;
 
     const NON_ZERO_VALUES: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
@@ -1011,6 +1033,32 @@ mod test {
                     assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
                     assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn hue_data_ordering() {
+        let angles: Vec<Degrees<f64>> = [
+            -180.0_f64, -165.0, -150.0, -135.0, -120.0, -105.0, -90.0, -75.0, -60.0, -45.0, -30.0,
+            -15.0, 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0, 105.0, 120.0, 135.0, 150.0, 165.0,
+            180.0,
+        ]
+        .iter()
+        .map(|a| Degrees::from(*a))
+        .collect();
+        for l_angle in angles.iter() {
+            let l_hue_data = HueData::<f64>::from(*l_angle);
+            let l_rgb = l_hue_data.max_chroma_rgb();
+            for r_angle in angles.iter() {
+                let r_hue_data = HueData::<f64>::from(*r_angle);
+                let r_rgb = r_hue_data.max_chroma_rgb();
+                println!("Angles: {:?} vs {:?}", l_angle, r_angle);
+                println!("HueData: {:?} vs {:?}", l_hue_data, r_hue_data);
+                println!("RGBs: {:?} vs {:?}", l_rgb, r_rgb);
+                let rgb_cmp = l_rgb.cmp(&r_rgb);
+                let hue_data_cmp = l_hue_data.cmp(&r_hue_data);
+                assert_eq!(rgb_cmp, hue_data_cmp);
             }
         }
     }

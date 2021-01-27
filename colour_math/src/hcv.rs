@@ -8,6 +8,7 @@ use crate::{
     RGBConstants, RGB, URGB,
 };
 use normalised_angles::Degrees;
+use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct HCV<F: ColourComponent> {
@@ -140,6 +141,22 @@ impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
 impl<F: ColourComponent> From<RGB<F>> for HCV<F> {
     fn from(rgb: RGB<F>) -> Self {
         HCV::from(&rgb)
+    }
+}
+
+impl<F: ColourComponent> PartialOrd for HCV<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if let Some(_hue_data) = self.hue_data {
+            if let Some(_other_hue_data) = other.hue_data {
+                Some(Ordering::Less)
+            } else {
+                Some(Ordering::Greater)
+            }
+        } else if other.hue_data.is_some() {
+            Some(Ordering::Less)
+        } else {
+            self.sum.partial_cmp(&other.sum)
+        }
     }
 }
 

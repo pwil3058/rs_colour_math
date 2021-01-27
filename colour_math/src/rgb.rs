@@ -27,6 +27,20 @@ impl HueConstants for IndicesValueOrder {
     const YELLOW: Self = Self([I_GREEN, I_RED, I_BLUE]);
 }
 
+impl IndicesValueOrder {
+    pub fn ord_index(&self) -> u8 {
+        match *self {
+            IndicesValueOrder::GREEN => 0,
+            IndicesValueOrder::YELLOW => 1,
+            IndicesValueOrder::RED => 2,
+            IndicesValueOrder::MAGENTA => 3,
+            IndicesValueOrder::BLUE => 4,
+            IndicesValueOrder::CYAN => 5,
+            _ => panic!("illegal IndicesValueOrder: {:?}", self),
+        }
+    }
+}
+
 impl Index<u8> for IndicesValueOrder {
     type Output = u8;
 
@@ -51,6 +65,18 @@ impl Default for IndicesValueOrder {
 impl From<&[u8; 3]> for IndicesValueOrder {
     fn from(array: &[u8; 3]) -> Self {
         Self(*array)
+    }
+}
+
+impl PartialOrd for IndicesValueOrder {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.ord_index().partial_cmp(&other.ord_index())
+    }
+}
+
+impl Ord for IndicesValueOrder {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
