@@ -10,12 +10,14 @@ use crate::{
 use normalised_angles::Degrees;
 use std::cmp::Ordering;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct HCV<F: ColourComponent> {
     pub(crate) hue_data: Option<HueData<F>>,
     pub(crate) chroma: F,
     pub(crate) sum: F,
 }
+
+impl<F: ColourComponent> Eq for HCV<F> {}
 
 impl<F: ColourComponent> HCV<F> {
     pub fn hue_angle(&self) -> Option<Degrees<F>> {
@@ -121,7 +123,13 @@ impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
         debug_assert!(sum <= F::THREE);
         if hypot > F::ZERO {
             let io = rgb.indices_value_order();
-            let second = chroma::calc_other_from_xy_alt(xy);
+            let second = if rgb[io[0]] == rgb[io[1]] {
+                F::ONE
+            } else if rgb[io[1]] == rgb[io[2]] {
+                F::ZERO
+            } else {
+                chroma::calc_other_from_xy_alt(xy)
+            };
             let chroma = (hypot * chroma::calc_chroma_correction(second)).min(F::ONE);
             Self {
                 hue_data: Some(HueData { io, second }),
@@ -148,15 +156,30 @@ impl<F: ColourComponent> PartialOrd for HCV<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if let Some(_hue_data) = self.hue_data {
             if let Some(_other_hue_data) = other.hue_data {
-                Some(Ordering::Less)
+                match _hue_data.partial_cmp(&_other_hue_data) {
+                    Some(Ordering::Equal) => {
+                      match self.sum.partial_cmp(&other.sum) {
+                            Some(Ordering::Equal) => self.chroma.partial_cmp(&other.chroma),
+                            ord => ord,
+                        }
+                    }
+                    ord => ord,
+                }
             } else {
                 Some(Ordering::Greater)
             }
         } else if other.hue_data.is_some() {
             Some(Ordering::Less)
         } else {
+            // no need to check chroma as both will be zero
             self.sum.partial_cmp(&other.sum)
         }
+    }
+}
+
+impl<F: ColourComponent> Ord for HCV<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
@@ -340,6 +363,29 @@ mod hcv_tests {
                     let urgb_out = URGB::<u8>::from(&hcv);
                     assert_eq!(urgb_in, urgb_out);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn hcv_rgb_cmp_consistency() {
+        let values = vec![0.0_f64, 0.1, 0.25, 0.499, 0.5, 0.99, 0.999, 1.0];
+        let mut rgbs: Vec<RGB<f64>> = Vec::with_capacity(256);
+        for red in values.iter() {
+            for green in values.iter() {
+                for blue in values.iter() {
+                    let rgb: RGB<f64> = [*red, *green, *blue].into();
+                    rgbs.push(rgb);
+                }
+            }
+        }
+        for l_rgb in rgbs.iter() {
+            let l_hcv: HCV<f64> = l_rgb.into();
+            for r_rgb in rgbs.iter() {
+                let r_hcv: HCV<f64> = r_rgb.into();
+                println!("{:?} vs {:?}", l_rgb, r_rgb);
+                println!("{:?} vs {:?}", l_hcv, r_hcv);
+                assert_eq!(l_rgb.cmp(&r_rgb), l_hcv.cmp(&r_hcv));
             }
         }
     }

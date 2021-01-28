@@ -3,9 +3,10 @@ use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 
 use normalised_angles::*;
-use num_traits_plus::float_plus::*;
 
-use crate::{rgb::RGB, ColourComponent, HueConstants, HueIfce, IndicesValueOrder};
+use crate::{
+    rgb::RGB, ColourComponent, HueConstants, HueIfce, IndicesValueOrder, I_BLUE, I_GREEN, I_RED,
+};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if Degrees::PRIMARIES.contains(&abs_angle) {
@@ -120,10 +121,15 @@ impl<F: ColourComponent> HueConstants for HueData<F> {
 
 impl<F: ColourComponent> PartialOrd for HueData<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.io.cmp(&other.io) {
-            Ordering::Less => Some(Ordering::Less),
-            Ordering::Greater => Some(Ordering::Greater),
-            Ordering::Equal => self.second.partial_cmp(&other.second),
+        match self.io.partial_cmp(&other.io) {
+            Some(Ordering::Equal) => {
+                if IndicesValueOrder::PRIMARIES.contains(&self.io) {
+                    other.second.partial_cmp(&self.second)
+                } else {
+                    self.second.partial_cmp(&other.second)
+                }
+            }
+            ord => ord,
         }
     }
 }
@@ -158,33 +164,33 @@ impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
                 if angle < Degrees::YELLOW {
                     Self {
                         second: f(angle),
-                        io: IndicesValueOrder::RED,
+                        io: IndicesValueOrder::YELLOW,
                     }
                 } else if angle < Degrees::GREEN {
                     Self {
                         second: f(Degrees::GREEN - angle),
-                        io: IndicesValueOrder::YELLOW,
+                        io: IndicesValueOrder::GREEN,
                     }
                 } else {
                     Self {
                         second: f(angle - Degrees::GREEN),
-                        io: IndicesValueOrder::GREEN,
+                        io: IndicesValueOrder::CYAN,
                     }
                 }
             } else if angle > Degrees::MAGENTA {
                 Self {
                     second: f(-angle),
-                    io: IndicesValueOrder::MAGENTA,
+                    io: IndicesValueOrder::RED,
                 }
             } else if angle > Degrees::BLUE {
                 Self {
                     second: f(Degrees::GREEN + angle),
-                    io: IndicesValueOrder::BLUE,
+                    io: IndicesValueOrder::MAGENTA,
                 }
             } else {
                 Self {
                     second: f(-angle - Degrees::GREEN),
-                    io: IndicesValueOrder::CYAN,
+                    io: IndicesValueOrder::BLUE,
                 }
             }
         }
@@ -257,7 +263,19 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for HueData<F> {
     type Error = &'static str;
 
     fn try_from(rgb: &RGB<F>) -> Result<Self, Self::Error> {
-        rgb.xy().try_into()
+        let io = rgb.indices_value_order();
+        let second = if rgb[io[0]] == rgb[io[1]] {
+            if rgb[io[1]] == rgb[io[2]] {
+                return Err("RGB is grey and has no hue");
+            } else {
+                F::ONE
+            }
+        } else if rgb[io[1]] == rgb[io[2]] {
+            F::ZERO
+        } else {
+            calc_other_from_xy_alt(rgb.xy())
+        };
+        Ok(Self { second, io })
     }
 }
 
@@ -265,7 +283,7 @@ impl<F: ColourComponent> TryFrom<RGB<F>> for HueData<F> {
     type Error = &'static str;
 
     fn try_from(rgb: RGB<F>) -> Result<Self, Self::Error> {
-        rgb.xy().try_into()
+        HueData::<F>::try_from(&rgb)
     }
 }
 
@@ -273,16 +291,16 @@ impl<F: ColourComponent> HueIfce<F> for HueData<F> {
     fn hue_angle(&self) -> Degrees<F> {
         if self.second == F::ZERO {
             match self.io[0] {
-                0 => Degrees::RED,
-                1 => Degrees::GREEN,
-                2 => Degrees::BLUE,
+                I_RED => Degrees::RED,
+                I_GREEN => Degrees::GREEN,
+                I_BLUE => Degrees::BLUE,
                 _ => panic!("illegal colour component index: {}", self.io[0]),
             }
         } else if self.second == F::ONE {
             match self.io[2] {
-                0 => Degrees::CYAN,
-                1 => Degrees::MAGENTA,
-                2 => Degrees::YELLOW,
+                I_RED => Degrees::CYAN,
+                I_GREEN => Degrees::MAGENTA,
+                I_BLUE => Degrees::YELLOW,
                 _ => panic!("illegal colour component index: {}", self.io[0]),
             }
         } else {
@@ -291,12 +309,12 @@ impl<F: ColourComponent> HueIfce<F> for HueData<F> {
                 / (F::ONE - self.second + self.second.powi(2)).sqrt();
             let angle = Degrees::asin(sin);
             match self.io {
-                IndicesValueOrder::RED => angle,
-                IndicesValueOrder::YELLOW => Degrees::GREEN - angle,
-                IndicesValueOrder::GREEN => Degrees::GREEN + angle,
-                IndicesValueOrder::MAGENTA => -angle,
-                IndicesValueOrder::BLUE => Degrees::BLUE + angle,
-                IndicesValueOrder::CYAN => Degrees::BLUE - angle,
+                IndicesValueOrder::YELLOW => angle,
+                IndicesValueOrder::GREEN => Degrees::GREEN - angle,
+                IndicesValueOrder::CYAN => Degrees::GREEN + angle,
+                IndicesValueOrder::RED => -angle,
+                IndicesValueOrder::MAGENTA => Degrees::BLUE + angle,
+                IndicesValueOrder::BLUE => Degrees::BLUE - angle,
                 _ => panic!("illegal colour component indices: {:?}", self.io),
             }
         }
@@ -507,7 +525,6 @@ mod test {
     use crate::{ColourComponent, HueConstants, HueIfce, RGBConstants};
     use normalised_angles::Degrees;
     use num_traits_plus::{assert_approx_eq, float_plus::*};
-    use std::cmp::Ordering;
     use std::convert::TryFrom;
 
     const NON_ZERO_VALUES: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
@@ -577,55 +594,55 @@ mod test {
     #[test]
     fn hue_data_from_angle() {
         for (angle, expected, io) in &[
-            (-180.0, 1.0, [2, 1, 0].into()),
-            (-165.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 1, 0].into()),
-            (-150.0, 0.5, [2, 1, 0].into()),
+            (-180.0, 1.0, IndicesValueOrder::CYAN),
+            (-165.0, 2.0 / (f64::SQRT_3 + 1.0), IndicesValueOrder::BLUE),
+            (-150.0, 0.5, IndicesValueOrder::BLUE),
             (
                 -135.0,
                 (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
-                [2, 1, 0].into(),
+                IndicesValueOrder::BLUE,
             ),
-            (-120.0, 0.0, [2, 0, 1].into()),
+            (-120.0, 0.0, IndicesValueOrder::BLUE),
             (
                 -105.0,
                 (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
-                [2, 0, 1].into(),
+                IndicesValueOrder::MAGENTA,
             ),
-            (-90.0, 0.5, [2, 0, 1].into()),
-            (-75.0, 2.0 / (f64::SQRT_3 + 1.0), [2, 0, 1].into()),
-            (-60.0, 1.0, [0, 2, 1].into()),
-            (-45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 2, 1].into()),
-            (-30.0, 0.5, [0, 2, 1].into()),
+            (-90.0, 0.5, IndicesValueOrder::MAGENTA),
+            (-75.0, 2.0 / (f64::SQRT_3 + 1.0), IndicesValueOrder::MAGENTA),
+            (-60.0, 1.0, IndicesValueOrder::MAGENTA),
+            (-45.0, 2.0 / (f64::SQRT_3 + 1.0), IndicesValueOrder::RED),
+            (-30.0, 0.5, IndicesValueOrder::RED),
             (
                 -15.0,
                 (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
-                [0, 2, 1].into(),
+                IndicesValueOrder::RED,
             ),
-            (0.0, 0.0, [0, 1, 2].into()),
+            (0.0, 0.0, IndicesValueOrder::RED),
             (
                 15.0,
                 (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
-                [0, 1, 2].into(),
+                IndicesValueOrder::YELLOW,
             ),
-            (30.0, 0.5, [0, 1, 2].into()),
-            (45.0, 2.0 / (f64::SQRT_3 + 1.0), [0, 1, 2].into()),
-            (60.0, 1.0, [1, 0, 2].into()),
-            (75.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 0, 2].into()),
-            (90.0, 0.5, [1, 0, 2].into()),
+            (30.0, 0.5, IndicesValueOrder::YELLOW),
+            (45.0, 2.0 / (f64::SQRT_3 + 1.0), IndicesValueOrder::YELLOW),
+            (60.0, 1.0, IndicesValueOrder::YELLOW),
+            (75.0, 2.0 / (f64::SQRT_3 + 1.0), IndicesValueOrder::GREEN),
+            (90.0, 0.5, IndicesValueOrder::GREEN),
             (
                 105.0,
                 (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
-                [1, 0, 2].into(),
+                IndicesValueOrder::GREEN,
             ),
-            (120.0, 0.0, [1, 2, 0].into()),
+            (120.0, 0.0, IndicesValueOrder::GREEN),
             (
                 135.0,
                 (f64::SQRT_3 - 1.0) / (f64::SQRT_3 + 1.0),
-                [1, 2, 0].into(),
+                IndicesValueOrder::CYAN,
             ),
-            (150.0, 0.5, [1, 2, 0].into()),
-            (165.0, 2.0 / (f64::SQRT_3 + 1.0), [1, 2, 0].into()),
-            (180.0, 1.0, [2, 1, 0].into()),
+            (150.0, 0.5, IndicesValueOrder::CYAN),
+            (165.0, 2.0 / (f64::SQRT_3 + 1.0), IndicesValueOrder::CYAN),
+            (180.0, 1.0, IndicesValueOrder::CYAN),
         ] {
             let hue_angle = Degrees::<f64>::from(*angle);
             let hue_data: HueData<f64> = hue_angle.into();

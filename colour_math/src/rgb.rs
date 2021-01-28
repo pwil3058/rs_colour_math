@@ -11,6 +11,8 @@ pub use crate::{
     RGBConstants, I_BLUE, I_GREEN, I_RED,
 };
 
+use crate::chroma::HueData;
+use crate::HueIfce;
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
 
@@ -18,23 +20,23 @@ use num_traits_plus::float_plus::*;
 pub struct IndicesValueOrder(pub(crate) [u8; 3]);
 
 impl HueConstants for IndicesValueOrder {
-    const RED: Self = Self([I_RED, I_GREEN, I_BLUE]);
-    const GREEN: Self = Self([I_GREEN, I_BLUE, I_RED]);
-    const BLUE: Self = Self([I_BLUE, I_RED, I_GREEN]);
+    const RED: Self = Self([I_RED, I_BLUE, I_GREEN]);
+    const GREEN: Self = Self([I_GREEN, I_RED, I_BLUE]);
+    const BLUE: Self = Self([I_BLUE, I_GREEN, I_RED]);
 
-    const CYAN: Self = Self([I_BLUE, I_GREEN, I_RED]);
-    const MAGENTA: Self = Self([I_RED, I_BLUE, I_GREEN]);
-    const YELLOW: Self = Self([I_GREEN, I_RED, I_BLUE]);
+    const CYAN: Self = Self([I_GREEN, I_BLUE, I_RED]);
+    const MAGENTA: Self = Self([I_BLUE, I_RED, I_GREEN]);
+    const YELLOW: Self = Self([I_RED, I_GREEN, I_BLUE]);
 }
 
 impl IndicesValueOrder {
     pub fn ord_index(&self) -> u8 {
         match *self {
-            IndicesValueOrder::GREEN => 0,
-            IndicesValueOrder::YELLOW => 1,
+            IndicesValueOrder::BLUE => 0,
+            IndicesValueOrder::MAGENTA => 1,
             IndicesValueOrder::RED => 2,
-            IndicesValueOrder::MAGENTA => 3,
-            IndicesValueOrder::BLUE => 4,
+            IndicesValueOrder::YELLOW => 3,
+            IndicesValueOrder::GREEN => 4,
             IndicesValueOrder::CYAN => 5,
             _ => panic!("illegal IndicesValueOrder: {:?}", self),
         }
@@ -227,10 +229,11 @@ impl<F: ColourComponent> PartialOrd for RGB<F> {
             if let Some(other_hue_angle) = other.hue_angle() {
                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
                 match hue_angle.degrees().partial_cmp(&other_hue_angle.degrees()) {
-                    Some(Ordering::Less) => Some(Ordering::Less),
-                    Some(Ordering::Greater) => Some(Ordering::Greater),
-                    Some(Ordering::Equal) => self.sum().partial_cmp(&other.sum()),
-                    None => None,
+                    Some(Ordering::Equal) => match self.sum().partial_cmp(&other.sum()) {
+                        Some(Ordering::Equal) => self.chroma().partial_cmp(&other.chroma()),
+                        ord => ord,
+                    },
+                    ord => ord,
                 }
             } else {
                 Some(Ordering::Greater)
@@ -238,6 +241,7 @@ impl<F: ColourComponent> PartialOrd for RGB<F> {
         } else if other.hue_angle().is_some() {
             Some(Ordering::Less)
         } else {
+            // No need to look a chroma as it will be zero for both
             self.sum().partial_cmp(&other.sum())
         }
     }
@@ -386,7 +390,13 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 
     fn hue_angle(&self) -> Option<Degrees<F>> {
-        Degrees::atan2(self.y(), self.x())
+        use std::convert::TryFrom;
+        //Degrees::atan2(self.y(), self.x())
+        if let Ok(hue) = HueData::<F>::try_from(*self) {
+            Some(hue.hue_angle())
+        } else {
+            None
+        }
     }
 
     fn is_grey(&self) -> bool {
