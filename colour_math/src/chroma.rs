@@ -1,6 +1,6 @@
 // Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::cmp::Ordering;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 use normalised_angles::*;
 
@@ -191,68 +191,6 @@ impl<F: ColourComponent> From<Degrees<F>> for HueData<F> {
                 Self {
                     second: f(-angle - Degrees::GREEN),
                     io: IndicesValueOrder::BLUE,
-                }
-            }
-        }
-    }
-}
-
-impl<F: ColourComponent> TryFrom<(F, F)> for HueData<F> {
-    type Error = &'static str;
-
-    fn try_from(xy: (F, F)) -> Result<Self, Self::Error> {
-        if xy.1 == F::ZERO {
-            if xy.0 > F::ZERO {
-                Ok(Self::RED)
-            } else if xy.0 < F::ZERO {
-                Ok(Self::CYAN)
-            } else {
-                Err("Greys have no hue and, ergo, can't generate HueData")
-            }
-        } else {
-            let x_sqrt_3 = xy.0.abs() * F::SQRT_3;
-            if x_sqrt_3 > xy.1.abs() {
-                let divisor = xy.0.abs() * F::SQRT_3 + xy.1.abs();
-                let x = xy.0 * F::SQRT_3 / divisor;
-                if xy.0 >= F::ZERO {
-                    Ok(Self {
-                        second: ((F::ONE - x) * F::TWO).min(F::ONE),
-                        io: if xy.1 > F::ZERO {
-                            IndicesValueOrder::RED //[0, 1, 2].into()
-                        } else {
-                            IndicesValueOrder::MAGENTA //[0, 2, 1].into()
-                        },
-                    })
-                } else {
-                    Ok(Self {
-                        second: (-(x * F::TWO + F::ONE)).min(F::ONE),
-                        io: if xy.1 > F::ZERO {
-                            IndicesValueOrder::GREEN //[1, 2, 0].into()
-                        } else {
-                            IndicesValueOrder::CYAN //[2, 1, 0].into()
-                        },
-                    })
-                }
-            } else if x_sqrt_3 < xy.1.abs() {
-                Ok(Self {
-                    second: (F::HALF + xy.0 * F::SIN_120 / xy.1.abs()).min(F::ONE),
-                    io: if xy.1 > F::ZERO {
-                        IndicesValueOrder::YELLOW //[1, 0, 2].into()
-                    } else {
-                        IndicesValueOrder::BLUE //[2, 0, 1].into()
-                    },
-                })
-            } else if xy.0 > F::ZERO {
-                if xy.1 > F::ZERO {
-                    Ok(Self::YELLOW)
-                } else {
-                    Ok(Self::MAGENTA)
-                }
-            } else {
-                if xy.1 > F::ZERO {
-                    Ok(Self::GREEN)
-                } else {
-                    Ok(Self::BLUE)
                 }
             }
         }
@@ -659,43 +597,44 @@ mod test {
     }
 
     #[test]
-    fn hue_data_from_xy() {
+    fn hue_data_from_rgb() {
         assert_eq!(
-            HueData::<f64>::try_from(RGB::<f64>::RED.xy()),
+            HueData::<f64>::try_from(RGB::<f64>::RED),
             Ok(HueData::<f64>::RED)
         );
         assert_eq!(
-            HueData::<f64>::try_from(RGB::<f64>::GREEN.xy()),
+            HueData::<f64>::try_from(RGB::<f64>::GREEN),
             Ok(HueData::<f64>::GREEN)
         );
         assert_eq!(
-            HueData::<f64>::try_from(RGB::<f64>::BLUE.xy()),
+            HueData::<f64>::try_from(RGB::<f64>::BLUE),
             Ok(HueData::<f64>::BLUE)
         );
         assert_eq!(
-            HueData::<f64>::try_from(RGB::<f64>::CYAN.xy()),
+            HueData::<f64>::try_from(RGB::<f64>::CYAN),
             Ok(HueData::<f64>::CYAN)
         );
         assert_eq!(
-            HueData::<f64>::try_from(RGB::<f64>::YELLOW.xy()),
+            HueData::<f64>::try_from(RGB::<f64>::YELLOW),
             Ok(HueData::<f64>::YELLOW)
         );
         assert_eq!(
-            HueData::<f64>::try_from(RGB::<f64>::MAGENTA.xy()),
+            HueData::<f64>::try_from(RGB::<f64>::MAGENTA),
             Ok(HueData::<f64>::MAGENTA)
         );
-        assert!(HueData::<f64>::try_from(RGB::<f64>::BLACK.xy()).is_err());
-        assert!(HueData::<f64>::try_from(RGB::<f64>::WHITE.xy()).is_err());
+        assert!(HueData::<f64>::try_from(RGB::<f64>::BLACK).is_err());
+        assert!(HueData::<f64>::try_from(RGB::<f64>::WHITE).is_err());
         for (array, expected) in &[
-            ([0.9, 0.5, 0.1], IndicesValueOrder::RED),
+            ([0.9, 0.5, 0.1], IndicesValueOrder::YELLOW),
             ([0.9, 0.5, 0.5], IndicesValueOrder::RED),
-            ([0.5, 0.9, 0.1], IndicesValueOrder::YELLOW),
-            ([0.5, 0.9, 0.50000001], IndicesValueOrder::GREEN), // inexactness of floating point
-            ([0.1, 0.5, 0.9], IndicesValueOrder::CYAN),
+            ([0.5, 0.9, 0.1], IndicesValueOrder::GREEN),
+            ([0.5, 0.9, 0.5], IndicesValueOrder::GREEN),
+            ([0.1, 0.5, 0.9], IndicesValueOrder::BLUE),
             ([0.5, 0.5, 0.9], IndicesValueOrder::BLUE),
         ] {
+            println!("RGB {:?} IO {:?}", array, expected);
             assert_eq!(
-                HueData::<f64>::try_from(RGB::<f64>::from(array).xy())
+                HueData::<f64>::try_from(RGB::<f64>::from(array))
                     .unwrap()
                     .io,
                 *expected
