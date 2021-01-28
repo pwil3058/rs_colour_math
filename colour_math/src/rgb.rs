@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    convert::From,
+    convert::{From, TryFrom},
     ops::{Add, Index, Mul},
 };
 
@@ -225,12 +225,13 @@ impl<F: ColourComponent> PartialOrd for RGB<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.0 == other.0 {
             Some(Ordering::Equal)
-        } else if let Some(hue_angle) = self.hue_angle() {
-            if let Some(other_hue_angle) = other.hue_angle() {
+        } else if let Ok(hue_data) = HueData::<F>::try_from(self) {
+            if let Ok(other_hue_data) = HueData::<F>::try_from(other) {
                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
-                match hue_angle.degrees().partial_cmp(&other_hue_angle.degrees()) {
+                match hue_data.partial_cmp(&other_hue_data) {
                     Some(Ordering::Equal) => match self.sum().partial_cmp(&other.sum()) {
-                        Some(Ordering::Equal) => self.chroma().partial_cmp(&other.chroma()),
+                        // since chroma correction for both is the same so hypot() will be OK
+                        Some(Ordering::Equal) => self.hypot().partial_cmp(&other.hypot()),
                         ord => ord,
                     },
                     ord => ord,
@@ -390,10 +391,8 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 
     fn hue_angle(&self) -> Option<Degrees<F>> {
-        use std::convert::TryFrom;
-        //Degrees::atan2(self.y(), self.x())
-        if let Ok(hue) = HueData::<F>::try_from(*self) {
-            Some(hue.hue_angle())
+        if let Ok(hue_data) = HueData::<F>::try_from(*self) {
+            Some(hue_data.hue_angle())
         } else {
             None
         }
