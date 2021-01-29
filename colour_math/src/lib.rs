@@ -3,7 +3,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 
-use std::{cmp::PartialEq, convert::From, fmt::Debug};
+use std::{cmp::PartialEq, fmt::Debug};
 
 pub use num_traits_plus;
 pub use num_traits_plus::float_plus::*;
@@ -87,16 +87,6 @@ pub enum CCI {
     Red,
     Green,
     Blue,
-}
-
-impl From<CCI> for usize {
-    fn from(cci: CCI) -> Self {
-        match cci {
-            CCI::Red => 0,
-            CCI::Green => 1,
-            CCI::Blue => 2,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]

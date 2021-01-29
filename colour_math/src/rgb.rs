@@ -53,7 +53,11 @@ impl Index<u8> for IndicesValueOrder {
 
 impl From<[CCI; 3]> for IndicesValueOrder {
     fn from(array: [CCI; 3]) -> Self {
-        // debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
+        debug_assert!(
+            array[0] != array[1] && array[0] != array[2] && array[1] != array[2],
+            "{:?}",
+            array
+        );
         Self(array)
     }
 }
@@ -275,8 +279,11 @@ impl<F: ColourComponent> Index<CCI> for RGB<F> {
     type Output = F;
 
     fn index(&self, index: CCI) -> &F {
-        let i: usize = index.into();
-        &self.0[i]
+        match index {
+            CCI::Red => &self.0[0],
+            CCI::Green => &self.0[1],
+            CCI::Blue => &self.0[2],
+        }
     }
 }
 
