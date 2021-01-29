@@ -201,19 +201,18 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for HueData<F> {
     type Error = &'static str;
 
     fn try_from(rgb: &RGB<F>) -> Result<Self, Self::Error> {
-        let io = rgb.indices_value_order();
-        let second = if rgb[io[0]] == rgb[io[1]] {
-            if rgb[io[1]] == rgb[io[2]] {
-                return Err("RGB is grey and has no hue");
-            } else {
+        if let Some(io) = rgb.indices_value_order() {
+            let second = if rgb[io[0]] == rgb[io[1]] {
                 F::ONE
-            }
-        } else if rgb[io[1]] == rgb[io[2]] {
-            F::ZERO
+            } else if rgb[io[1]] == rgb[io[2]] {
+                F::ZERO
+            } else {
+                calc_other_from_xy_alt(rgb.xy())
+            };
+            Ok(Self { second, io })
         } else {
-            calc_other_from_xy_alt(rgb.xy())
-        };
-        Ok(Self { second, io })
+            Err("RGB is grey and has no hue")
+        }
     }
 }
 
@@ -872,7 +871,7 @@ mod test {
                     } else {
                         let rgb_other = calc_other_from_xy(xy);
                         assert_approx_eq!(rgb_other, *second, 0.0000000001);
-                        let rgb_io = rgb.indices_value_order();
+                        let rgb_io = rgb.indices_value_order().unwrap();
                         assert!(
                             rgb_io == *io || rgb[io[1]] == rgb[io[2]] || rgb[io[0]] == rgb[io[1]],
                             "{:?} == {:?} :: sum: {} other: {} {:?}",
@@ -918,7 +917,7 @@ mod test {
                             } else {
                                 let rgb_other = calc_other_from_xy(xy);
                                 assert_approx_eq!(rgb_other, *other, 0.0000000001);
-                                let rgb_io = rgb.indices_value_order();
+                                let rgb_io = rgb.indices_value_order().unwrap();
                                 assert!(
                                     rgb_io == *io
                                         || rgb[io[1]] == rgb[io[2]]

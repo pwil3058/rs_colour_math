@@ -52,7 +52,7 @@ impl<F: ColourComponent> TryFrom<RGB<F>> for Hue<F> {
     fn try_from(rgb: RGB<F>) -> Result<Self, Self::Error> {
         use std::convert::TryInto;
         let angle: Degrees<F> = rgb.xy().try_into()?;
-        let io = rgb.indices_value_order();
+        let io = rgb.indices_value_order().expect("angle succeeded");
         let mut parts: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
         parts[io[0] as usize] = F::ONE;
         if rgb[io[0]] == rgb[io[1]] {
@@ -239,7 +239,10 @@ impl<F: ColourComponent> Hue<F> {
                 RGB::WHITE
             } else {
                 let mut array = [F::ONE, F::ONE, F::ONE];
-                let io = self.max_chroma_rgb.indices_value_order();
+                let io = self
+                    .max_chroma_rgb
+                    .indices_value_order()
+                    .expect("should not be grey");
                 // it's simpler to work out weakest component first
                 let other = self.max_chroma_rgb[io[1]];
                 let shortfall = (value - mcv) * F::THREE;
@@ -273,37 +276,37 @@ mod test {
             Hue::<f64>::from(Degrees::from(-150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_BLUE, I_GREEN, I_RED].into()
+            Some([I_BLUE, I_GREEN, I_RED].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(-90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_BLUE, I_RED, I_GREEN].into()
+            Some([I_BLUE, I_RED, I_GREEN].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(-30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_RED, I_BLUE, I_GREEN].into()
+            Some([I_RED, I_BLUE, I_GREEN].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_RED, I_GREEN, I_BLUE].into()
+            Some([I_RED, I_GREEN, I_BLUE].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_GREEN, I_RED, I_BLUE].into()
+            Some([I_GREEN, I_RED, I_BLUE].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            [I_GREEN, I_BLUE, I_RED].into()
+            Some([I_GREEN, I_BLUE, I_RED].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::RED).max_chroma_rgb,

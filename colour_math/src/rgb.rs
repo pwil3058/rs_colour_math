@@ -130,30 +130,30 @@ impl<F: ColourComponent> RGB<F> {
         self.x().hypot(self.y())
     }
 
-    pub(crate) fn indices_value_order(self) -> IndicesValueOrder {
+    pub(crate) fn indices_value_order(self) -> Option<IndicesValueOrder> {
         match self[I_RED].partial_cmp(&self[I_GREEN]).unwrap() {
             Ordering::Greater => match self[I_GREEN].partial_cmp(&self[I_BLUE]).unwrap() {
-                Ordering::Greater => IndicesValueOrder([I_RED, I_GREEN, I_BLUE]),
+                Ordering::Greater => Some(IndicesValueOrder([I_RED, I_GREEN, I_BLUE])),
                 Ordering::Less => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
-                    Ordering::Greater => IndicesValueOrder([I_RED, I_BLUE, I_GREEN]),
-                    Ordering::Less => IndicesValueOrder([I_BLUE, I_RED, I_GREEN]),
-                    Ordering::Equal => IndicesValueOrder::MAGENTA,
+                    Ordering::Greater => Some(IndicesValueOrder([I_RED, I_BLUE, I_GREEN])),
+                    Ordering::Less => Some(IndicesValueOrder([I_BLUE, I_RED, I_GREEN])),
+                    Ordering::Equal => Some(IndicesValueOrder::MAGENTA),
                 },
-                Ordering::Equal => IndicesValueOrder::RED,
+                Ordering::Equal => Some(IndicesValueOrder::RED),
             },
             Ordering::Less => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
-                Ordering::Greater => IndicesValueOrder([I_GREEN, I_RED, I_BLUE]),
+                Ordering::Greater => Some(IndicesValueOrder([I_GREEN, I_RED, I_BLUE])),
                 Ordering::Less => match self[I_GREEN].partial_cmp(&self[I_BLUE]).unwrap() {
-                    Ordering::Greater => IndicesValueOrder([I_GREEN, I_BLUE, I_RED]),
-                    Ordering::Less => IndicesValueOrder([I_BLUE, I_GREEN, I_RED]),
-                    Ordering::Equal => IndicesValueOrder::CYAN,
+                    Ordering::Greater => Some(IndicesValueOrder([I_GREEN, I_BLUE, I_RED])),
+                    Ordering::Less => Some(IndicesValueOrder([I_BLUE, I_GREEN, I_RED])),
+                    Ordering::Equal => Some(IndicesValueOrder::CYAN),
                 },
-                Ordering::Equal => IndicesValueOrder::GREEN,
+                Ordering::Equal => Some(IndicesValueOrder::GREEN),
             },
             Ordering::Equal => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
-                Ordering::Greater => IndicesValueOrder::YELLOW,
-                Ordering::Less => IndicesValueOrder::BLUE,
-                Ordering::Equal => IndicesValueOrder::default(), // actually grey
+                Ordering::Greater => Some(IndicesValueOrder::YELLOW),
+                Ordering::Less => Some(IndicesValueOrder::BLUE),
+                Ordering::Equal => None, // actually grey
             },
         }
     }
@@ -414,15 +414,14 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 
     fn max_chroma_rgb(&self) -> RGB<F> {
-        let xy = self.xy();
-        if xy.0 == F::ZERO && xy.1 == F::ZERO {
-            *self
-        } else {
-            let io = self.indices_value_order();
+        if let Some(io) = self.indices_value_order() {
+            let xy = self.xy();
             let mut array: [F; 3] = [F::ZERO, F::ZERO, F::ZERO];
             array[io[0] as usize] = F::ONE;
             array[io[1] as usize] = chroma::calc_other_from_xy_alt(xy);
             array.into()
+        } else {
+            *self
         }
     }
 
@@ -502,37 +501,31 @@ mod tests {
 
     #[test]
     fn indices_order() {
-        assert_eq!(
-            RGB::<f64>::WHITE.indices_value_order(),
-            IndicesValueOrder::default()
-        );
-        assert_eq!(
-            RGB::<f64>::BLACK.indices_value_order(),
-            IndicesValueOrder::default()
-        );
+        assert_eq!(RGB::<f64>::WHITE.indices_value_order(), None);
+        assert_eq!(RGB::<f64>::BLACK.indices_value_order(), None);
         assert_eq!(
             RGB::<f64>::RED.indices_value_order(),
-            IndicesValueOrder::RED
+            Some(IndicesValueOrder::RED)
         );
         assert_eq!(
             RGB::<f64>::GREEN.indices_value_order(),
-            IndicesValueOrder::GREEN
+            Some(IndicesValueOrder::GREEN)
         );
         assert_eq!(
             RGB::<f64>::BLUE.indices_value_order(),
-            IndicesValueOrder::BLUE
+            Some(IndicesValueOrder::BLUE)
         );
         assert_eq!(
             RGB::<f64>::CYAN.indices_value_order(),
-            IndicesValueOrder::CYAN
+            Some(IndicesValueOrder::CYAN)
         );
         assert_eq!(
             RGB::<f64>::MAGENTA.indices_value_order(),
-            IndicesValueOrder::MAGENTA
+            Some(IndicesValueOrder::MAGENTA)
         );
         assert_eq!(
             RGB::<f64>::YELLOW.indices_value_order(),
-            IndicesValueOrder::YELLOW
+            Some(IndicesValueOrder::YELLOW)
         );
     }
 

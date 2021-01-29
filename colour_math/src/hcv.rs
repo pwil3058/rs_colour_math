@@ -132,24 +132,34 @@ impl<F: ColourComponent> RGBConstants for HCV<F> {
 impl<F: ColourComponent> From<&RGB<F>> for HCV<F> {
     fn from(rgb: &RGB<F>) -> Self {
         debug_assert!(rgb.is_valid());
-        let xy = rgb.xy();
-        let hypot = xy.0.hypot(xy.1);
         let sum = rgb.iter().copied().sum();
         debug_assert!(sum <= F::THREE);
-        if hypot > F::ZERO {
-            let io = rgb.indices_value_order();
-            let second = if rgb[io[0]] == rgb[io[1]] {
-                F::ONE
+        if let Some(io) = rgb.indices_value_order() {
+            let xy = rgb.xy();
+            let hypot = xy.0.hypot(xy.1);
+            if rgb[io[0]] == rgb[io[1]] {
+                Self {
+                    hue_data: Some(HueData { io, second: F::ONE }),
+                    chroma: hypot.min(F::ONE),
+                    sum,
+                }
             } else if rgb[io[1]] == rgb[io[2]] {
-                F::ZERO
+                Self {
+                    hue_data: Some(HueData {
+                        io,
+                        second: F::ZERO,
+                    }),
+                    chroma: hypot.min(F::ONE),
+                    sum,
+                }
             } else {
-                chroma::calc_other_from_xy_alt(xy)
-            };
-            let chroma = (hypot * chroma::calc_chroma_correction(second)).min(F::ONE);
-            Self {
-                hue_data: Some(HueData { io, second }),
-                chroma,
-                sum,
+                let second = chroma::calc_other_from_xy_alt(xy);
+                let chroma = (hypot * chroma::calc_chroma_correction(second)).min(F::ONE);
+                Self {
+                    hue_data: Some(HueData { io, second }),
+                    chroma,
+                    sum,
+                }
             }
         } else {
             Self {
