@@ -82,10 +82,6 @@ impl ColourComponent for f64 {
     const COS_120: Self = -0.5;
 }
 
-pub const I_RED: u8 = 0;
-pub const I_GREEN: u8 = 1;
-pub const I_BLUE: u8 = 2;
-
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CCI {
     Red,

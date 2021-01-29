@@ -6,7 +6,7 @@ use std::{
     ops::{Add, Index, Mul},
 };
 
-pub use crate::{chroma, hcv::*, hue::*, ColourComponent, ColourInterface, I_BLUE, I_GREEN, I_RED};
+pub use crate::{chroma, hcv::*, hue::*, ColourComponent, ColourInterface};
 
 use crate::{rgb::RGB, HueConstants, RGBConstants};
 

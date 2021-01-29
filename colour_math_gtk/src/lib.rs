@@ -14,7 +14,7 @@ pub mod colour {
     pub use colour_math::{
         attributes::{hue_wheel::Shape, ColourAttributeDisplayIfce},
         urgb::{UnsignedComponent, URGB},
-        ColourInterface, HueConstants, RGBConstants, ScalarAttribute, CCI, I_BLUE, I_GREEN, I_RED,
+        ColourInterface, HueConstants, RGBConstants, ScalarAttribute, CCI,
     };
     use pw_gix::gdk;
     pub type RGB = colour_math::rgb::RGB<f64>;
