@@ -10,7 +10,7 @@ use std::{
 use normalised_angles::*;
 
 use crate::rgb::RGB;
-use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants};
+use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, CCI};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Hue<F: ColourComponent> {
@@ -159,9 +159,9 @@ impl<F: ColourComponent> Hue<F> {
             (self.max_chroma_rgb, self.max_chroma_rgb)
         } else {
             let shade: [F; 3] = [
-                self.max_chroma_rgb[0] * chroma,
-                self.max_chroma_rgb[1] * chroma,
-                self.max_chroma_rgb[2] * chroma,
+                self.max_chroma_rgb[CCI::Red] * chroma,
+                self.max_chroma_rgb[CCI::Green] * chroma,
+                self.max_chroma_rgb[CCI::Blue] * chroma,
             ];
             let delta = F::ONE - chroma;
             let tint: [F; 3] = [shade[0] + delta, shade[1] + delta, shade[2] + delta];
@@ -197,9 +197,9 @@ impl<F: ColourComponent> Hue<F> {
         } else {
             let delta = value - min_value;
             let rgb: RGB<F> = [
-                (self.max_chroma_rgb[0] * chroma + delta).min(F::ONE),
-                (self.max_chroma_rgb[1] * chroma + delta).min(F::ONE),
-                (self.max_chroma_rgb[2] * chroma + delta).min(F::ONE),
+                (self.max_chroma_rgb[CCI::Red] * chroma + delta).min(F::ONE),
+                (self.max_chroma_rgb[CCI::Green] * chroma + delta).min(F::ONE),
+                (self.max_chroma_rgb[CCI::Blue] * chroma + delta).min(F::ONE),
             ]
             .into();
             // NB: because floats only approximate reals trying to
@@ -228,9 +228,9 @@ impl<F: ColourComponent> Hue<F> {
                 RGB::BLACK
             } else {
                 [
-                    self.max_chroma_rgb[0] * value / mcv,
-                    self.max_chroma_rgb[1] * value / mcv,
-                    self.max_chroma_rgb[2] * value / mcv,
+                    self.max_chroma_rgb[CCI::Red] * value / mcv,
+                    self.max_chroma_rgb[CCI::Green] * value / mcv,
+                    self.max_chroma_rgb[CCI::Blue] * value / mcv,
                 ]
                 .into()
             }
@@ -259,7 +259,7 @@ impl<F: ColourComponent> Hue<F> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{HueConstants, RGBConstants, I_BLUE, I_GREEN, I_RED};
+    use crate::{HueConstants, RGBConstants};
     use num_traits_plus::assert_approx_eq;
 
     const TEST_ANGLES: [f64; 13] = [
@@ -276,37 +276,37 @@ mod test {
             Hue::<f64>::from(Degrees::from(-150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            Some([I_BLUE, I_GREEN, I_RED].into())
+            Some([CCI::Blue, CCI::Green, CCI::Red].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(-90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            Some([I_BLUE, I_RED, I_GREEN].into())
+            Some([CCI::Blue, CCI::Red, CCI::Green].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(-30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            Some([I_RED, I_BLUE, I_GREEN].into())
+            Some([CCI::Red, CCI::Blue, CCI::Green].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(30.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            Some([I_RED, I_GREEN, I_BLUE].into())
+            Some([CCI::Red, CCI::Green, CCI::Blue].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(90.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            Some([I_GREEN, I_RED, I_BLUE].into())
+            Some([CCI::Green, CCI::Red, CCI::Blue].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::from(150.0))
                 .max_chroma_rgb
                 .indices_value_order(),
-            Some([I_GREEN, I_BLUE, I_RED].into())
+            Some([CCI::Green, CCI::Blue, CCI::Red].into())
         );
         assert_eq!(
             Hue::<f64>::from(Degrees::RED).max_chroma_rgb,

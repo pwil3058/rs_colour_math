@@ -6,7 +6,7 @@ use pw_gix::cairo;
 
 use colour_math::{
     attributes::drawing::{self, Cartesian},
-    ColourInterface, RGBConstants,
+    ColourInterface, RGBConstants, CCI,
 };
 
 pub type Point = drawing::Point<f64>;
@@ -26,7 +26,7 @@ impl CairoSetColour for pw_gix::cairo::Context {
     }
 
     fn set_source_colour_rgb(&self, rgb: &RGB) {
-        self.set_source_rgb(rgb[0], rgb[1], rgb[2]);
+        self.set_source_rgb(rgb[CCI::Red], rgb[CCI::Green], rgb[CCI::Blue]);
     }
 }
 
@@ -101,9 +101,9 @@ impl<'a> drawing::Draw<f64> for Drawer<'a> {
         for colour_stop in colour_stops.iter() {
             linear_gradient.add_color_stop_rgb(
                 colour_stop.1,
-                colour_stop.0[0],
-                colour_stop.0[1],
-                colour_stop.0[2],
+                colour_stop.0[CCI::Red],
+                colour_stop.0[CCI::Green],
+                colour_stop.0[CCI::Blue],
             );
         }
         self.cairo_context

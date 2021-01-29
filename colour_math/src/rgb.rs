@@ -2,13 +2,13 @@
 
 use std::{
     cmp::Ordering,
-    convert::{From, TryFrom},
+    convert::{From, Into, TryFrom},
     ops::{Add, Index, Mul},
 };
 
 pub use crate::{
     chroma, hcv::*, hue::*, rgba::RGBA, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
-    RGBConstants, I_BLUE, I_GREEN, I_RED,
+    RGBConstants, CCI,
 };
 
 use crate::chroma::HueData;
@@ -17,16 +17,16 @@ use normalised_angles::Degrees;
 use num_traits_plus::float_plus::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub struct IndicesValueOrder(pub(crate) [u8; 3]);
+pub struct IndicesValueOrder(pub(crate) [CCI; 3]);
 
 impl HueConstants for IndicesValueOrder {
-    const RED: Self = Self([I_RED, I_BLUE, I_GREEN]);
-    const GREEN: Self = Self([I_GREEN, I_RED, I_BLUE]);
-    const BLUE: Self = Self([I_BLUE, I_GREEN, I_RED]);
+    const RED: Self = Self([CCI::Red, CCI::Blue, CCI::Green]);
+    const GREEN: Self = Self([CCI::Green, CCI::Red, CCI::Blue]);
+    const BLUE: Self = Self([CCI::Blue, CCI::Green, CCI::Red]);
 
-    const CYAN: Self = Self([I_GREEN, I_BLUE, I_RED]);
-    const MAGENTA: Self = Self([I_BLUE, I_RED, I_GREEN]);
-    const YELLOW: Self = Self([I_RED, I_GREEN, I_BLUE]);
+    const CYAN: Self = Self([CCI::Green, CCI::Blue, CCI::Red]);
+    const MAGENTA: Self = Self([CCI::Blue, CCI::Red, CCI::Green]);
+    const YELLOW: Self = Self([CCI::Red, CCI::Green, CCI::Blue]);
 }
 
 impl IndicesValueOrder {
@@ -44,15 +44,15 @@ impl IndicesValueOrder {
 }
 
 impl Index<u8> for IndicesValueOrder {
-    type Output = u8;
+    type Output = CCI;
 
-    fn index(&self, index: u8) -> &u8 {
+    fn index(&self, index: u8) -> &CCI {
         &self.0[index as usize]
     }
 }
 
-impl From<[u8; 3]> for IndicesValueOrder {
-    fn from(array: [u8; 3]) -> Self {
+impl From<[CCI; 3]> for IndicesValueOrder {
+    fn from(array: [CCI; 3]) -> Self {
         // debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
         Self(array)
     }
@@ -60,12 +60,12 @@ impl From<[u8; 3]> for IndicesValueOrder {
 
 impl Default for IndicesValueOrder {
     fn default() -> Self {
-        Self([I_RED, I_GREEN, I_BLUE])
+        Self([CCI::Red, CCI::Green, CCI::Blue])
     }
 }
 
-impl From<&[u8; 3]> for IndicesValueOrder {
-    fn from(array: &[u8; 3]) -> Self {
+impl From<&[CCI; 3]> for IndicesValueOrder {
+    fn from(array: &[CCI; 3]) -> Self {
         Self(*array)
     }
 }
@@ -110,16 +110,16 @@ impl<F: ColourComponent> RGB<F> {
     }
 
     pub(crate) fn sum(self) -> F {
-        //self.0[I_RED] + self.0[I_GREEN] + self.0[I_BLUE]
+        //self.0[CCI::Red] + self.0[CCI::Green] + self.0[CCI::Blue]
         self.0.iter().copied().sum()
     }
 
     pub(crate) fn x(self) -> F {
-        self[I_RED] + (self[I_GREEN] + self[I_BLUE]) * F::COS_120
+        self[CCI::Red] + (self[CCI::Green] + self[CCI::Blue]) * F::COS_120
     }
 
     pub(crate) fn y(self) -> F {
-        (self[I_GREEN] - self[I_BLUE]) * F::SIN_120
+        (self[CCI::Green] - self[CCI::Blue]) * F::SIN_120
     }
 
     pub(crate) fn xy(self) -> (F, F) {
@@ -131,26 +131,26 @@ impl<F: ColourComponent> RGB<F> {
     }
 
     pub(crate) fn indices_value_order(self) -> Option<IndicesValueOrder> {
-        match self[I_RED].partial_cmp(&self[I_GREEN]).unwrap() {
-            Ordering::Greater => match self[I_GREEN].partial_cmp(&self[I_BLUE]).unwrap() {
-                Ordering::Greater => Some(IndicesValueOrder([I_RED, I_GREEN, I_BLUE])),
-                Ordering::Less => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
-                    Ordering::Greater => Some(IndicesValueOrder([I_RED, I_BLUE, I_GREEN])),
-                    Ordering::Less => Some(IndicesValueOrder([I_BLUE, I_RED, I_GREEN])),
+        match self[CCI::Red].partial_cmp(&self[CCI::Green]).unwrap() {
+            Ordering::Greater => match self[CCI::Green].partial_cmp(&self[CCI::Blue]).unwrap() {
+                Ordering::Greater => Some(IndicesValueOrder([CCI::Red, CCI::Green, CCI::Blue])),
+                Ordering::Less => match self[CCI::Red].partial_cmp(&self[CCI::Blue]).unwrap() {
+                    Ordering::Greater => Some(IndicesValueOrder([CCI::Red, CCI::Blue, CCI::Green])),
+                    Ordering::Less => Some(IndicesValueOrder([CCI::Blue, CCI::Red, CCI::Green])),
                     Ordering::Equal => Some(IndicesValueOrder::MAGENTA),
                 },
                 Ordering::Equal => Some(IndicesValueOrder::RED),
             },
-            Ordering::Less => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
-                Ordering::Greater => Some(IndicesValueOrder([I_GREEN, I_RED, I_BLUE])),
-                Ordering::Less => match self[I_GREEN].partial_cmp(&self[I_BLUE]).unwrap() {
-                    Ordering::Greater => Some(IndicesValueOrder([I_GREEN, I_BLUE, I_RED])),
-                    Ordering::Less => Some(IndicesValueOrder([I_BLUE, I_GREEN, I_RED])),
+            Ordering::Less => match self[CCI::Red].partial_cmp(&self[CCI::Blue]).unwrap() {
+                Ordering::Greater => Some(IndicesValueOrder([CCI::Green, CCI::Red, CCI::Blue])),
+                Ordering::Less => match self[CCI::Green].partial_cmp(&self[CCI::Blue]).unwrap() {
+                    Ordering::Greater => Some(IndicesValueOrder([CCI::Green, CCI::Blue, CCI::Red])),
+                    Ordering::Less => Some(IndicesValueOrder([CCI::Blue, CCI::Green, CCI::Red])),
                     Ordering::Equal => Some(IndicesValueOrder::CYAN),
                 },
                 Ordering::Equal => Some(IndicesValueOrder::GREEN),
             },
-            Ordering::Equal => match self[I_RED].partial_cmp(&self[I_BLUE]).unwrap() {
+            Ordering::Equal => match self[CCI::Red].partial_cmp(&self[CCI::Blue]).unwrap() {
                 Ordering::Greater => Some(IndicesValueOrder::YELLOW),
                 Ordering::Less => Some(IndicesValueOrder::BLUE),
                 Ordering::Equal => None, // actually grey
@@ -158,7 +158,7 @@ impl<F: ColourComponent> RGB<F> {
         }
     }
 
-    fn ff(&self, indices: (u8, u8), ks: (F, F)) -> F {
+    fn ff(&self, indices: (CCI, CCI), ks: (F, F)) -> F {
         self[indices.0] * ks.0 + self[indices.1] * ks.1
     }
 
@@ -182,32 +182,32 @@ impl<F: ColourComponent> RGB<F> {
             if delta_hue_angle > Degrees::DEG_120 {
                 let ks = calc_ks(delta_hue_angle - Degrees::DEG_120);
                 return RGB([
-                    self.ff((2, 1), ks),
-                    self.ff((0, 2), ks),
-                    self.ff((1, 0), ks),
+                    self.ff((CCI::Blue, CCI::Green), ks),
+                    self.ff((CCI::Red, CCI::Blue), ks),
+                    self.ff((CCI::Green, CCI::Red), ks),
                 ]);
             } else {
                 let ks = calc_ks(delta_hue_angle);
                 return RGB([
-                    self.ff((0, 2), ks),
-                    self.ff((1, 0), ks),
-                    self.ff((2, 1), ks),
+                    self.ff((CCI::Red, CCI::Blue), ks),
+                    self.ff((CCI::Green, CCI::Red), ks),
+                    self.ff((CCI::Blue, CCI::Green), ks),
                 ]);
             }
         } else if delta_hue_angle < Degrees::DEG_0 {
             if delta_hue_angle < -Degrees::DEG_120 {
                 let ks = calc_ks(delta_hue_angle.abs() - Degrees::DEG_120);
                 return RGB([
-                    self.ff((1, 2), ks),
-                    self.ff((2, 0), ks),
-                    self.ff((0, 1), ks),
+                    self.ff((CCI::Green, CCI::Blue), ks),
+                    self.ff((CCI::Blue, CCI::Red), ks),
+                    self.ff((CCI::Red, CCI::Green), ks),
                 ]);
             } else {
                 let ks = calc_ks(delta_hue_angle.abs());
                 return RGB([
-                    self.ff((0, 1), ks),
-                    self.ff((1, 2), ks),
-                    self.ff((2, 0), ks),
+                    self.ff((CCI::Red, CCI::Green), ks),
+                    self.ff((CCI::Green, CCI::Blue), ks),
+                    self.ff((CCI::Blue, CCI::Red), ks),
                 ]);
             }
         }
@@ -271,11 +271,12 @@ impl<F: ColourComponent + std::fmt::Debug + std::iter::Sum> FloatApproxEq<F> for
     }
 }
 
-impl<F: ColourComponent> Index<u8> for RGB<F> {
+impl<F: ColourComponent> Index<CCI> for RGB<F> {
     type Output = F;
 
-    fn index(&self, index: u8) -> &F {
-        &self.0[index as usize]
+    fn index(&self, index: CCI) -> &F {
+        let i: usize = index.into();
+        &self.0[i]
     }
 }
 
@@ -348,7 +349,7 @@ impl<F: ColourComponent> From<&[u8; 3]> for RGB<F> {
 
 impl<F: ColourComponent> From<&RGB<F>> for (F, F, F) {
     fn from(rgb: &RGB<F>) -> (F, F, F) {
-        (rgb[0], rgb[1], rgb[2])
+        (rgb[CCI::Red], rgb[CCI::Green], rgb[CCI::Blue])
     }
 }
 
@@ -361,9 +362,9 @@ impl<F: ColourComponent> From<&RGB<F>> for [F; 3] {
 impl<F: ColourComponent, G: ColourComponent> From<&RGB<F>> for RGB<G> {
     fn from(rgb: &RGB<F>) -> RGB<G> {
         Self([
-            G::from(rgb[0]).unwrap(),
-            G::from(rgb[1]).unwrap(),
-            G::from(rgb[2]).unwrap(),
+            G::from(rgb[CCI::Red]).unwrap(),
+            G::from(rgb[CCI::Green]).unwrap(),
+            G::from(rgb[CCI::Blue]).unwrap(),
         ])
     }
 }
@@ -462,9 +463,9 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
     }
 
     fn best_foreground_rgb(&self) -> RGB<F> {
-        if self[I_RED] * F::from(0.299).unwrap()
-            + self[I_GREEN] * F::from(0.587).unwrap()
-            + self[I_BLUE] * F::from(0.114).unwrap()
+        if self[CCI::Red] * F::from(0.299).unwrap()
+            + self[CCI::Green] * F::from(0.587).unwrap()
+            + self[CCI::Blue] * F::from(0.114).unwrap()
             > F::HALF
         {
             Self::BLACK
@@ -475,7 +476,7 @@ impl<F: ColourComponent> ColourInterface<F> for RGB<F> {
 }
 
 #[cfg(test)]
-mod tests {
+mod rgb_tests {
     use super::*;
 
     #[test]

@@ -4,9 +4,7 @@ use std::convert::TryFrom;
 
 use normalised_angles::*;
 
-use crate::{
-    rgb::RGB, ColourComponent, HueConstants, HueIfce, IndicesValueOrder, I_BLUE, I_GREEN, I_RED,
-};
+use crate::{rgb::RGB, ColourComponent, HueConstants, HueIfce, IndicesValueOrder, CCI};
 
 pub(crate) fn calc_other_from_angle<F: ColourComponent>(abs_angle: Degrees<F>) -> F {
     if Degrees::PRIMARIES.contains(&abs_angle) {
@@ -228,17 +226,15 @@ impl<F: ColourComponent> HueIfce<F> for HueData<F> {
     fn hue_angle(&self) -> Degrees<F> {
         if self.second == F::ZERO {
             match self.io[0] {
-                I_RED => Degrees::RED,
-                I_GREEN => Degrees::GREEN,
-                I_BLUE => Degrees::BLUE,
-                _ => panic!("illegal colour component index: {}", self.io[0]),
+                CCI::Red => Degrees::RED,
+                CCI::Green => Degrees::GREEN,
+                CCI::Blue => Degrees::BLUE,
             }
         } else if self.second == F::ONE {
             match self.io[2] {
-                I_RED => Degrees::CYAN,
-                I_GREEN => Degrees::MAGENTA,
-                I_BLUE => Degrees::YELLOW,
-                _ => panic!("illegal colour component index: {}", self.io[0]),
+                CCI::Red => Degrees::CYAN,
+                CCI::Green => Degrees::MAGENTA,
+                CCI::Blue => Degrees::YELLOW,
             }
         } else {
             let sin = F::SQRT_3 * self.second
@@ -866,8 +862,8 @@ mod test {
                     assert_approx_eq!(rgb.sum(), *sum);
                     let xy = rgb.xy();
                     if xy.0 == 0.0 && xy.1 == 0.0 {
-                        assert_approx_eq!(rgb[0], rgb[1]);
-                        assert_approx_eq!(rgb[0], rgb[2]);
+                        assert_approx_eq!(rgb[CCI::Red], rgb[CCI::Green]);
+                        assert_approx_eq!(rgb[CCI::Red], rgb[CCI::Blue]);
                     } else {
                         let rgb_other = calc_other_from_xy(xy);
                         assert_approx_eq!(rgb_other, *second, 0.0000000001);
@@ -912,8 +908,8 @@ mod test {
                             assert_approx_eq!(rgb.sum(), *sum, 0.000000000000001);
                             let xy = rgb.xy();
                             if xy.0 == 0.0 && xy.1 == 0.0 {
-                                assert_approx_eq!(rgb[0], rgb[1]);
-                                assert_approx_eq!(rgb[0], rgb[2]);
+                                assert_approx_eq!(rgb[CCI::Red], rgb[CCI::Green]);
+                                assert_approx_eq!(rgb[CCI::Red], rgb[CCI::Blue]);
                             } else {
                                 let rgb_other = calc_other_from_xy(xy);
                                 assert_approx_eq!(rgb_other, *other, 0.0000000001);

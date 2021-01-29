@@ -15,7 +15,9 @@ use colour_math_cairo::Point;
 
 use crate::{
     angles::Degrees,
-    colour::{ColourInterface, ColourManipulator, ColourManipulatorBuilder, RGBConstants, RGB},
+    colour::{
+        ColourInterface, ColourManipulator, ColourManipulatorBuilder, RGBConstants, CCI, RGB,
+    },
     coloured::Colourable,
 };
 
@@ -133,7 +135,7 @@ impl ColourManipulatorGUI {
 
     fn draw(&self, cairo_context: &cairo::Context) {
         let rgb = self.colour_manipulator.borrow().rgb();
-        cairo_context.set_source_rgb(rgb[0], rgb[1], rgb[2]);
+        cairo_context.set_source_rgb(rgb[CCI::Red], rgb[CCI::Green], rgb[CCI::Blue]);
         cairo_context.paint();
         for sample in self.samples.borrow().iter() {
             let buffer = sample

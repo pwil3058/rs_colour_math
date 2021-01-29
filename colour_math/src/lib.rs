@@ -3,7 +3,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 
-use std::{cmp::PartialEq, fmt::Debug};
+use std::{cmp::PartialEq, convert::From, fmt::Debug};
 
 pub use num_traits_plus;
 pub use num_traits_plus::float_plus::*;
@@ -86,7 +86,24 @@ pub const I_RED: u8 = 0;
 pub const I_GREEN: u8 = 1;
 pub const I_BLUE: u8 = 2;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CCI {
+    Red,
+    Green,
+    Blue,
+}
+
+impl From<CCI> for usize {
+    fn from(cci: CCI) -> Self {
+        match cci {
+            CCI::Red => 0,
+            CCI::Green => 1,
+            CCI::Blue => 2,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ScalarAttribute {
     Chroma,
     Greyness,

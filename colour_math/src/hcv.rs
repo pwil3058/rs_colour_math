@@ -5,7 +5,7 @@ use crate::chroma::HueData;
 use crate::urgb::UnsignedComponent;
 use crate::{
     chroma, image, ColourComponent, ColourInterface, HueConstants, HueIfce, IndicesValueOrder,
-    RGBConstants, I_RED, RGB, URGB,
+    RGBConstants, CCI, RGB, URGB,
 };
 use normalised_angles::Degrees;
 use std::cmp::Ordering;
@@ -22,9 +22,9 @@ impl<F: ColourComponent> Eq for HCV<F> {}
 impl<F: ColourComponent> HCV<F> {
     pub fn x(&self) -> F {
         if let Some(hue_data) = self.hue_data {
-            let x = if hue_data.io[0] == I_RED {
+            let x = if hue_data.io[0] == CCI::Red {
                 F::ONE + hue_data.second * F::COS_120
-            } else if hue_data.io[1] == I_RED {
+            } else if hue_data.io[1] == CCI::Red {
                 hue_data.second + F::COS_120
             } else {
                 (F::ONE + hue_data.second) * F::COS_120

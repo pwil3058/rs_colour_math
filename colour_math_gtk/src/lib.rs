@@ -14,7 +14,7 @@ pub mod colour {
     pub use colour_math::{
         attributes::{hue_wheel::Shape, ColourAttributeDisplayIfce},
         urgb::{UnsignedComponent, URGB},
-        ColourInterface, HueConstants, RGBConstants, ScalarAttribute, I_BLUE, I_GREEN, I_RED,
+        ColourInterface, HueConstants, RGBConstants, ScalarAttribute, CCI, I_BLUE, I_GREEN, I_RED,
     };
     use pw_gix::gdk;
     pub type RGB = colour_math::rgb::RGB<f64>;
@@ -25,9 +25,9 @@ pub mod colour {
 
     pub fn rgba_from_rgb(rgb: &RGB) -> gdk::RGBA {
         gdk::RGBA {
-            red: rgb[I_RED],
-            blue: rgb[I_BLUE],
-            green: rgb[I_GREEN],
+            red: rgb[CCI::Red],
+            green: rgb[CCI::Green],
+            blue: rgb[CCI::Blue],
             alpha: 1.0,
         }
     }
