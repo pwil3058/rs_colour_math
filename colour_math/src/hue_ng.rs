@@ -68,15 +68,36 @@ pub enum Sextant {
     BlueMagenta = 2,
 }
 
-impl Sextant {
-    fn max_chroma_rgb<F: ColourComponent>(&self, second: F) -> RGB<F> {
-        match self {
-            Sextant::RedMagenta => [F::ONE, F::ZERO, second].into(),
-            Sextant::RedYellow => [F::ONE, second, F::ZERO].into(),
-            Sextant::GreenYellow => [second, F::ONE, F::ZERO].into(),
-            Sextant::GreenCyan => [F::ZERO, F::ONE, second].into(),
-            Sextant::BlueCyan => [F::ZERO, second, F::ONE].into(),
-            Sextant::BlueMagenta => [second, F::ZERO, F::ONE].into(),
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
+pub struct SextantHue<F: ColourComponent>(Sextant, F);
+
+impl<F: ColourComponent> Eq for SextantHue<F> {}
+
+impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
+    fn from(arg: (Sextant, &RGB<F>)) -> Self {
+        let (sextant, rgb) = arg;
+        use Sextant::*;
+        use CCI::*;
+        match sextant {
+            RedMagenta => Self(sextant, (rgb[Blue] - rgb[Green]) / rgb[Red]),
+            RedYellow => Self(sextant, (rgb[Green] - rgb[Blue]) / rgb[Red]),
+            GreenYellow => Self(sextant, (rgb[Red] - rgb[Blue]) / rgb[Green]),
+            GreenCyan => Self(sextant, (rgb[Blue] - rgb[Red]) / rgb[Green]),
+            BlueCyan => Self(sextant, (rgb[Green] - rgb[Red]) / rgb[Blue]),
+            BlueMagenta => Self(sextant, (rgb[Red] - rgb[Green]) / rgb[Blue]),
+        }
+    }
+}
+
+impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        match self.0 {
+            Sextant::RedMagenta => [F::ONE, F::ZERO, self.1].into(),
+            Sextant::RedYellow => [F::ONE, self.1, F::ZERO].into(),
+            Sextant::GreenYellow => [self.1, F::ONE, F::ZERO].into(),
+            Sextant::GreenCyan => [F::ZERO, F::ONE, self.1].into(),
+            Sextant::BlueCyan => [F::ZERO, self.1, F::ONE].into(),
+            Sextant::BlueMagenta => [self.1, F::ZERO, F::ONE].into(),
         }
     }
 }
@@ -85,7 +106,7 @@ impl Sextant {
 pub enum Hue<F: ColourComponent> {
     Primary(RGBHue),
     Secondary(CMYHue),
-    Other(Sextant, F),
+    Other(SextantHue<F>),
 }
 
 impl<F: ColourComponent> Eq for Hue<F> {}
@@ -104,39 +125,22 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
     type Error = &'static str;
 
     fn try_from(rgb: &RGB<F>) -> Result<Self, Self::Error> {
+        use Sextant::*;
         match rgb[CCI::Red].partial_cmp(&rgb[CCI::Green]).unwrap() {
             Ordering::Greater => match rgb[CCI::Green].partial_cmp(&rgb[CCI::Blue]).unwrap() {
-                Ordering::Greater => Ok(Hue::Other(
-                    Sextant::RedYellow,
-                    (rgb[CCI::Green] - rgb[CCI::Blue]) / rgb[CCI::Red],
-                )),
+                Ordering::Greater => Ok(Hue::Other(SextantHue::from((RedYellow, rgb)))),
                 Ordering::Less => match rgb[CCI::Red].partial_cmp(&rgb[CCI::Blue]).unwrap() {
-                    Ordering::Greater => Ok(Hue::Other(
-                        Sextant::RedMagenta,
-                        (rgb[CCI::Blue] - rgb[CCI::Green]) / rgb[CCI::Red],
-                    )),
-                    Ordering::Less => Ok(Hue::Other(
-                        Sextant::BlueMagenta,
-                        (rgb[CCI::Red] - rgb[CCI::Green]) / rgb[CCI::Blue],
-                    )),
+                    Ordering::Greater => Ok(Hue::Other(SextantHue::from((RedMagenta, rgb)))),
+                    Ordering::Less => Ok(Hue::Other(SextantHue::from((BlueMagenta, rgb)))),
                     Ordering::Equal => Ok(Hue::Secondary(CMYHue::Magenta)),
                 },
                 Ordering::Equal => Ok(Hue::Primary(RGBHue::Red)),
             },
             Ordering::Less => match rgb[CCI::Red].partial_cmp(&rgb[CCI::Blue]).unwrap() {
-                Ordering::Greater => Ok(Hue::Other(
-                    Sextant::GreenYellow,
-                    (rgb[CCI::Red] - rgb[CCI::Blue]) / rgb[CCI::Green],
-                )),
+                Ordering::Greater => Ok(Hue::Other(SextantHue::from((GreenYellow, rgb)))),
                 Ordering::Less => match rgb[CCI::Green].partial_cmp(&rgb[CCI::Blue]).unwrap() {
-                    Ordering::Greater => Ok(Hue::Other(
-                        Sextant::GreenCyan,
-                        (rgb[CCI::Blue] - rgb[CCI::Red]) / rgb[CCI::Green],
-                    )),
-                    Ordering::Less => Ok(Hue::Other(
-                        Sextant::BlueCyan,
-                        (rgb[CCI::Green] - rgb[CCI::Red]) / rgb[CCI::Blue],
-                    )),
+                    Ordering::Greater => Ok(Hue::Other(SextantHue::from((GreenCyan, rgb)))),
+                    Ordering::Less => Ok(Hue::Other(SextantHue::from((BlueCyan, rgb)))),
                     Ordering::Equal => Ok(Hue::Secondary(CMYHue::Cyan)),
                 },
                 Ordering::Equal => Ok(Hue::Primary(RGBHue::Green)),
@@ -155,7 +159,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb(),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb(),
-            Self::Other(sextant, second) => sextant.max_chroma_rgb(*second),
+            Self::Other(sextant_hue) => sextant_hue.max_chroma_rgb(),
         }
     }
 }
@@ -198,11 +202,11 @@ mod hue_ng_tests {
         for (rgb, hue) in &[
             (
                 RGB::<f64>::from([1.0, 0.5, 0.0]),
-                Hue::Other(Sextant::RedYellow, 0.5),
+                Hue::Other(SextantHue(Sextant::RedYellow, 0.5)),
             ),
             (
                 RGB::<f64>::from([0.0, 0.25, 0.5]),
-                Hue::Other(Sextant::BlueCyan, 0.5),
+                Hue::Other(SextantHue(Sextant::BlueCyan, 0.5)),
             ),
         ] {
             assert_eq!(Hue::<f64>::try_from(rgb), Ok(*hue));
@@ -220,11 +224,11 @@ mod hue_ng_tests {
         for (rgb, hue) in &[
             (
                 RGB::<f64>::from([1.0, 0.5, 0.0]),
-                Hue::Other(Sextant::RedYellow, 0.5),
+                Hue::Other(SextantHue(Sextant::RedYellow, 0.5)),
             ),
             (
                 RGB::<f64>::from([0.0, 0.5, 1.0]),
-                Hue::Other(Sextant::BlueCyan, 0.5),
+                Hue::Other(SextantHue(Sextant::BlueCyan, 0.5)),
             ),
         ] {
             assert_eq!(hue.max_chroma_rgb(), *rgb);
