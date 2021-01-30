@@ -14,6 +14,7 @@ pub mod attributes;
 pub mod chroma;
 pub mod hcv;
 pub mod hue;
+pub mod hue_ng;
 pub mod image;
 pub mod manipulator;
 pub mod rgb;
