@@ -9,8 +9,10 @@ pub use crate::{
     chroma, hcv::*, rgb::RGB, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
     RGBConstants, CCI,
 };
+use normalised_angles::Degrees;
 
 pub trait HueIfceTmp<F: ColourComponent> {
+    fn hue_angle(&self) -> Degrees<F>;
     fn max_chroma_rgb(&self) -> RGB<F>;
 }
 
@@ -22,6 +24,14 @@ pub enum RGBHue {
 }
 
 impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
+    fn hue_angle(&self) -> Degrees<F> {
+        match self {
+            RGBHue::Red => Degrees::RED,
+            RGBHue::Green => Degrees::GREEN,
+            RGBHue::Blue => Degrees::BLUE,
+        }
+    }
+
     fn max_chroma_rgb(&self) -> RGB<F> {
         match self {
             RGBHue::Red => RGB::RED,
@@ -39,6 +49,14 @@ pub enum CMYHue {
 }
 
 impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
+    fn hue_angle(&self) -> Degrees<F> {
+        match self {
+            CMYHue::Cyan => Degrees::CYAN,
+            CMYHue::Magenta => Degrees::MAGENTA,
+            CMYHue::Yellow => Degrees::YELLOW,
+        }
+    }
+
     fn max_chroma_rgb(&self) -> RGB<F> {
         match self {
             CMYHue::Cyan => RGB::CYAN,
@@ -90,6 +108,19 @@ impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
 }
 
 impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
+    fn hue_angle(&self) -> Degrees<F> {
+        let sin = F::SQRT_3 * self.1 / F::TWO / (F::ONE - self.1 + self.1.powi(2)).sqrt();
+        let angle = Degrees::asin(sin);
+        match self.0 {
+            Sextant::RedMagenta => -angle,
+            Sextant::RedYellow => angle,
+            Sextant::GreenYellow => Degrees::GREEN - angle,
+            Sextant::GreenCyan => Degrees::GREEN + angle,
+            Sextant::BlueCyan => Degrees::BLUE - angle,
+            Sextant::BlueMagenta => Degrees::BLUE + angle,
+        }
+    }
+
     fn max_chroma_rgb(&self) -> RGB<F> {
         match self.0 {
             Sextant::RedMagenta => [F::ONE, F::ZERO, self.1].into(),
@@ -155,6 +186,14 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
 }
 
 impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
+    fn hue_angle(&self) -> Degrees<F> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
+            Self::Secondary(cmy_hue) => cmy_hue.hue_angle(),
+            Self::Other(sextant_hue) => sextant_hue.hue_angle(),
+        }
+    }
+
     fn max_chroma_rgb(&self) -> RGB<F> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb(),
@@ -185,6 +224,7 @@ impl<F: ColourComponent> Ord for Hue<F> {
 #[cfg(test)]
 mod hue_ng_tests {
     use super::*;
+    use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
     #[test]
     fn hue_from_rgb() {
@@ -199,17 +239,18 @@ mod hue_ng_tests {
             assert_eq!(Hue::<f64>::try_from(rgb), Ok(*hue));
             assert_eq!(Hue::<f64>::try_from(&(*rgb * 0.5)), Ok(*hue));
         }
-        for (rgb, hue) in &[
-            (
-                RGB::<f64>::from([1.0, 0.5, 0.0]),
-                Hue::Other(SextantHue(Sextant::RedYellow, 0.5)),
-            ),
-            (
-                RGB::<f64>::from([0.0, 0.25, 0.5]),
-                Hue::Other(SextantHue(Sextant::BlueCyan, 0.5)),
-            ),
+        for (array, sextant, second) in &[
+            ([1.0, 0.5, 0.0], Sextant::RedYellow, 0.5),
+            ([0.0, 0.25, 0.5], Sextant::BlueCyan, 0.5),
+            ([0.2, 0.0, 0.4], Sextant::BlueMagenta, 0.5),
+            ([0.5, 0.0, 1.0], Sextant::BlueMagenta, 0.5),
+            ([1.0, 0.0, 0.5], Sextant::RedMagenta, 0.5),
+            ([0.5, 1.0, 0.0], Sextant::GreenYellow, 0.5),
+            ([0.0, 1.0, 0.5], Sextant::GreenCyan, 0.5),
         ] {
-            assert_eq!(Hue::<f64>::try_from(rgb), Ok(*hue));
+            let rgb = RGB::<f64>::from(array);
+            let hue = Hue::Other(SextantHue(*sextant, *second));
+            assert_eq!(Hue::<f64>::try_from(&rgb), Ok(hue));
         }
     }
 
@@ -221,17 +262,44 @@ mod hue_ng_tests {
         for (hue, rgb) in Hue::<f64>::SECONDARIES.iter().zip(RGB::SECONDARIES.iter()) {
             assert_eq!(hue.max_chroma_rgb(), *rgb);
         }
-        for (rgb, hue) in &[
-            (
-                RGB::<f64>::from([1.0, 0.5, 0.0]),
-                Hue::Other(SextantHue(Sextant::RedYellow, 0.5)),
-            ),
-            (
-                RGB::<f64>::from([0.0, 0.5, 1.0]),
-                Hue::Other(SextantHue(Sextant::BlueCyan, 0.5)),
-            ),
+        for (array, sextant, second) in &[
+            ([1.0, 0.5, 0.0], Sextant::RedYellow, 0.5),
+            ([0.0, 0.5, 1.0], Sextant::BlueCyan, 0.5),
+            ([0.5, 0.0, 1.0], Sextant::BlueMagenta, 0.5),
+            ([1.0, 0.0, 0.5], Sextant::RedMagenta, 0.5),
+            ([0.5, 1.0, 0.0], Sextant::GreenYellow, 0.5),
+            ([0.0, 1.0, 0.5], Sextant::GreenCyan, 0.5),
         ] {
-            assert_eq!(hue.max_chroma_rgb(), *rgb);
+            let rgb = RGB::<f64>::from(array);
+            let hue = Hue::Other(SextantHue(*sextant, *second));
+            assert_eq!(Hue::<f64>::try_from(&rgb), Ok(hue));
+        }
+    }
+
+    #[test]
+    fn hue_angle() {
+        for (hue, angle) in Hue::<f64>::PRIMARIES
+            .iter()
+            .zip(Degrees::<f64>::PRIMARIES.iter())
+        {
+            assert_eq!(hue.hue_angle(), *angle);
+        }
+        for (hue, angle) in Hue::<f64>::SECONDARIES
+            .iter()
+            .zip(Degrees::<f64>::SECONDARIES.iter())
+        {
+            assert_eq!(hue.hue_angle(), *angle);
+        }
+        for (sextant, second, angle) in &[
+            (Sextant::RedYellow, 0.5, Degrees::<f64>::DEG_30),
+            (Sextant::BlueCyan, 0.5, Degrees::<f64>::NEG_DEG_150),
+            (Sextant::BlueMagenta, 0.5, Degrees::<f64>::NEG_DEG_90),
+            (Sextant::RedMagenta, 0.5, Degrees::<f64>::NEG_DEG_30),
+            (Sextant::GreenYellow, 0.5, Degrees::<f64>::DEG_90),
+            (Sextant::GreenCyan, 0.5, Degrees::<f64>::DEG_150),
+        ] {
+            let hue = Hue::Other(SextantHue(*sextant, *second));
+            assert_approx_eq!(hue.hue_angle(), *angle, 0.0000001);
         }
     }
 }
