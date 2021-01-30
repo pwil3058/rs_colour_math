@@ -13,6 +13,10 @@ use normalised_angles::Degrees;
 
 pub trait HueIfceTmp<F: ColourComponent> {
     fn hue_angle(&self) -> Degrees<F>;
+    fn chroma_correction(&self) -> F;
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F);
+    fn max_chroma_for_sum(&self, sum: F) -> F;
+
     fn max_chroma_rgb(&self) -> RGB<F>;
 }
 
@@ -29,6 +33,32 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
             RGBHue::Red => Degrees::RED,
             RGBHue::Green => Degrees::GREEN,
             RGBHue::Blue => Degrees::BLUE,
+        }
+    }
+
+    fn chroma_correction(&self) -> F {
+        F::ONE
+    }
+
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F) {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ONE {
+            (F::ONE, F::ONE)
+        } else {
+            (chroma, (F::THREE - F::TWO * chroma).min(F::THREE))
+        }
+    }
+
+    fn max_chroma_for_sum(&self, sum: F) -> F {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO || sum == F::THREE {
+            F::ZERO
+        } else if sum < F::ONE {
+            sum
+        } else if sum > F::ONE {
+            ((F::THREE - sum) / F::TWO).min(F::ONE)
+        } else {
+            F::ONE
         }
     }
 
@@ -54,6 +84,32 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
             CMYHue::Cyan => Degrees::CYAN,
             CMYHue::Magenta => Degrees::MAGENTA,
             CMYHue::Yellow => Degrees::YELLOW,
+        }
+    }
+
+    fn chroma_correction(&self) -> F {
+        F::ONE
+    }
+
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F) {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ONE {
+            (F::TWO, F::TWO)
+        } else {
+            (chroma * F::TWO, F::THREE - chroma)
+        }
+    }
+
+    fn max_chroma_for_sum(&self, sum: F) -> F {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO || sum == F::THREE {
+            F::ZERO
+        } else if sum < F::TWO {
+            (sum / (F::TWO)).min(F::ONE)
+        } else if sum > F::TWO {
+            (F::THREE - sum).min(F::ONE)
+        } else {
+            F::ONE
         }
     }
 
@@ -118,6 +174,41 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             Sextant::GreenCyan => Degrees::GREEN + angle,
             Sextant::BlueCyan => Degrees::BLUE - angle,
             Sextant::BlueMagenta => Degrees::BLUE + angle,
+        }
+    }
+
+    fn chroma_correction(&self) -> F {
+        // Careful of fact floats only approximate real numbers
+        (F::ONE + self.1 * self.1 - self.1)
+            .sqrt()
+            .min(F::ONE)
+            .recip()
+    }
+
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F) {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ONE {
+            let temp = (F::ONE + self.1).min(F::TWO);
+            (temp, temp)
+        } else {
+            let temp = self.1 * chroma;
+            (
+                (chroma + temp).min(F::THREE),
+                (F::THREE + temp - F::TWO * chroma).min(F::THREE),
+            )
+        }
+    }
+
+    fn max_chroma_for_sum(&self, sum: F) -> F {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO || sum == F::THREE {
+            F::ZERO
+        } else if sum < F::ONE + self.1 {
+            (sum / (F::ONE + self.1)).min(F::ONE)
+        } else if sum > F::ONE + self.1 {
+            ((F::THREE - sum) / (F::TWO - self.1)).min(F::ONE)
+        } else {
+            F::ONE
         }
     }
 
@@ -191,6 +282,30 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
             Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
             Self::Secondary(cmy_hue) => cmy_hue.hue_angle(),
             Self::Other(sextant_hue) => sextant_hue.hue_angle(),
+        }
+    }
+
+    fn chroma_correction(&self) -> F {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.chroma_correction(),
+            Self::Secondary(cmy_hue) => cmy_hue.chroma_correction(),
+            Self::Other(sextant_hue) => sextant_hue.chroma_correction(),
+        }
+    }
+
+    fn sum_range_for_chroma(&self, chroma: F) -> (F, F) {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
+            Self::Other(sextant_hue) => sextant_hue.sum_range_for_chroma(chroma),
+        }
+    }
+
+    fn max_chroma_for_sum(&self, sum: F) -> F {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.max_chroma_for_sum(sum),
+            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_for_sum(sum),
+            Self::Other(sextant_hue) => sextant_hue.max_chroma_for_sum(sum),
         }
     }
 
