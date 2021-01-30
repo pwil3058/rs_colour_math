@@ -18,6 +18,7 @@ pub trait HueIfceTmp<F: ColourComponent> {
     fn max_chroma_for_sum(&self, sum: F) -> F;
 
     fn max_chroma_rgb(&self) -> RGB<F>;
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -69,6 +70,30 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
             RGBHue::Blue => RGB::BLUE,
         }
     }
+
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO {
+            RGB::BLACK
+        } else if sum == F::THREE {
+            RGB::WHITE
+        } else {
+            if sum <= F::ONE {
+                match self {
+                    RGBHue::Red => [sum, F::ZERO, F::ZERO].into(),
+                    RGBHue::Green => [F::ZERO, sum, F::ZERO].into(),
+                    RGBHue::Blue => [F::ZERO, F::ZERO, sum].into(),
+                }
+            } else {
+                let other = ((sum - F::ONE) / F::TWO).min(F::ONE);
+                match self {
+                    RGBHue::Red => [F::ONE, other, other].into(),
+                    RGBHue::Green => [other, F::ONE, other].into(),
+                    RGBHue::Blue => [other, other, F::ONE].into(),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -118,6 +143,31 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
             CMYHue::Cyan => RGB::CYAN,
             CMYHue::Magenta => RGB::MAGENTA,
             CMYHue::Yellow => RGB::YELLOW,
+        }
+    }
+
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO {
+            RGB::BLACK
+        } else if sum == F::THREE {
+            RGB::WHITE
+        } else {
+            if sum <= F::TWO {
+                let cmpt = (sum / F::TWO).min(F::ONE);
+                match self {
+                    CMYHue::Cyan => [F::ZERO, cmpt, cmpt].into(),
+                    CMYHue::Magenta => [cmpt, F::ZERO, cmpt].into(),
+                    CMYHue::Yellow => [cmpt, cmpt, F::ZERO].into(),
+                }
+            } else {
+                let third = (sum - F::TWO).max(F::ZERO).min(F::ONE);
+                match self {
+                    CMYHue::Cyan => [third, F::ONE, F::ONE].into(),
+                    CMYHue::Magenta => [F::ONE, third, F::ONE].into(),
+                    CMYHue::Yellow => [F::ONE, F::ONE, third].into(),
+                }
+            }
         }
     }
 }
@@ -222,6 +272,43 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             Sextant::BlueMagenta => [self.1, F::ZERO, F::ONE].into(),
         }
     }
+
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
+        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        if sum == F::ZERO {
+            RGB::BLACK
+        } else if sum == F::THREE {
+            RGB::WHITE
+        } else if sum < F::ONE + self.1 {
+            let divisor = F::ONE + self.1;
+            let first = (sum / divisor).min(F::ONE);
+            let second = sum * self.1 / divisor;
+            match self.0 {
+                Sextant::RedMagenta => [first, F::ZERO, second].into(),
+                Sextant::RedYellow => [first, second, F::ZERO].into(),
+                Sextant::GreenYellow => [second, F::ONE, F::ZERO].into(),
+                Sextant::GreenCyan => [F::ZERO, first, second].into(),
+                Sextant::BlueCyan => [F::ZERO, second, first].into(),
+                Sextant::BlueMagenta => [second, F::ZERO, first].into(),
+            }
+        } else if sum > F::ONE + self.1 {
+            let chroma = (F::THREE - sum) / (F::TWO - self.1);
+            let oc = self.1 * chroma;
+            let first = ((sum + F::TWO * chroma - oc).max(F::ZERO) / F::THREE).min(F::ONE);
+            let second = ((sum + F::TWO * oc - chroma).max(F::ZERO) / F::THREE).min(F::ONE);
+            let third = ((sum - oc - chroma).max(F::ZERO) / F::THREE).min(F::ONE);
+            match self.0 {
+                Sextant::RedMagenta => [first, third, second].into(),
+                Sextant::RedYellow => [first, second, third].into(),
+                Sextant::GreenYellow => [second, third, F::ZERO].into(),
+                Sextant::GreenCyan => [third, first, second].into(),
+                Sextant::BlueCyan => [third, second, first].into(),
+                Sextant::BlueMagenta => [second, third, first].into(),
+            }
+        } else {
+            self.max_chroma_rgb()
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -314,6 +401,14 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb(),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb(),
             Self::Other(sextant_hue) => sextant_hue.max_chroma_rgb(),
+        }
+    }
+
+    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
+            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb_for_sum(sum),
+            Self::Other(sextant_hue) => sextant_hue.max_chroma_rgb_for_sum(sum),
         }
     }
 }
