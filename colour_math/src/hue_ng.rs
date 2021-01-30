@@ -2,8 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    convert::{From, Into, TryFrom},
-    ops::{Add, Index, Mul},
+    convert::{Into, TryFrom},
 };
 
 pub use crate::{
@@ -11,12 +10,9 @@ pub use crate::{
     RGBConstants, CCI,
 };
 
-use crate::chroma::HueData;
-use crate::hue_ng::Sextant::{BlueMagenta, GreenYellow, RedMagenta, RedYellow};
-use crate::HueIfce;
-use normalised_angles::Degrees;
-use num_traits_plus::float_plus::*;
-use regex::Error;
+pub trait HueIfceTmp<F: ColourComponent> {
+    fn max_chroma_rgb(&self) -> RGB<F>;
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum RGBHue {
@@ -25,11 +21,31 @@ pub enum RGBHue {
     Blue = 1,
 }
 
+impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        match self {
+            RGBHue::Red => RGB::RED,
+            RGBHue::Green => RGB::GREEN,
+            RGBHue::Blue => RGB::BLUE,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum CMYHue {
-    Cyan = 11,
+    Cyan = 113,
     Magenta = 3,
     Yellow = 7,
+}
+
+impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        match self {
+            CMYHue::Cyan => RGB::CYAN,
+            CMYHue::Magenta => RGB::MAGENTA,
+            CMYHue::Yellow => RGB::YELLOW,
+        }
+    }
 }
 
 impl CMYHue {
@@ -50,6 +66,19 @@ pub enum Sextant {
     GreenCyan = 10,
     BlueCyan = 0,
     BlueMagenta = 2,
+}
+
+impl Sextant {
+    fn max_chroma_rgb<F: ColourComponent>(&self, second: F) -> RGB<F> {
+        match self {
+            Sextant::RedMagenta => [F::ONE, F::ZERO, second].into(),
+            Sextant::RedYellow => [F::ONE, second, F::ZERO].into(),
+            Sextant::GreenYellow => [second, F::ONE, F::ZERO].into(),
+            Sextant::GreenCyan => [F::ZERO, F::ONE, second].into(),
+            Sextant::BlueCyan => [F::ZERO, second, F::ONE].into(),
+            Sextant::BlueMagenta => [second, F::ZERO, F::ONE].into(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -121,6 +150,16 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
     }
 }
 
+impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
+    fn max_chroma_rgb(&self) -> RGB<F> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb(),
+            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb(),
+            Self::Other(sextant, second) => sextant.max_chroma_rgb(*second),
+        }
+    }
+}
+
 impl<F: ColourComponent> Hue<F> {
     pub fn ord_index(&self) -> u8 {
         0
@@ -150,9 +189,11 @@ mod hue_ng_tests {
         }
         for (rgb, hue) in RGB::<f64>::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
             assert_eq!(Hue::<f64>::try_from(rgb), Ok(*hue));
+            assert_eq!(Hue::<f64>::try_from(&(*rgb * 0.5)), Ok(*hue));
         }
         for (rgb, hue) in RGB::<f64>::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
             assert_eq!(Hue::<f64>::try_from(rgb), Ok(*hue));
+            assert_eq!(Hue::<f64>::try_from(&(*rgb * 0.5)), Ok(*hue));
         }
         for (rgb, hue) in &[
             (
@@ -165,6 +206,28 @@ mod hue_ng_tests {
             ),
         ] {
             assert_eq!(Hue::<f64>::try_from(rgb), Ok(*hue));
+        }
+    }
+
+    #[test]
+    fn hue_max_chroma_rgb() {
+        for (hue, rgb) in Hue::<f64>::PRIMARIES.iter().zip(RGB::PRIMARIES.iter()) {
+            assert_eq!(hue.max_chroma_rgb(), *rgb);
+        }
+        for (hue, rgb) in Hue::<f64>::SECONDARIES.iter().zip(RGB::SECONDARIES.iter()) {
+            assert_eq!(hue.max_chroma_rgb(), *rgb);
+        }
+        for (rgb, hue) in &[
+            (
+                RGB::<f64>::from([1.0, 0.5, 0.0]),
+                Hue::Other(Sextant::RedYellow, 0.5),
+            ),
+            (
+                RGB::<f64>::from([0.0, 0.5, 1.0]),
+                Hue::Other(Sextant::BlueCyan, 0.5),
+            ),
+        ] {
+            assert_eq!(hue.max_chroma_rgb(), *rgb);
         }
     }
 }
