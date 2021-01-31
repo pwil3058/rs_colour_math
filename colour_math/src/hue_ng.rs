@@ -29,6 +29,17 @@ pub enum RGBHue {
     Blue = 1,
 }
 
+impl RGBHue {
+    fn make_rgb<F: ColourComponent>(&self, components: (F, F)) -> RGB<F> {
+        use RGBHue::*;
+        match self {
+            Red => [components.0, components.1, components.1].into(),
+            Green => [components.1, components.0, components.1].into(),
+            Blue => [components.1, components.1, components.0].into(),
+        }
+    }
+}
+
 impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
@@ -80,18 +91,9 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
             RGB::WHITE
         } else {
             if sum <= F::ONE {
-                match self {
-                    RGBHue::Red => [sum, F::ZERO, F::ZERO].into(),
-                    RGBHue::Green => [F::ZERO, sum, F::ZERO].into(),
-                    RGBHue::Blue => [F::ZERO, F::ZERO, sum].into(),
-                }
+                self.make_rgb((sum, F::ZERO))
             } else {
-                let other = ((sum - F::ONE) / F::TWO).min(F::ONE);
-                match self {
-                    RGBHue::Red => [F::ONE, other, other].into(),
-                    RGBHue::Green => [other, F::ONE, other].into(),
-                    RGBHue::Blue => [other, other, F::ONE].into(),
-                }
+                self.make_rgb((F::ONE, ((sum - F::ONE) / F::TWO).min(F::ONE)))
             }
         }
     }
@@ -103,12 +105,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
         } else if chroma == F::ONE {
             self.max_chroma_rgb()
         } else {
-            use RGBHue::*;
-            match self {
-                Red => [chroma, F::ZERO, F::ZERO].into(),
-                Green => [F::ZERO, chroma, F::ZERO].into(),
-                Blue => [F::ZERO, F::ZERO, chroma].into(),
-            }
+            self.make_rgb((chroma, F::ZERO))
         }
     }
 }
@@ -118,6 +115,17 @@ pub enum CMYHue {
     Cyan = 113,
     Magenta = 3,
     Yellow = 7,
+}
+
+impl CMYHue {
+    fn make_rgb<F: ColourComponent>(&self, components: (F, F)) -> RGB<F> {
+        use CMYHue::*;
+        match self {
+            Cyan => [components.1, components.0, components.0].into(),
+            Magenta => [components.0, components.1, components.0].into(),
+            Yellow => [components.0, components.0, components.1].into(),
+        }
+    }
 }
 
 impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
@@ -171,19 +179,9 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
             RGB::WHITE
         } else {
             if sum <= F::TWO {
-                let cmpt = (sum / F::TWO).min(F::ONE);
-                match self {
-                    CMYHue::Cyan => [F::ZERO, cmpt, cmpt].into(),
-                    CMYHue::Magenta => [cmpt, F::ZERO, cmpt].into(),
-                    CMYHue::Yellow => [cmpt, cmpt, F::ZERO].into(),
-                }
+                self.make_rgb(((sum / F::TWO).min(F::ONE), F::ZERO))
             } else {
-                let third = (sum - F::TWO).max(F::ZERO).min(F::ONE);
-                match self {
-                    CMYHue::Cyan => [third, F::ONE, F::ONE].into(),
-                    CMYHue::Magenta => [F::ONE, third, F::ONE].into(),
-                    CMYHue::Yellow => [F::ONE, F::ONE, third].into(),
-                }
+                self.make_rgb((F::ONE, (sum - F::TWO).max(F::ZERO).min(F::ONE)))
             }
         }
     }
@@ -195,12 +193,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
         } else if chroma == F::ONE {
             self.max_chroma_rgb()
         } else {
-            use CMYHue::*;
-            match self {
-                Cyan => [F::ZERO, chroma, chroma].into(),
-                Magenta => [chroma, F::ZERO, chroma].into(),
-                Yellow => [chroma, chroma, F::ZERO].into(),
-            }
+            self.make_rgb((chroma, F::ZERO))
         }
     }
 }
@@ -220,18 +213,32 @@ pub struct SextantHue<F: ColourComponent>(Sextant, F);
 
 impl<F: ColourComponent> Eq for SextantHue<F> {}
 
+impl<F: ColourComponent> SextantHue<F> {
+    fn make_rgb(&self, components: (F, F, F)) -> RGB<F> {
+        assert!(components.0 >= components.1 && components.1 >= components.2);
+        use Sextant::*;
+        match self.0 {
+            RedMagenta => [components.0, components.2, components.1].into(),
+            RedYellow => [components.0, components.1, components.2].into(),
+            GreenYellow => [components.1, components.0, components.2].into(),
+            GreenCyan => [components.2, components.0, components.1].into(),
+            BlueCyan => [components.2, components.1, components.0].into(),
+            BlueMagenta => [components.1, components.2, components.0].into(),
+        }
+    }
+}
+
 impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
     fn from(arg: (Sextant, &RGB<F>)) -> Self {
-        let (sextant, rgb) = arg;
         use Sextant::*;
         use CCI::*;
-        match sextant {
-            RedMagenta => Self(sextant, (rgb[Blue] - rgb[Green]) / rgb[Red]),
-            RedYellow => Self(sextant, (rgb[Green] - rgb[Blue]) / rgb[Red]),
-            GreenYellow => Self(sextant, (rgb[Red] - rgb[Blue]) / rgb[Green]),
-            GreenCyan => Self(sextant, (rgb[Blue] - rgb[Red]) / rgb[Green]),
-            BlueCyan => Self(sextant, (rgb[Green] - rgb[Red]) / rgb[Blue]),
-            BlueMagenta => Self(sextant, (rgb[Red] - rgb[Green]) / rgb[Blue]),
+        match arg.0 {
+            RedMagenta => Self(arg.0, (arg.1[Blue] - arg.1[Green]) / arg.1[Red]),
+            RedYellow => Self(arg.0, (arg.1[Green] - arg.1[Blue]) / arg.1[Red]),
+            GreenYellow => Self(arg.0, (arg.1[Red] - arg.1[Blue]) / arg.1[Green]),
+            GreenCyan => Self(arg.0, (arg.1[Blue] - arg.1[Red]) / arg.1[Green]),
+            BlueCyan => Self(arg.0, (arg.1[Green] - arg.1[Red]) / arg.1[Blue]),
+            BlueMagenta => Self(arg.0, (arg.1[Red] - arg.1[Green]) / arg.1[Blue]),
         }
     }
 }
@@ -286,14 +293,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
     }
 
     fn max_chroma_rgb(&self) -> RGB<F> {
-        match self.0 {
-            Sextant::RedMagenta => [F::ONE, F::ZERO, self.1].into(),
-            Sextant::RedYellow => [F::ONE, self.1, F::ZERO].into(),
-            Sextant::GreenYellow => [self.1, F::ONE, F::ZERO].into(),
-            Sextant::GreenCyan => [F::ZERO, F::ONE, self.1].into(),
-            Sextant::BlueCyan => [F::ZERO, self.1, F::ONE].into(),
-            Sextant::BlueMagenta => [self.1, F::ZERO, F::ONE].into(),
-        }
+        self.make_rgb((F::ONE, self.1, F::ZERO))
     }
 
     fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
@@ -308,7 +308,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             if sum == max_chroma_sum {
                 self.max_chroma_rgb()
             } else {
-                let (first, second, third) = if sum < max_chroma_sum {
+                let components = if sum < max_chroma_sum {
                     let first = (sum / max_chroma_sum).min(F::ONE);
                     (first, first * self.1, F::ZERO)
                 } else {
@@ -316,15 +316,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
                     let second = ((temp + self.1) / F::TWO).min(F::ONE);
                     (F::ONE, second, (temp - second).max(F::ZERO))
                 };
-                assert!(first >= second && second >= third);
-                match self.0 {
-                    Sextant::RedMagenta => [first, third, second].into(),
-                    Sextant::RedYellow => [first, second, third].into(),
-                    Sextant::GreenYellow => [second, first, third].into(),
-                    Sextant::GreenCyan => [third, first, second].into(),
-                    Sextant::BlueCyan => [third, second, first].into(),
-                    Sextant::BlueMagenta => [second, third, first].into(),
-                }
+                self.make_rgb(components)
             }
         }
     }
@@ -336,16 +328,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
         } else if chroma == F::ONE {
             self.max_chroma_rgb()
         } else {
-            use Sextant::*;
-            let second = self.1 * chroma;
-            match self.0 {
-                RedMagenta => [chroma, F::ZERO, second].into(),
-                RedYellow => [chroma, second, F::ZERO].into(),
-                GreenYellow => [second, chroma, F::ZERO].into(),
-                GreenCyan => [F::ZERO, chroma, second].into(),
-                BlueCyan => [F::ZERO, second, chroma].into(),
-                BlueMagenta => [second, F::ZERO, chroma].into(),
-            }
+            self.make_rgb((chroma, self.1 * chroma, F::ZERO))
         }
     }
 }
