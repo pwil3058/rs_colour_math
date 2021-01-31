@@ -20,6 +20,7 @@ pub trait HueIfceTmp<F: ColourComponent> {
     fn max_chroma_rgb(&self) -> RGB<F>;
     fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F>;
     fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -108,6 +109,17 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
             self.make_rgb((chroma, F::ZERO))
         }
     }
+
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ZERO {
+            RGB::WHITE
+        } else if chroma == F::ONE {
+            self.max_chroma_rgb()
+        } else {
+            self.make_rgb((F::ONE, F::ONE - chroma))
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -194,6 +206,17 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
             self.max_chroma_rgb()
         } else {
             self.make_rgb((chroma, F::ZERO))
+        }
+    }
+
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ZERO {
+            RGB::WHITE
+        } else if chroma == F::ONE {
+            self.max_chroma_rgb()
+        } else {
+            self.make_rgb((F::ONE, F::ONE - chroma))
         }
     }
 }
@@ -331,6 +354,18 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             self.make_rgb((chroma, self.1 * chroma, F::ZERO))
         }
     }
+
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ZERO {
+            RGB::WHITE
+        } else if chroma == F::ONE {
+            self.max_chroma_rgb()
+        } else {
+            let third = F::ONE - chroma;
+            self.make_rgb((F::ONE, chroma * self.1 + third, third))
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -439,6 +474,14 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
             Self::Primary(rgb_hue) => rgb_hue.min_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.min_sum_rgb_for_chroma(chroma),
             Self::Other(sextant_hue) => sextant_hue.min_sum_rgb_for_chroma(chroma),
+        }
+    }
+
+    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.max_sum_rgb_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.max_sum_rgb_for_chroma(chroma),
+            Self::Other(sextant_hue) => sextant_hue.max_sum_rgb_for_chroma(chroma),
         }
     }
 }
@@ -774,7 +817,13 @@ mod hue_ng_tests {
         {
             println!("{:?} : {:?}", hue, expected_rgb);
             assert_eq!(hue.min_sum_rgb_for_chroma(1.0), *expected_rgb);
-            //assert_eq!(hue.max_sum_rgb_for_chroma(1.0), *expected_rgb);
+            assert_eq!(hue.max_sum_rgb_for_chroma(1.0), *expected_rgb);
+            let shade = hue.min_sum_rgb_for_chroma(0.5);
+            let tint = hue.max_sum_rgb_for_chroma(0.5);
+            assert!(shade.value() < tint.value());
+            assert_approx_eq!(shade.chroma(), 0.5, 0.00000000001);
+            assert_approx_eq!(tint.chroma(), 0.5, 0.00000000001);
+            assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
         }
         for (hue, expected_rgb) in Hue::<f64>::SECONDARIES
             .iter()
@@ -782,7 +831,13 @@ mod hue_ng_tests {
         {
             println!("{:?} : {:?}", hue, expected_rgb);
             assert_eq!(hue.min_sum_rgb_for_chroma(1.0), *expected_rgb);
-            //assert_eq!(hue.max_sum_rgb_for_chroma(1.0), *expected_rgb);
+            assert_eq!(hue.max_sum_rgb_for_chroma(1.0), *expected_rgb);
+            let shade = hue.min_sum_rgb_for_chroma(0.5);
+            let tint = hue.max_sum_rgb_for_chroma(0.5);
+            assert!(shade.value() < tint.value());
+            assert_approx_eq!(shade.chroma(), 0.5, 0.00000000001);
+            assert_approx_eq!(tint.chroma(), 0.5, 0.00000000001);
+            assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
         }
         use Sextant::*;
         for sextant in &[
@@ -796,14 +851,14 @@ mod hue_ng_tests {
             for second in SECOND_VALUES.iter() {
                 let hue = Hue::<f64>::Other(SextantHue(*sextant, *second));
                 assert_eq!(hue.min_sum_rgb_for_chroma(0.0), RGB::BLACK);
-                //assert_eq!(hue.max_sum_rgb_for_chroma(0.0), RGB::WHITE);
+                assert_eq!(hue.max_sum_rgb_for_chroma(0.0), RGB::WHITE);
                 for chroma in NON_ZERO_CHROMAS.iter() {
                     let shade = hue.min_sum_rgb_for_chroma(*chroma);
-                    //let tint = hue.max_sum_rgb_for_chroma(*chroma);
-                    //assert!(shade.sum() <= tint.sum());
+                    let tint = hue.max_sum_rgb_for_chroma(*chroma);
+                    assert!(shade.sum() <= tint.sum());
                     assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
-                    //assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
-                    //assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
+                    assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
+                    assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
                 }
             }
         }
