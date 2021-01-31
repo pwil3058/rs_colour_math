@@ -172,16 +172,6 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
     }
 }
 
-impl CMYHue {
-    pub fn indices(&self) -> (CCI, CCI) {
-        match self {
-            CMYHue::Magenta => (CCI::Red, CCI::Blue),
-            CMYHue::Yellow => (CCI::Red, CCI::Green),
-            CMYHue::Cyan => (CCI::Green, CCI::Blue),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Sextant {
     RedMagenta = 4,
@@ -275,38 +265,34 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
 
     fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+        // TODO: make hue drift an error
         if sum == F::ZERO {
             RGB::BLACK
         } else if sum == F::THREE {
             RGB::WHITE
-        } else if sum < F::ONE + self.1 {
-            let divisor = F::ONE + self.1;
-            let first = (sum / divisor).min(F::ONE);
-            let second = sum * self.1 / divisor;
-            match self.0 {
-                Sextant::RedMagenta => [first, F::ZERO, second].into(),
-                Sextant::RedYellow => [first, second, F::ZERO].into(),
-                Sextant::GreenYellow => [second, F::ONE, F::ZERO].into(),
-                Sextant::GreenCyan => [F::ZERO, first, second].into(),
-                Sextant::BlueCyan => [F::ZERO, second, first].into(),
-                Sextant::BlueMagenta => [second, F::ZERO, first].into(),
-            }
-        } else if sum > F::ONE + self.1 {
-            let chroma = (F::THREE - sum) / (F::TWO - self.1);
-            let oc = self.1 * chroma;
-            let first = ((sum + F::TWO * chroma - oc).max(F::ZERO) / F::THREE).min(F::ONE);
-            let second = ((sum + F::TWO * oc - chroma).max(F::ZERO) / F::THREE).min(F::ONE);
-            let third = ((sum - oc - chroma).max(F::ZERO) / F::THREE).min(F::ONE);
-            match self.0 {
-                Sextant::RedMagenta => [first, third, second].into(),
-                Sextant::RedYellow => [first, second, third].into(),
-                Sextant::GreenYellow => [second, third, F::ZERO].into(),
-                Sextant::GreenCyan => [third, first, second].into(),
-                Sextant::BlueCyan => [third, second, first].into(),
-                Sextant::BlueMagenta => [second, third, first].into(),
-            }
         } else {
-            self.max_chroma_rgb()
+            let max_chroma_sum = self.1 + F::ONE;
+            if sum == max_chroma_sum {
+                self.max_chroma_rgb()
+            } else {
+                let (first, second, third) = if sum < max_chroma_sum {
+                    let first = (sum / max_chroma_sum).min(F::ONE);
+                    (first, first * self.1, F::ZERO)
+                } else {
+                    let temp = sum - F::ONE;
+                    let second = ((temp + self.1) / F::TWO).min(F::ONE);
+                    (F::ONE, second, (temp - second).max(F::ZERO))
+                };
+                assert!(first >= second && second >= third);
+                match self.0 {
+                    Sextant::RedMagenta => [first, third, second].into(),
+                    Sextant::RedYellow => [first, second, third].into(),
+                    Sextant::GreenYellow => [second, first, third].into(),
+                    Sextant::GreenCyan => [third, first, second].into(),
+                    Sextant::BlueCyan => [third, second, first].into(),
+                    Sextant::BlueMagenta => [second, third, first].into(),
+                }
+            }
         }
     }
 }
@@ -436,6 +422,83 @@ mod hue_ng_tests {
     use super::*;
     use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
+    const NON_ZERO_CHROMAS: [f64; 7] = [0.000000001, 0.025, 0.5, 0.75, 0.9, 0.99999, 1.0];
+    const VALID_OTHER_SUMS: [f64; 20] = [
+        0.000000001,
+        0.025,
+        0.5,
+        0.75,
+        0.9,
+        0.99999,
+        1.0,
+        1.000000001,
+        1.025,
+        1.5,
+        1.75,
+        1.9,
+        1.99999,
+        2.0,
+        2.000000001,
+        2.025,
+        2.5,
+        2.75,
+        2.9,
+        2.99999,
+    ];
+    // "second" should never be 0.0 or 1.0
+    const SECOND_VALUES: [f64; 11] = [
+        0.00000001, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.999999,
+    ];
+
+    impl RGBHue {
+        fn indices(&self) -> (CCI, CCI, CCI) {
+            match self {
+                RGBHue::Red => (CCI::Red, CCI::Green, CCI::Blue),
+                RGBHue::Green => (CCI::Green, CCI::Red, CCI::Blue),
+                RGBHue::Blue => (CCI::Blue, CCI::Red, CCI::Green),
+            }
+        }
+    }
+
+    impl CMYHue {
+        fn indices(&self) -> (CCI, CCI, CCI) {
+            match self {
+                CMYHue::Magenta => (CCI::Red, CCI::Blue, CCI::Green),
+                CMYHue::Yellow => (CCI::Red, CCI::Green, CCI::Blue),
+                CMYHue::Cyan => (CCI::Green, CCI::Blue, CCI::Red),
+            }
+        }
+    }
+
+    impl Sextant {
+        fn indices(&self) -> (CCI, CCI, CCI) {
+            match self {
+                Sextant::RedYellow => (CCI::Red, CCI::Green, CCI::Blue),
+                Sextant::RedMagenta => (CCI::Red, CCI::Blue, CCI::Green),
+                Sextant::GreenYellow => (CCI::Green, CCI::Red, CCI::Blue),
+                Sextant::GreenCyan => (CCI::Green, CCI::Blue, CCI::Red),
+                Sextant::BlueMagenta => (CCI::Blue, CCI::Red, CCI::Green),
+                Sextant::BlueCyan => (CCI::Blue, CCI::Green, CCI::Red),
+            }
+        }
+    }
+
+    impl<F: ColourComponent> SextantHue<F> {
+        fn indices(&self) -> (CCI, CCI, CCI) {
+            self.0.indices()
+        }
+    }
+
+    impl<F: ColourComponent> Hue<F> {
+        fn indices(&self) -> (CCI, CCI, CCI) {
+            match self {
+                Self::Primary(rgb_hue) => rgb_hue.indices(),
+                Self::Secondary(cmy_hue) => cmy_hue.indices(),
+                Self::Other(sextant_hue) => sextant_hue.indices(),
+            }
+        }
+    }
+
     #[test]
     fn hue_from_rgb() {
         for rgb in &[RGB::<f64>::BLACK, RGB::WHITE, RGB::from([0.5, 0.5, 0.5])] {
@@ -507,9 +570,155 @@ mod hue_ng_tests {
             (Sextant::RedMagenta, 0.5, Degrees::<f64>::NEG_DEG_30),
             (Sextant::GreenYellow, 0.5, Degrees::<f64>::DEG_90),
             (Sextant::GreenCyan, 0.5, Degrees::<f64>::DEG_150),
+            //(Sextant::RedYellow, 0.25, Degrees::<f64>::from(15.0)),
         ] {
             let hue = Hue::Other(SextantHue(*sextant, *second));
             assert_approx_eq!(hue.hue_angle(), *angle, 0.0000001);
+        }
+    }
+
+    #[test]
+    fn max_chroma_and_sum_ranges() {
+        for hue in &Hue::<f64>::PRIMARIES {
+            assert_eq!(hue.sum_range_for_chroma(0.0), (0.0, 3.0));
+            assert_eq!(hue.sum_range_for_chroma(1.0), (1.0, 1.0));
+            for chroma in NON_ZERO_CHROMAS.iter() {
+                let (shade, tint) = hue.sum_range_for_chroma(*chroma);
+                let max_chroma = hue.max_chroma_for_sum(shade);
+                assert_approx_eq!(max_chroma, *chroma);
+                let max_chroma = hue.max_chroma_for_sum(tint);
+                assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
+            }
+        }
+        for hue in &Hue::<f64>::SECONDARIES {
+            assert_eq!(hue.sum_range_for_chroma(0.0), (0.0, 3.0));
+            assert_eq!(hue.sum_range_for_chroma(1.0), (2.0, 2.0));
+            for chroma in NON_ZERO_CHROMAS.iter() {
+                let (shade, tint) = hue.sum_range_for_chroma(*chroma);
+                let max_chroma = hue.max_chroma_for_sum(shade);
+                assert_approx_eq!(max_chroma, *chroma);
+                let max_chroma = hue.max_chroma_for_sum(tint);
+                assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
+            }
+        }
+        use Sextant::*;
+        for sextant in &[
+            RedYellow,
+            RedMagenta,
+            GreenCyan,
+            GreenYellow,
+            BlueCyan,
+            BlueMagenta,
+        ] {
+            for other in SECOND_VALUES.iter() {
+                let hue = Hue::<f64>::Other(SextantHue(*sextant, *other));
+                assert_eq!(hue.sum_range_for_chroma(0.0), (0.0, 3.0),);
+                assert_eq!(hue.sum_range_for_chroma(1.0), (1.0 + *other, 1.0 + *other),);
+                for chroma in NON_ZERO_CHROMAS.iter() {
+                    let (shade, tint) = hue.sum_range_for_chroma(*chroma);
+                    let max_chroma = hue.max_chroma_for_sum(shade);
+                    assert_approx_eq!(max_chroma, *chroma);
+                    let max_chroma = hue.max_chroma_for_sum(tint);
+                    assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn primary_max_chroma_rgbs() {
+        for (hue, expected_rgb) in Hue::<f64>::PRIMARIES
+            .iter()
+            .zip(RGB::<f64>::PRIMARIES.iter())
+        {
+            assert_eq!(hue.max_chroma_rgb_for_sum(1.0), *expected_rgb);
+            assert_eq!(hue.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
+            assert_eq!(hue.max_chroma_rgb_for_sum(3.0), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 0.9999].iter() {
+                let mut array = [0.0_f64, 0.0, 0.0];
+                array[hue.indices().0 as usize] = *sum;
+                let expected: RGB<f64> = array.into();
+                assert_eq!(hue.max_chroma_rgb_for_sum(*sum), expected);
+            }
+            for sum in [2.0001, 2.25, 2.5, 2.75, 2.9999].iter() {
+                let mut array = [1.0_f64, 1.0, 1.0];
+                array[hue.indices().1 as usize] = (sum - 1.0) / 2.0;
+                array[hue.indices().2 as usize] = (sum - 1.0) / 2.0;
+                let expected: RGB<f64> = array.into();
+                assert_eq!(hue.max_chroma_rgb_for_sum(*sum), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn secondary_max_chroma_rgbs() {
+        for (hue, expected_rgb) in Hue::<f64>::SECONDARIES
+            .iter()
+            .zip(RGB::<f64>::SECONDARIES.iter())
+        {
+            assert_eq!(hue.max_chroma_rgb_for_sum(2.0), *expected_rgb);
+            assert_eq!(hue.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
+            assert_eq!(hue.max_chroma_rgb_for_sum(3.0), RGB::WHITE);
+            for sum in [0.0001, 0.25, 0.5, 0.75, 1.0, 1.5, 1.9999].iter() {
+                let mut array = [0.0_f64, 0.0, 0.0];
+                array[hue.indices().0 as usize] = sum / 2.0;
+                array[hue.indices().1 as usize] = sum / 2.0;
+                let expected: RGB<f64> = array.into();
+                assert_eq!(hue.max_chroma_rgb_for_sum(*sum), expected);
+            }
+            for sum in [2.0001, 2.25, 2.5, 2.75, 2.9999].iter() {
+                let mut array = [1.0_f64, 1.0, 1.0];
+                array[hue.indices().2 as usize] = sum - 2.0;
+                let expected: RGB<f64> = array.into();
+                assert_eq!(hue.max_chroma_rgb_for_sum(*sum), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn other_max_chroma_rgbs() {
+        use Sextant::*;
+        for sextant in &[
+            RedYellow,
+            RedMagenta,
+            GreenCyan,
+            GreenYellow,
+            BlueCyan,
+            BlueMagenta,
+        ] {
+            for second in SECOND_VALUES.iter() {
+                let sextant_hue = SextantHue(*sextant, *second);
+                let hue = Hue::<f64>::Other(sextant_hue);
+                assert_eq!(hue.max_chroma_rgb_for_sum(0.0), RGB::BLACK);
+                assert_eq!(hue.max_chroma_rgb_for_sum(3.0), RGB::WHITE);
+                println!("hue: {:?} MAX_CHROMA_RGB: {:?}", hue, hue.max_chroma_rgb());
+                for sum in VALID_OTHER_SUMS.iter() {
+                    let rgb = hue.max_chroma_rgb_for_sum(*sum);
+                    assert_approx_eq!(rgb.sum(), *sum);
+                    if *sum < 3.0 - *second {
+                        if let Hue::<f64>::Other(sextant_hue_out) =
+                            Hue::<f64>::try_from(&rgb).unwrap()
+                        {
+                            assert_eq!(sextant_hue.0, sextant_hue_out.0);
+                            assert_approx_eq!(sextant_hue.1, sextant_hue_out.1, 0.000000000001);
+                        } else {
+                            panic!("\"Other\"  Hue variant expected");
+                        }
+                    } else {
+                        // sum is too big for this hue so drifting towards nearest secondary
+                        use CMYHue::*;
+                        use Sextant::*;
+                        let hue_out = Hue::<f64>::try_from(&rgb).unwrap();
+                        match sextant {
+                            RedYellow | GreenYellow => assert_eq!(hue_out, Hue::Secondary(Yellow)),
+                            RedMagenta | BlueMagenta => {
+                                assert_eq!(hue_out, Hue::Secondary(Magenta))
+                            }
+                            GreenCyan | BlueCyan => assert_eq!(hue_out, Hue::Secondary(Cyan)),
+                        }
+                    }
+                }
+            }
         }
     }
 }
