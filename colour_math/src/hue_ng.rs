@@ -19,6 +19,7 @@ pub trait HueIfceTmp<F: ColourComponent> {
 
     fn max_chroma_rgb(&self) -> RGB<F>;
     fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F>;
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -91,6 +92,22 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
                     RGBHue::Green => [other, F::ONE, other].into(),
                     RGBHue::Blue => [other, other, F::ONE].into(),
                 }
+            }
+        }
+    }
+
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ZERO {
+            RGB::BLACK
+        } else if chroma == F::ONE {
+            self.max_chroma_rgb()
+        } else {
+            use RGBHue::*;
+            match self {
+                Red => [chroma, F::ZERO, F::ZERO].into(),
+                Green => [F::ZERO, chroma, F::ZERO].into(),
+                Blue => [F::ZERO, F::ZERO, chroma].into(),
             }
         }
     }
@@ -167,6 +184,22 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
                     CMYHue::Magenta => [F::ONE, third, F::ONE].into(),
                     CMYHue::Yellow => [F::ONE, F::ONE, third].into(),
                 }
+            }
+        }
+    }
+
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ZERO {
+            RGB::BLACK
+        } else if chroma == F::ONE {
+            self.max_chroma_rgb()
+        } else {
+            use CMYHue::*;
+            match self {
+                Cyan => [F::ZERO, chroma, chroma].into(),
+                Magenta => [chroma, F::ZERO, chroma].into(),
+                Yellow => [chroma, chroma, F::ZERO].into(),
             }
         }
     }
@@ -295,6 +328,26 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             }
         }
     }
+
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
+        if chroma == F::ZERO {
+            RGB::BLACK
+        } else if chroma == F::ONE {
+            self.max_chroma_rgb()
+        } else {
+            use Sextant::*;
+            let second = self.1 * chroma;
+            match self.0 {
+                RedMagenta => [chroma, F::ZERO, second].into(),
+                RedYellow => [chroma, second, F::ZERO].into(),
+                GreenYellow => [second, chroma, F::ZERO].into(),
+                GreenCyan => [F::ZERO, chroma, second].into(),
+                BlueCyan => [F::ZERO, second, chroma].into(),
+                BlueMagenta => [second, F::ZERO, chroma].into(),
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -395,6 +448,14 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb_for_sum(sum),
             Self::Other(sextant_hue) => sextant_hue.max_chroma_rgb_for_sum(sum),
+        }
+    }
+
+    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.min_sum_rgb_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.min_sum_rgb_for_chroma(chroma),
+            Self::Other(sextant_hue) => sextant_hue.min_sum_rgb_for_chroma(chroma),
         }
     }
 }
@@ -717,6 +778,49 @@ mod hue_ng_tests {
                             GreenCyan | BlueCyan => assert_eq!(hue_out, Hue::Secondary(Cyan)),
                         }
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn min_max_sum_rgb_for_chroma() {
+        for (hue, expected_rgb) in Hue::<f64>::PRIMARIES
+            .iter()
+            .zip(RGB::<f64>::PRIMARIES.iter())
+        {
+            println!("{:?} : {:?}", hue, expected_rgb);
+            assert_eq!(hue.min_sum_rgb_for_chroma(1.0), *expected_rgb);
+            //assert_eq!(hue.max_sum_rgb_for_chroma(1.0), *expected_rgb);
+        }
+        for (hue, expected_rgb) in Hue::<f64>::SECONDARIES
+            .iter()
+            .zip(RGB::<f64>::SECONDARIES.iter())
+        {
+            println!("{:?} : {:?}", hue, expected_rgb);
+            assert_eq!(hue.min_sum_rgb_for_chroma(1.0), *expected_rgb);
+            //assert_eq!(hue.max_sum_rgb_for_chroma(1.0), *expected_rgb);
+        }
+        use Sextant::*;
+        for sextant in &[
+            RedYellow,
+            RedMagenta,
+            GreenCyan,
+            GreenYellow,
+            BlueCyan,
+            BlueMagenta,
+        ] {
+            for second in SECOND_VALUES.iter() {
+                let hue = Hue::<f64>::Other(SextantHue(*sextant, *second));
+                assert_eq!(hue.min_sum_rgb_for_chroma(0.0), RGB::BLACK);
+                //assert_eq!(hue.max_sum_rgb_for_chroma(0.0), RGB::WHITE);
+                for chroma in NON_ZERO_CHROMAS.iter() {
+                    let shade = hue.min_sum_rgb_for_chroma(*chroma);
+                    //let tint = hue.max_sum_rgb_for_chroma(*chroma);
+                    //assert!(shade.sum() <= tint.sum());
+                    assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
+                    //assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
+                    //assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
                 }
             }
         }
