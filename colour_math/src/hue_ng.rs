@@ -423,59 +423,34 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
     }
 
     fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<Result<RGB<F>, RGB<F>>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        let mut rgb = if sum == F::ZERO {
-            if chroma == F::ZERO {
-                RGB::BLACK
+        debug_assert!(chroma.is_proportion());
+        if chroma == F::ZERO {
+            if sum == F::ZERO {
+                Some(Err(RGB::BLACK))
+            } else if sum == F::THREE {
+                Some(Err(RGB::WHITE))
             } else {
-                return None;
+                let value = sum / F::THREE;
+                Some(Err([value, value, value].into()))
             }
-        } else if sum == F::THREE {
-            if chroma > F::ZERO {
-                return None;
-            } else {
-                RGB::WHITE
-            }
-        } else if chroma == F::ZERO {
-            let value = sum / F::THREE;
-            [value, value, value].into()
         } else if chroma == F::ONE {
             if sum == F::ONE + self.1 {
-                self.max_chroma_rgb()
+                Some(Ok(self.max_chroma_rgb()))
             } else {
-                return None;
+                None
             }
-        } else {
+        } else if sum > chroma * (self.1 + F::ONE) && sum < F::THREE - chroma * (F::TWO - self.1) {
             let oc = self.1 * chroma;
             let components = (
                 (sum + F::TWO * chroma - oc) / F::THREE,
                 (sum + F::TWO * oc - chroma) / F::THREE,
                 (sum - oc - chroma) / F::THREE,
             );
-            if components.0 > F::ONE || components.2 < F::ZERO {
-                return None;
-            };
-            self.make_rgb(components)
-        };
-        // NB: because floats only approximate real numbers trying to
-        // set chroma too small (but non zero) results in a drift
-        // in the hue angle of the resulting RGB. When this
-        // happens we go straight to a zero chroma RGB
-        if chroma < F::from(0.00001).unwrap() && chroma > F::ZERO {
-            let xy: (F, F) = rgb.xy();
-            if !(xy.0 == F::ZERO && xy.1 == F::ZERO) {
-                let rgb_second = crate::chroma::calc_other_from_xy_alt(xy);
-                // deviation "second" indicates a drift in the hue
-                if (rgb_second - self.1).abs() / rgb_second > F::from(0.000_000_000_1).unwrap() {
-                    let value = (sum / F::THREE).min(F::ONE);
-                    rgb = [value, value, value].into();
-                }
-            }
-        };
-        Some(Ok(rgb))
+            Some(Ok(self.make_rgb(components)))
+        } else {
+            None
+        }
     }
 }
 
@@ -1087,33 +1062,24 @@ mod hue_ng_tests {
                 assert!(hue.rgb_for_sum_and_chroma(3.0, 1.0).is_none());
                 for chroma in NON_ZERO_CHROMAS.iter() {
                     for sum in VALID_OTHER_SUMS.iter() {
+                        println!("MC RGB: {:?}", hue.max_chroma_rgb());
                         if let Some(result) = hue.rgb_for_sum_and_chroma(*sum, *chroma) {
                             match result {
                                 Ok(rgb) => {
                                     assert_approx_eq!(rgb.sum(), *sum, 0.000000000000001);
-                                    let xy = rgb.xy();
-                                    if xy.0 == 0.0 && xy.1 == 0.0 {
-                                        assert_approx_eq!(rgb[CCI::Red], rgb[CCI::Green]);
-                                        assert_approx_eq!(rgb[CCI::Red], rgb[CCI::Blue]);
-                                    } else {
-                                        let rgb_other = crate::chroma::calc_other_from_xy(xy);
-                                        assert_approx_eq!(rgb_other, *second, 0.0000000001);
-                                        let hue_out = Hue::<f64>::try_from(&rgb).unwrap();
-                                        assert!(
-                                        hue_out == hue,
+                                    let hue_out = Hue::<f64>::try_from(&rgb).unwrap();
+                                    assert_eq!(
+                                        hue_out,
+                                        hue,
                                         "\n{:?} == {:?} \n:: sum: {} chroma: {} other: {}\n {:?}",
                                         hue,
                                         hue_out,
                                         *sum,
                                         *chroma,
                                         *second,
-                                        rgb
+                                        rgb.max_chroma_rgb(),
                                     );
-                                        let chroma_correction =
-                                            crate::chroma::calc_chroma_correction(rgb_other);
-                                        let rgb_chroma = xy.0.hypot(xy.1) * chroma_correction;
-                                        assert_approx_eq!(rgb_chroma, *chroma, 0.000000000000001);
-                                    }
+                                    assert_eq!(rgb.max_chroma_rgb(), hue.max_chroma_rgb());
                                 }
                                 Err(err_rgb) => {
                                     println!("Error RGB: {:?}", err_rgb);
@@ -1130,6 +1096,17 @@ mod hue_ng_tests {
                                     );
                                 }
                             }
+                        } else {
+                            let (min_shade_sum, max_tint_sum) = hue.sum_range_for_chroma(*chroma);
+                            assert!(
+                                *sum <= min_shade_sum || *sum >= max_tint_sum,
+                                "\n{} < {} < {} \n:: chroma: {} \nHue: {:?}",
+                                min_shade_sum,
+                                *sum,
+                                max_tint_sum,
+                                chroma,
+                                hue
+                            );
                         }
                     }
                 }
