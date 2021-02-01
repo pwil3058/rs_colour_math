@@ -142,15 +142,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
             }
         } else if sum > chroma && sum < F::THREE - chroma * F::TWO {
             let other = (sum - chroma) / F::THREE;
-            println!(
-                "{:?}: {:?} {:?} => {:?} {:?}",
-                self,
-                sum,
-                chroma,
-                (chroma + other).min(F::ZERO),
-                other
-            );
-            Some(Ok(self.make_rgb(((chroma + other).max(F::ZERO), other))))
+            Some(Ok(self.make_rgb(((chroma + other), other))))
         } else {
             None
         }
@@ -256,40 +248,30 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
     }
 
     fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<Result<RGB<F>, RGB<F>>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if sum == F::ZERO {
-            if chroma == F::ZERO {
+        debug_assert!(chroma.is_proportion());
+        if chroma == F::ZERO {
+            if sum == F::ZERO {
                 Some(Err(RGB::BLACK))
-            } else {
-                None
-            }
-        } else if sum == F::THREE {
-            if chroma > F::ZERO {
-                None
-            } else {
+            } else if sum == F::THREE {
                 Some(Err(RGB::WHITE))
+            } else {
+                let value = sum / F::THREE;
+                Some(Err([value, value, value].into()))
             }
-        } else if chroma == F::ZERO {
-            let value = sum / F::THREE;
-            Some(Ok([value, value, value].into()))
         } else if chroma == F::ONE {
             if sum == F::TWO {
                 Some(Ok(self.max_chroma_rgb()))
             } else {
                 None
             }
-        } else if chroma == F::ONE {
-            if sum == F::TWO {
-                Some(Ok(self.max_chroma_rgb()))
-            } else {
-                None
-            }
-        } else {
+        } else if sum > chroma * F::TWO && sum < F::THREE - chroma {
             Some(Ok(self.make_rgb((
-                (sum + chroma) / F::THREE,
-                (sum - F::TWO * chroma) / F::THREE,
+                (sum - chroma) / F::THREE,
+                (sum - chroma * F::TWO) / F::THREE,
             ))))
+        } else {
+            None
         }
     }
 }
@@ -1006,6 +988,48 @@ mod hue_ng_tests {
         for (hue, expected_mc_rgb) in Hue::<f64>::PRIMARIES
             .iter()
             .zip(RGB::<f64>::PRIMARIES.iter())
+        {
+            assert_eq!(hue.rgb_for_sum_and_chroma(0.0, 0.0), Some(Err(RGB::BLACK)));
+            assert_eq!(
+                hue.rgb_for_sum_and_chroma(1.5, 0.0),
+                Some(Err(RGB::from([0.5, 0.5, 0.5])))
+            );
+            assert_eq!(hue.rgb_for_sum_and_chroma(3.0, 0.0), Some(Err(RGB::WHITE)));
+            assert!(hue.rgb_for_sum_and_chroma(0.0, 1.0).is_none());
+            assert!(hue.rgb_for_sum_and_chroma(3.0, 1.0).is_none());
+            for chroma in &NON_ZERO_CHROMAS {
+                for sum in &VALID_OTHER_SUMS {
+                    if let Some(result) = hue.rgb_for_sum_and_chroma(*sum, *chroma) {
+                        match result {
+                            Ok(rgb) => {
+                                assert_approx_eq!(rgb.max_chroma_rgb(), *expected_mc_rgb, 0.000001);
+                            }
+                            Err(rgb) => {
+                                assert!(rgb == RGB::BLACK || rgb == RGB::WHITE);
+                            }
+                        }
+                    } else {
+                        let (min_shade_sum, max_tint_sum) = hue.sum_range_for_chroma(*chroma);
+                        assert!(
+                            *sum <= min_shade_sum || *sum >= max_tint_sum,
+                            "\n{} < {} < {} \n:: chroma: {} \nHue: {:?}",
+                            min_shade_sum,
+                            *sum,
+                            max_tint_sum,
+                            chroma,
+                            *hue
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn secondary_rgb_for_sum_and_chroma() {
+        for (hue, expected_mc_rgb) in Hue::<f64>::SECONDARIES
+            .iter()
+            .zip(RGB::<f64>::SECONDARIES.iter())
         {
             assert_eq!(hue.rgb_for_sum_and_chroma(0.0, 0.0), Some(Err(RGB::BLACK)));
             assert_eq!(
