@@ -10,6 +10,7 @@ pub use crate::{
     RGBConstants, CCI,
 };
 use normalised_angles::Degrees;
+use num_traits_plus::float_plus::FloatApproxEq;
 
 pub trait HueIfceTmp<F: ColourComponent> {
     fn hue_angle(&self) -> Degrees<F>;
@@ -306,6 +307,16 @@ impl<F: ColourComponent> SextantHue<F> {
     }
 }
 
+impl<F: ColourComponent> FloatApproxEq<F> for SextantHue<F> {
+    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
+        if self.0 == other.0 {
+            self.1.approx_eq(&other.1, max_diff)
+        } else {
+            false
+        }
+    }
+}
+
 impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
     fn from(arg: (Sextant, &RGB<F>)) -> Self {
         use Sextant::*;
@@ -583,6 +594,27 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
 impl<F: ColourComponent> Hue<F> {
     pub fn ord_index(&self) -> u8 {
         0
+    }
+}
+
+impl<F: ColourComponent> FloatApproxEq<F> for Hue<F> {
+    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
+        match self {
+            Self::Primary(rgb_hue) => match other {
+                Self::Primary(other_rgb_hue) => rgb_hue == other_rgb_hue,
+                _ => false,
+            },
+            Self::Secondary(cmy_hue) => match other {
+                Self::Secondary(other_cmy_hue) => cmy_hue == other_cmy_hue,
+                _ => false,
+            },
+            Self::Other(sextant_hue) => match other {
+                Self::Other(other_sextant_hue) => {
+                    sextant_hue.approx_eq(other_sextant_hue, max_diff)
+                }
+                _ => false,
+            },
+        }
     }
 }
 
@@ -1067,18 +1099,18 @@ mod hue_ng_tests {
                             match result {
                                 Ok(rgb) => {
                                     assert_approx_eq!(rgb.sum(), *sum, 0.000000000000001);
+                                    assert_approx_eq!(rgb.chroma(), *chroma, 0.000000000000001);
                                     let hue_out = Hue::<f64>::try_from(&rgb).unwrap();
-                                    assert_eq!(
-                                        hue_out,
-                                        hue,
+                                    println!(
                                         "\n{:?} == {:?} \n:: sum: {} chroma: {} other: {}\n {:?}",
                                         hue,
                                         hue_out,
                                         *sum,
                                         *chroma,
                                         *second,
-                                        rgb.max_chroma_rgb(),
+                                        rgb.max_chroma_rgb()
                                     );
+                                    assert_approx_eq!(hue_out, hue);
                                     assert_eq!(rgb.max_chroma_rgb(), hue.max_chroma_rgb());
                                 }
                                 Err(err_rgb) => {
