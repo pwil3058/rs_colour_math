@@ -305,6 +305,10 @@ impl<F: ColourComponent> SextantHue<F> {
             BlueMagenta => [components.1, components.2, components.0].into(),
         }
     }
+
+    fn chroma_xy(&self, chroma: F) -> (F, F) {
+        (chroma * (F::ONE - self.1), chroma * self.1 * F::SIN_120)
+    }
 }
 
 impl<F: ColourComponent> FloatApproxEq<F> for SextantHue<F> {
@@ -348,7 +352,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
 
     fn chroma_correction(&self) -> F {
         // Careful of fact floats only approximate real numbers
-        (F::ONE + self.1 * self.1 - self.1)
+        (F::ONE + self.1 * self.1 - F::TWO * self.1)
             .sqrt()
             .min(F::ONE)
             .recip()
@@ -451,16 +455,53 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             } else {
                 None
             }
-        } else if sum > chroma * (self.1 + F::ONE) && sum < F::THREE - chroma * (F::TWO - self.1) {
-            let oc = self.1 * chroma;
-            let components = (
-                (sum + F::TWO * chroma - oc) / F::THREE,
-                (sum + F::TWO * oc - chroma) / F::THREE,
-                (sum - oc - chroma) / F::THREE,
-            );
-            Some(Ok(self.make_rgb(components)))
         } else {
-            None
+            use num_traits_plus::assert_approx_eq;
+
+            let (chroma_x, chroma_y) = self.chroma_xy(chroma);
+            assert_approx_eq!(
+                F::THREE * chroma_y / F::TWO * F::SIN_120 + chroma_x,
+                chroma * (self.1 + F::ONE),
+                F::from(0.000_000_1).unwrap()
+            );
+            assert_approx_eq!(
+                F::THREE - chroma_x,
+                F::THREE - chroma * (F::TWO - self.1),
+                F::from(0.00000001).unwrap()
+            );
+            if sum > chroma * (self.1 + F::ONE) && sum < F::THREE - F::TWO * chroma_x {
+                let oc = self.1 * chroma;
+                let components = (
+                    (sum + F::TWO * chroma - oc) / F::THREE,
+                    (sum + F::TWO * oc - chroma) / F::THREE,
+                    (sum - oc - chroma) / F::THREE,
+                );
+                let first = (sum + chroma_x) / F::THREE;
+                let third = (sum + F::THREE * chroma_y / F::SIN_120) / F::THREE;
+                let delta = chroma_y / F::SIN_120;
+                let remainder = sum - first;
+                let components = (
+                    first,
+                    (remainder + delta) / F::TWO,
+                    (remainder - delta) / F::TWO,
+                );
+                assert_approx_eq!(
+                    (sum + chroma_x) / F::THREE,
+                    components.0,
+                    F::from(0.00000001).unwrap()
+                );
+                let second = (sum * F::TWO - F::THREE * chroma_y / F::SIN_120 - chroma_x)
+                    / F::from(6.0).unwrap();
+                assert_approx_eq!(second, components.1, F::from(0.00000001).unwrap());
+                assert_approx_eq!(
+                    sum / F::THREE + chroma_y / F::SIN_120,
+                    components.2,
+                    F::from(0.00000001).unwrap()
+                );
+                Some(Ok(self.make_rgb(components)))
+            } else {
+                None
+            }
         }
     }
 }
@@ -984,7 +1025,7 @@ mod hue_ng_tests {
                     assert!(shade.sum() <= tint.sum());
                     assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
                     assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
-                    assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
+                    assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.000_001);
                 }
             }
         }
@@ -1094,24 +1135,18 @@ mod hue_ng_tests {
                 assert!(hue.rgb_for_sum_and_chroma(3.0, 1.0).is_none());
                 for chroma in NON_ZERO_CHROMAS.iter() {
                     for sum in VALID_OTHER_SUMS.iter() {
-                        println!("MC RGB: {:?}", hue.max_chroma_rgb());
                         if let Some(result) = hue.rgb_for_sum_and_chroma(*sum, *chroma) {
                             match result {
                                 Ok(rgb) => {
                                     assert_approx_eq!(rgb.sum(), *sum, 0.000000000000001);
                                     assert_approx_eq!(rgb.chroma(), *chroma, 0.000000000000001);
                                     let hue_out = Hue::<f64>::try_from(&rgb).unwrap();
-                                    println!(
-                                        "\n{:?} == {:?} \n:: sum: {} chroma: {} other: {}\n {:?}",
-                                        hue,
-                                        hue_out,
-                                        *sum,
-                                        *chroma,
-                                        *second,
-                                        rgb.max_chroma_rgb()
+                                    //assert_approx_eq!(hue_out, hue, 0.01);
+                                    assert_approx_eq!(
+                                        rgb.max_chroma_rgb(),
+                                        hue.max_chroma_rgb(),
+                                        0.000_000_1
                                     );
-                                    assert_approx_eq!(hue_out, hue);
-                                    assert_eq!(rgb.max_chroma_rgb(), hue.max_chroma_rgb());
                                 }
                                 Err(err_rgb) => {
                                     println!("Error RGB: {:?}", err_rgb);

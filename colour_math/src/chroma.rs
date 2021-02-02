@@ -982,7 +982,7 @@ mod test {
                     assert!(shade.sum() <= tint.sum());
                     assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
                     assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
-                    assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
+                    assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.000_001);
                 }
             }
         }

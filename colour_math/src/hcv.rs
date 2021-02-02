@@ -350,7 +350,7 @@ mod hcv_tests {
                     let hcv = HCV::<f32>::from(&rgb_in);
                     println!("{:?}", hcv);
                     let rgb_out = RGB::<f32>::from(&hcv);
-                    assert_approx_eq!(rgb_in, rgb_out);
+                    assert_approx_eq!(rgb_in, rgb_out, 0.000001);
                 }
             }
         }
@@ -367,7 +367,7 @@ mod hcv_tests {
                     let hcv = HCV::<f64>::from(&rgb_in);
                     println!("{:?}", hcv);
                     let rgb_out = RGB::<f64>::from(&hcv);
-                    assert_approx_eq!(rgb_in, rgb_out);
+                    assert_approx_eq!(rgb_in, rgb_out, 0.000_000_000_000_001);
                 }
             }
         }
