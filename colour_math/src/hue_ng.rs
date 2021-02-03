@@ -12,6 +12,38 @@ pub use crate::{
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::FloatApproxEq;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
+pub struct SumRange<F: ColourComponent>((F, F, F));
+
+pub enum SumRangeComparisonResult {
+    TooSmall,
+    Shade,
+    Tint,
+    TooBig,
+}
+
+impl<F: ColourComponent> SumRange<F> {
+    pub fn compare_sum(&self, sum: F) -> SumRangeComparisonResult {
+        if sum < self.0 .0 {
+            SumRangeComparisonResult::TooSmall
+        } else if sum < self.0 .1 {
+            SumRangeComparisonResult::Shade
+        } else if sum < self.0 .2 {
+            SumRangeComparisonResult::Tint
+        } else {
+            SumRangeComparisonResult::TooBig
+        }
+    }
+
+    pub fn min(&self) -> F {
+        self.0 .0
+    }
+
+    pub fn max(&self) -> F {
+        self.0 .2
+    }
+}
+
 pub trait HueIfceTmp<F: ColourComponent> {
     fn hue_angle(&self) -> Degrees<F>;
     fn chroma_correction(&self) -> F;
