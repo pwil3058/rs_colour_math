@@ -27,9 +27,11 @@ impl<F: ColourComponent> SumRange<F> {
         if sum < self.0 .0 {
             SumRangeComparisonResult::TooSmall
         } else if sum < self.0 .1 {
-            SumRangeComparisonResult::Shade
-        } else if sum < self.0 .2 {
-            SumRangeComparisonResult::Tint
+            if sum < self.0 .2 {
+                SumRangeComparisonResult::Shade
+            } else {
+                SumRangeComparisonResult::Tint
+            }
         } else {
             SumRangeComparisonResult::TooBig
         }
