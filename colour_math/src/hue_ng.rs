@@ -6,7 +6,7 @@ use std::{
 };
 
 pub use crate::{
-    chroma, hcv::*, rgb::RGB, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
+    chroma, hcv::*, rgb_ng::RGB, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
     RGBConstants, CCI,
 };
 use normalised_angles::Degrees;
@@ -768,7 +768,7 @@ mod hue_ng_tests {
             ([0.5, 1.0, 0.0], Sextant::GreenYellow, 0.5),
             ([0.0, 1.0, 0.5], Sextant::GreenCyan, 0.5),
         ] {
-            let rgb = RGB::<f64>::from(array);
+            let rgb = RGB::<f64>::from(*array);
             let hue = Hue::Sextant(SextantHue(*sextant, *second));
             assert_eq!(Hue::<f64>::try_from(&rgb), Ok(hue));
         }
@@ -790,7 +790,7 @@ mod hue_ng_tests {
             ([0.5, 1.0, 0.0], Sextant::GreenYellow, 0.5),
             ([0.0, 1.0, 0.5], Sextant::GreenCyan, 0.5),
         ] {
-            let rgb = RGB::<f64>::from(array);
+            let rgb = RGB::<f64>::from(*array);
             let hue = Hue::Sextant(SextantHue(*sextant, *second));
             assert_eq!(Hue::<f64>::try_from(&rgb), Ok(hue));
         }

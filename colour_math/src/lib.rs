@@ -18,6 +18,7 @@ pub mod hue_ng;
 pub mod image;
 pub mod manipulator;
 pub mod rgb;
+pub mod rgb_ng;
 pub mod rgba;
 pub mod urgb;
 pub mod urgba;
