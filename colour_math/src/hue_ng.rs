@@ -74,7 +74,7 @@ impl<F: ColourComponent> SumRange<F> {
 pub trait HueIfceTmp<F: ColourComponent> {
     fn hue_angle(&self) -> Degrees<F>;
     fn chroma_correction(&self) -> F;
-    fn sum_range_for_chroma(&self, chroma: F) -> SumRange<F>;
+    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>>;
     fn max_chroma_for_sum(&self, sum: F) -> F;
 
     fn max_chroma_rgb(&self) -> RGB<F>;
@@ -115,12 +115,16 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
         F::ONE
     }
 
-    fn sum_range_for_chroma(&self, chroma: F) -> SumRange<F> {
+    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
         debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         if chroma == F::ZERO {
-            SumRange((F::MAX, F::ZERO, F::ZERO))
+            None
         } else {
-            SumRange((chroma, (F::THREE - F::TWO * chroma).min(F::THREE), F::ONE))
+            Some(SumRange((
+                chroma,
+                (F::THREE - F::TWO * chroma).min(F::THREE),
+                F::ONE,
+            )))
         }
     }
 
@@ -185,7 +189,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
     fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
         debug_assert!(chroma.is_proportion());
-        let sum_range = self.sum_range_for_chroma(chroma);
+        let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             let other = (sum - chroma) / F::THREE;
             Some(self.make_rgb(((chroma + other), other)))
@@ -226,12 +230,12 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
         F::ONE
     }
 
-    fn sum_range_for_chroma(&self, chroma: F) -> SumRange<F> {
+    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
         debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         if chroma == F::ZERO {
-            SumRange((F::MAX, F::ZERO, F::ZERO))
+            None
         } else {
-            SumRange((chroma * F::TWO, F::THREE - chroma, F::TWO))
+            Some(SumRange((chroma * F::TWO, F::THREE - chroma, F::TWO)))
         }
     }
 
@@ -296,7 +300,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
     fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
         debug_assert!(chroma.is_proportion());
-        let sum_range = self.sum_range_for_chroma(chroma);
+        let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation
             Some(self.make_rgb((
@@ -392,17 +396,23 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
             .recip()
     }
 
-    fn sum_range_for_chroma(&self, chroma: F) -> SumRange<F> {
+    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
         debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
         if chroma == F::ZERO {
-            SumRange((F::MAX, F::ZERO, F::ZERO))
+            None
+        } else if chroma == F::ONE {
+            Some(SumRange((
+                (F::ONE + self.1).min(F::TWO),
+                (F::ONE + self.1).min(F::TWO),
+                (F::ONE + self.1).min(F::TWO),
+            )))
         } else {
             let temp = self.1 * chroma;
-            SumRange((
+            Some(SumRange((
                 (chroma + temp).min(F::THREE),
                 (F::THREE + temp - F::TWO * chroma).min(F::THREE),
                 F::THREE - temp,
-            ))
+            )))
         }
     }
 
@@ -475,7 +485,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
         debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
         debug_assert!(chroma.is_proportion());
         use SumRangeComparisonResult::*;
-        let sum_range = self.sum_range_for_chroma(chroma);
+        let sum_range = self.sum_range_for_chroma(chroma)?;
         match sum_range.compare_sum(sum) {
             Shade(min_sum, _max_sun) => {
                 let delta = (sum - min_sum) / F::THREE;
@@ -560,7 +570,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn sum_range_for_chroma(&self, chroma: F) -> SumRange<F> {
+    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
@@ -814,60 +824,56 @@ mod hue_ng_tests {
         }
     }
 
-    // TODO: reinstate this test after relevant code reworked
-    // #[test]
-    // fn max_chroma_and_sum_ranges() {
-    //     for hue in &Hue::<f64>::PRIMARIES {
-    //         assert_eq!(hue.sum_range_for_chroma(0.0), SumRange((0.0, 3.0, 1.0)));
-    //         assert_eq!(hue.sum_range_for_chroma(1.0), SumRange((1.0, 1.0, 1.0)));
-    //         for chroma in NON_ZERO_CHROMAS.iter() {
-    //             let range = hue.sum_range_for_chroma(*chroma);
-    //             let max_chroma = hue.max_chroma_for_sum(range.shade_min());
-    //             assert_approx_eq!(max_chroma, *chroma);
-    //             let max_chroma = hue.max_chroma_for_sum(range.tint_max());
-    //             assert_approx_eq!(max_chroma, *chroma, 0.000_000_000_000_001);
-    //         }
-    //     }
-    //     for hue in &Hue::<f64>::SECONDARIES {
-    //         assert_eq!(hue.sum_range_for_chroma(0.0), SumRange((0.0, 3.0, 2.0)));
-    //         assert_eq!(hue.sum_range_for_chroma(1.0), SumRange((2.0, 2.0, 2.0)));
-    //         for chroma in NON_ZERO_CHROMAS.iter() {
-    //             let range = hue.sum_range_for_chroma(*chroma);
-    //             let max_chroma = hue.max_chroma_for_sum(range.shade_min());
-    //             assert_approx_eq!(max_chroma, *chroma);
-    //             let max_chroma = hue.max_chroma_for_sum(range.tint_max());
-    //             assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
-    //         }
-    //     }
-    //     use Sextant::*;
-    //     for sextant in &[
-    //         RedYellow,
-    //         RedMagenta,
-    //         GreenCyan,
-    //         GreenYellow,
-    //         BlueCyan,
-    //         BlueMagenta,
-    //     ] {
-    //         for other in SECOND_VALUES.iter() {
-    //             let hue = Hue::<f64>::Sextant(SextantHue(*sextant, *other));
-    //             assert_eq!(
-    //                 hue.sum_range_for_chroma(0.0),
-    //                 SumRange((0.0, 3.0, 1.0 + other))
-    //             );
-    //             assert_eq!(
-    //                 hue.sum_range_for_chroma(1.0),
-    //                 SumRange((1.0 + *other, 1.0 + *other, 1.0 + other))
-    //             );
-    //             for chroma in NON_ZERO_CHROMAS.iter() {
-    //                 let range = hue.sum_range_for_chroma(*chroma);
-    //                 let max_chroma = hue.max_chroma_for_sum(range.shade_min());
-    //                 assert_approx_eq!(max_chroma, *chroma);
-    //                 let max_chroma = hue.max_chroma_for_sum(range.tint_max());
-    //                 assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
-    //             }
-    //         }
-    //     }
-    // }
+    // TODO: this test needs to be improved
+    #[test]
+    fn max_chroma_and_sum_ranges() {
+        for hue in &Hue::<f64>::PRIMARIES {
+            assert!(hue.sum_range_for_chroma(0.0).is_none());
+            assert_eq!(
+                hue.sum_range_for_chroma(1.0),
+                Some(SumRange((1.0, 1.0, 1.0)))
+            );
+            for chroma in NON_ZERO_CHROMAS.iter() {
+                let range = hue.sum_range_for_chroma(*chroma).unwrap();
+                let max_chroma = hue.max_chroma_for_sum(range.shade_min());
+                assert_approx_eq!(max_chroma, range.shade_min());
+                let max_chroma = hue.max_chroma_for_sum(range.tint_max());
+                assert_approx_eq!(max_chroma, range.tint_max(), 0.000_000_000_000_001);
+            }
+        }
+        for hue in &Hue::<f64>::SECONDARIES {
+            assert!(hue.sum_range_for_chroma(0.0).is_none());
+            assert_eq!(
+                hue.sum_range_for_chroma(1.0),
+                Some(SumRange((2.0, 2.0, 2.0)))
+            );
+            for chroma in NON_ZERO_CHROMAS.iter() {
+                let range = hue.sum_range_for_chroma(*chroma).unwrap();
+                let max_chroma = hue.max_chroma_for_sum(range.shade_min());
+                assert_approx_eq!(max_chroma, range.shade_min() / 2.0);
+                let max_chroma = hue.max_chroma_for_sum(range.tint_max());
+                assert_approx_eq!(max_chroma, range.tint_max() / 2.0, 0.000000000000001);
+            }
+        }
+        use Sextant::*;
+        for sextant in &[
+            RedYellow,
+            RedMagenta,
+            GreenCyan,
+            GreenYellow,
+            BlueCyan,
+            BlueMagenta,
+        ] {
+            for other in SECOND_VALUES.iter() {
+                let hue = Hue::<f64>::Sextant(SextantHue(*sextant, *other));
+                assert!(hue.sum_range_for_chroma(0.0).is_none());
+                assert_eq!(
+                    hue.sum_range_for_chroma(1.0),
+                    Some(SumRange((1.0 + *other, 1.0 + *other, 1.0 + other)))
+                );
+            }
+        }
+    }
 
     #[test]
     fn primary_max_chroma_rgbs() {
@@ -1035,7 +1041,7 @@ mod hue_ng_tests {
                         assert_approx_eq!(rgb.chroma(), *chroma, 0.000_000_000_1);
                         assert_approx_eq!(Hue::<f64>::try_from(&rgb).unwrap(), hue);
                     } else {
-                        let range = hue.sum_range_for_chroma(*chroma);
+                        let range = hue.sum_range_for_chroma(*chroma).unwrap();
                         println!("{:?}, {:?}, {:?} : {:?}", *hue, sum, chroma, range);
                         assert!(range.compare_sum(*sum).is_failure());
                     }
@@ -1058,7 +1064,7 @@ mod hue_ng_tests {
                         assert_approx_eq!(rgb.chroma(), *chroma, 0.000_000_1);
                         assert_approx_eq!(Hue::<f64>::try_from(&rgb).unwrap(), hue);
                     } else {
-                        let range = hue.sum_range_for_chroma(*chroma);
+                        let range = hue.sum_range_for_chroma(*chroma).unwrap();
                         assert!(range.compare_sum(*sum).is_failure());
                     }
                 }
@@ -1085,7 +1091,7 @@ mod hue_ng_tests {
                 assert!(hue.rgb_for_sum_and_chroma(0.0, 0.0).is_none());
                 assert!(hue.rgb_for_sum_and_chroma(3.0, 0.0).is_none());
                 for chroma in &NON_ZERO_CHROMAS {
-                    let sum_range = hue.sum_range_for_chroma(*chroma);
+                    let sum_range = hue.sum_range_for_chroma(*chroma).unwrap();
                     for sum in &VALID_OTHER_SUMS {
                         println!(
                             "{:?}, {:?}, {:?} :: {:?}",
@@ -1120,7 +1126,7 @@ mod hue_ng_tests {
                                 _ => (),
                             }
                         } else {
-                            let range = hue.sum_range_for_chroma(*chroma);
+                            let range = hue.sum_range_for_chroma(*chroma).unwrap();
                             assert!(range.compare_sum(*sum).is_failure());
                         }
                     }
