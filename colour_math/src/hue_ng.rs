@@ -16,33 +16,39 @@ use num_traits_plus::float_plus::FloatApproxEq;
 pub struct SumRange<F: ColourComponent>((F, F, F));
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
-pub enum SumRangeComparisonResult {
+pub enum SumRangeComparisonResult<F: ColourComponent> {
     TooSmall,
-    Shade,
-    Tint,
+    Shade(F, F),
+    Tint(F, F),
     TooBig,
 }
 
 impl<F: ColourComponent> SumRange<F> {
-    pub fn compare_sum(&self, sum: F) -> SumRangeComparisonResult {
+    pub fn compare_sum(&self, sum: F) -> SumRangeComparisonResult<F> {
         if sum <= self.0 .0 {
             SumRangeComparisonResult::TooSmall
         } else if sum <= self.0 .1 {
-            if sum <= self.0 .2 {
-                SumRangeComparisonResult::Shade
-            } else {
-                SumRangeComparisonResult::Tint
-            }
+            SumRangeComparisonResult::Shade(self.0 .0, self.0 .1)
+        } else if sum < self.0 .2 {
+            SumRangeComparisonResult::Tint(self.0 .1, self.0 .2)
         } else {
             SumRangeComparisonResult::TooBig
         }
     }
 
-    pub fn min(&self) -> F {
+    pub fn shade_min(&self) -> F {
         self.0 .0
     }
 
-    pub fn max(&self) -> F {
+    pub fn shade_max(&self) -> F {
+        self.0 .1
+    }
+
+    pub fn tint_min(&self) -> F {
+        self.0 .1
+    }
+
+    pub fn tint_max(&self) -> F {
         self.0 .2
     }
 }
@@ -820,9 +826,9 @@ mod hue_ng_tests {
             assert_eq!(hue.sum_range_for_chroma(1.0), SumRange((1.0, 1.0, 1.0)));
             for chroma in NON_ZERO_CHROMAS.iter() {
                 let range = hue.sum_range_for_chroma(*chroma);
-                let max_chroma = hue.max_chroma_for_sum(range.min());
+                let max_chroma = hue.max_chroma_for_sum(range.shade_min());
                 assert_approx_eq!(max_chroma, *chroma);
-                let max_chroma = hue.max_chroma_for_sum(range.max());
+                let max_chroma = hue.max_chroma_for_sum(range.tint_max());
                 assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
             }
         }
@@ -831,9 +837,9 @@ mod hue_ng_tests {
             assert_eq!(hue.sum_range_for_chroma(1.0), SumRange((2.0, 2.0, 2.0)));
             for chroma in NON_ZERO_CHROMAS.iter() {
                 let range = hue.sum_range_for_chroma(*chroma);
-                let max_chroma = hue.max_chroma_for_sum(range.min());
+                let max_chroma = hue.max_chroma_for_sum(range.shade_min());
                 assert_approx_eq!(max_chroma, *chroma);
-                let max_chroma = hue.max_chroma_for_sum(range.max());
+                let max_chroma = hue.max_chroma_for_sum(range.tint_max());
                 assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
             }
         }
@@ -857,10 +863,10 @@ mod hue_ng_tests {
                     SumRange((1.0 + *other, 1.0 + *other, 1.0 + other))
                 );
                 for chroma in NON_ZERO_CHROMAS.iter() {
-                    let (range) = hue.sum_range_for_chroma(*chroma);
-                    let max_chroma = hue.max_chroma_for_sum(range.min());
+                    let range = hue.sum_range_for_chroma(*chroma);
+                    let max_chroma = hue.max_chroma_for_sum(range.shade_min());
                     assert_approx_eq!(max_chroma, *chroma);
-                    let max_chroma = hue.max_chroma_for_sum(range.max());
+                    let max_chroma = hue.max_chroma_for_sum(range.tint_max());
                     assert_approx_eq!(max_chroma, *chroma, 0.000000000000001);
                 }
             }
