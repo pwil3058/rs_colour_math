@@ -1,42 +1,48 @@
-// Copyright 2019 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::{cmp::Ordering, convert::TryFrom, iter::Sum, ops::Index, ops::Mul};
+// Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::{
+    cmp::Ordering,
+    convert::{From, TryFrom},
+    iter::Sum,
+    ops::Index,
+    ops::Mul,
+};
 
-use crate::{hue_ng::*, ColourComponent, HueConstants, RGBConstants};
+use crate::{hue_ng::*, proportion::*, ColourComponent, HueConstants, RGBConstants};
 use num_traits_plus::float_plus::FloatApproxEq;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
-pub struct RGB<F: ColourComponent>(pub(crate) [F; 3]);
+pub struct RGB<T>(pub(crate) [Proportion<T>; 3]);
 
-impl<F: ColourComponent> Eq for RGB<F> {}
+impl<T> Eq for RGB<T> {}
 
-impl<F: ColourComponent> HueConstants for RGB<F> {
-    const RED: Self = Self([F::ONE, F::ZERO, F::ZERO]);
-    const GREEN: Self = Self([F::ZERO, F::ONE, F::ZERO]);
-    const BLUE: Self = Self([F::ZERO, F::ZERO, F::ONE]);
+impl<T> HueConstants for RGB<T> {
+    const RED: Self = Self([Proportion::ONE, Proportion::ZERO, Proportion::ZERO]);
+    const GREEN: Self = Self([Proportion::ZERO, Proportion::ONE, Proportion::ZERO]);
+    const BLUE: Self = Self([Proportion::ZERO, Proportion::ZERO, Proportion::ONE]);
 
-    const CYAN: Self = Self([F::ZERO, F::ONE, F::ONE]);
-    const MAGENTA: Self = Self([F::ONE, F::ZERO, F::ONE]);
-    const YELLOW: Self = Self([F::ONE, F::ONE, F::ZERO]);
+    const CYAN: Self = Self([Proportion::ZERO, Proportion::ONE, Proportion::ONE]);
+    const MAGENTA: Self = Self([Proportion::ONE, Proportion::ZERO, Proportion::ONE]);
+    const YELLOW: Self = Self([Proportion::ONE, Proportion::ONE, Proportion::ZERO]);
 }
 
-impl<F: ColourComponent> RGBConstants for RGB<F> {
-    const WHITE: Self = Self([F::ONE, F::ONE, F::ONE]);
-    const BLACK: Self = Self([F::ZERO, F::ZERO, F::ZERO]);
+impl<T> RGBConstants for RGB<T> {
+    const WHITE: Self = Self([Proportion::ONE, Proportion::ONE, Proportion::ONE]);
+    const BLACK: Self = Self([Proportion::ZERO, Proportion::ZERO, Proportion::ZERO]);
 }
 
-impl<F: ColourComponent + Sum<F>> RGB<F> {
+impl<T> RGB<T> {
     #[cfg(test)]
-    pub(crate) fn value(&self) -> F {
-        self.sum() / F::THREE
+    pub(crate) fn value(&self) -> P {
+        (self.sum() / T::THREE).into()
     }
 
-    pub(crate) fn sum(&self) -> F {
+    pub(crate) fn sum<F: ColourComponent>(&self) -> F {
         self.0.iter().copied().sum()
     }
 
     #[cfg(test)]
-    pub(crate) fn chroma(&self) -> F {
-        F::ONE
+    pub(crate) fn chroma(&self) -> P {
+        Proportion::ONE
     }
 
     #[cfg(test)]
@@ -44,10 +50,11 @@ impl<F: ColourComponent + Sum<F>> RGB<F> {
         Self::BLACK
     }
 }
-impl<F: ColourComponent> Index<CCI> for RGB<F> {
-    type Output = F;
 
-    fn index(&self, index: CCI) -> &F {
+impl<T> Index<CCI> for RGB<T> {
+    type Output = P;
+
+    fn index(&self, index: CCI) -> &P {
         match index {
             CCI::Red => &self.0[0],
             CCI::Green => &self.0[1],
@@ -57,18 +64,18 @@ impl<F: ColourComponent> Index<CCI> for RGB<F> {
 }
 
 // Comparisons
-impl<F: ColourComponent> PartialOrd for RGB<F> {
+impl<T> PartialOrd for RGB<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.0 == other.0 {
             Some(Ordering::Equal)
-        } else if let Ok(hue) = Hue::<F>::try_from(self) {
-            if let Ok(other_hue) = Hue::<F>::try_from(other) {
+        } else if let Ok(hue) = Hue::<T, Proportion<T>>::try_from(self) {
+            if let Ok(other_hue) = Hue::<T, Proportion<T>>::try_from(other) {
                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
                 hue.partial_cmp(&other_hue)
             } else {
                 Some(Ordering::Greater)
             }
-        } else if Hue::<F>::try_from(other).is_ok() {
+        } else if Hue::<T, Proportion<T>>::try_from(other).is_ok() {
             Some(Ordering::Less)
         } else {
             // No need to look a chroma as it will be zero for both
@@ -77,15 +84,15 @@ impl<F: ColourComponent> PartialOrd for RGB<F> {
     }
 }
 
-impl<F: ColourComponent> Ord for RGB<F> {
+impl<T, P: Proportion<P>> Ord for RGB<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
             .expect("restricted range of values means this is OK")
     }
 }
 
-impl<F: ColourComponent + std::fmt::Debug> FloatApproxEq<F> for RGB<F> {
-    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
+impl<T: Copy, P: Proportion<T> + std::fmt::Debug + Copy> FloatApproxEq<T> for RGB<T> {
+    fn approx_eq(&self, other: &Self, max_diff: Option<T>) -> bool {
         for i in 0..3 {
             if !self.0[i].approx_eq(&other.0[i], max_diff) {
                 return false;
@@ -95,27 +102,24 @@ impl<F: ColourComponent + std::fmt::Debug> FloatApproxEq<F> for RGB<F> {
     }
 }
 
-impl<F: ColourComponent> From<[F; 3]> for RGB<F> {
-    fn from(array: [F; 3]) -> Self {
-        debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
+impl<T> From<[P; 3]> for RGB<T> {
+    fn from(array: [P; 3]) -> Self {
         Self(array)
     }
 }
 
-impl<F: ColourComponent> From<&[F]> for RGB<F> {
-    fn from(array: &[F]) -> Self {
-        debug_assert!(array.len() == 3);
-        debug_assert!(array.iter().all(|x| (*x).is_proportion()), "{:?}", array);
-        Self([array[0], array[1], array[2]])
+impl<T> From<&[P]> for RGB<T> {
+    fn from(array: &[P]) -> Self {
+        Self(*array)
     }
 }
 
 // Arithmetic
-impl<F: ColourComponent> Mul<F> for RGB<F> {
+impl<T> Mul<P> for RGB<T> {
     type Output = Self;
 
-    fn mul(self, scalar: F) -> Self {
-        let array: [F; 3] = [self.0[0] * scalar, self.0[1] * scalar, self.0[2] * scalar];
+    fn mul(self, scalar: P) -> Self {
+        let array: [P; 3] = [self.0[0] * scalar, self.0[1] * scalar, self.0[2] * scalar];
         array.into()
     }
 }
