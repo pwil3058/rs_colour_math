@@ -5,7 +5,7 @@ use std::{
     convert::{Into, TryFrom},
 };
 
-use crate::proportion::Proportion;
+use crate::proportion::{Chroma, Proportion, Sum};
 pub use crate::{
     chroma, hcv::*, rgb_ng::RGB, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
     RGBConstants, CCI,
@@ -75,14 +75,14 @@ impl<F: ColourComponent> SumRange<F> {
 pub trait HueIfceTmp<F: ColourComponent> {
     fn hue_angle(&self) -> Degrees<F>;
     fn chroma_correction(&self) -> F;
-    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>>;
-    fn max_chroma_for_sum(&self, sum: F) -> F;
+    fn sum_range_for_chroma(&self, chroma_value: Proportion<F>) -> Option<SumRange<F>>;
+    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Chroma<F>;
 
     fn max_chroma_rgb(&self) -> RGB<F>;
-    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F>;
-    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
-    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F>;
-    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>>;
+    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> RGB<F>;
+    fn min_sum_rgb_for_chroma(&self, chroma_value: Proportion<F>) -> RGB<F>;
+    fn max_sum_rgb_for_chroma(&self, chroma_value: Proportion<F>) -> RGB<F>;
+    fn rgb_for_sum_and_chroma(&self, sum: Sum<F>, chroma_value: Proportion<F>) -> Option<RGB<F>>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -93,7 +93,7 @@ pub enum RGBHue {
 }
 
 impl RGBHue {
-    fn make_rgb<F: ColourComponent, P: Proportion<P>>(&self, components: (P, P)) -> RGB<F> {
+    fn make_rgb<F: ColourComponent>(&self, components: (Proportion<F>, Proportion<F>)) -> RGB<F> {
         use RGBHue::*;
         match self {
             Red => [components.0, components.1, components.1].into(),
@@ -103,7 +103,7 @@ impl RGBHue {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F, P> for RGBHue {
+impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
             RGBHue::Red => Degrees::RED,
@@ -208,7 +208,7 @@ pub enum CMYHue {
 }
 
 impl CMYHue {
-    fn make_rgb<F: ColourComponent>(&self, components: (P, P)) -> RGB<F> {
+    fn make_rgb<F: ColourComponent>(&self, components: (Proportion<F>, Proportion<F>)) -> RGB<F> {
         use CMYHue::*;
         match self {
             Cyan => [components.1, components.0, components.0].into(),
@@ -218,7 +218,7 @@ impl CMYHue {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F, P> for CMYHue {
+impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
             CMYHue::Cyan => Degrees::CYAN,
@@ -330,7 +330,7 @@ pub struct SextantHue<F: ColourComponent>(Sextant, Proportion<F>);
 impl<F: ColourComponent> Eq for SextantHue<F> {}
 
 impl<F: ColourComponent> SextantHue<F> {
-    fn make_rgb(&self, components: (P, P, P)) -> RGB<F> {
+    fn make_rgb(&self, components: (Proportion<F>, Proportion<F>, Proportion<F>)) -> RGB<F> {
         debug_assert!(
             components.0 >= components.1 && components.1 >= components.2,
             "{:?} >= {:?} >= {:?}",
@@ -375,7 +375,7 @@ impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F, P> for SextantHue<F> {
+impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
     fn hue_angle(&self) -> Degrees<F> {
         let sin = F::SQRT_3 * self.1 / F::TWO / (F::ONE - self.1 + self.1.powi(2)).sqrt();
         let angle = Degrees::asin(sin);
@@ -431,7 +431,7 @@ impl<F: ColourComponent> HueIfceTmp<F, P> for SextantHue<F> {
     }
 
     fn max_chroma_rgb(&self) -> RGB<F> {
-        self.make_rgb((P::ONE, self.1, P::ZERO))
+        self.make_rgb((Proportion::ONE, self.1, Proportion::ZERO))
     }
 
     fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
@@ -509,9 +509,9 @@ pub enum Hue<F: ColourComponent> {
     Sextant(SextantHue<F>),
 }
 
-impl<F: ColourComponent> Eq for Hue<F, P> {}
+impl<F: ColourComponent> Eq for Hue<F> {}
 
-impl<F: ColourComponent> HueConstants for Hue<F, P> {
+impl<F: ColourComponent> HueConstants for Hue<F> {
     const RED: Self = Self::Primary(RGBHue::Red);
     const GREEN: Self = Self::Primary(RGBHue::Green);
     const BLUE: Self = Self::Primary(RGBHue::Blue);
@@ -521,7 +521,7 @@ impl<F: ColourComponent> HueConstants for Hue<F, P> {
     const YELLOW: Self = Self::Secondary(CMYHue::Yellow);
 }
 
-impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F, P> {
+impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
     type Error = &'static str;
 
     fn try_from(rgb: &RGB<F>) -> Result<Self, Self::Error> {
@@ -554,7 +554,7 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F, P> {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F, P> for Hue<F, P> {
+impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
@@ -628,13 +628,13 @@ impl<F: ColourComponent> HueIfceTmp<F, P> for Hue<F, P> {
     }
 }
 
-impl<F: ColourComponent> Hue<F, P> {
+impl<F: ColourComponent> Hue<F> {
     pub fn ord_index(&self) -> u8 {
         0
     }
 }
 
-impl<F: ColourComponent> FloatApproxEq<F> for Hue<F, P> {
+impl<F: ColourComponent> FloatApproxEq<F> for Hue<F> {
     fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
         match self {
             Self::Primary(rgb_hue) => match other {
@@ -655,13 +655,13 @@ impl<F: ColourComponent> FloatApproxEq<F> for Hue<F, P> {
     }
 }
 
-impl<F: ColourComponent> PartialOrd for Hue<F, P> {
+impl<F: ColourComponent> PartialOrd for Hue<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.ord_index().partial_cmp(&other.ord_index())
     }
 }
 
-impl<F: ColourComponent> Ord for Hue<F, P> {
+impl<F: ColourComponent> Ord for Hue<F> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
@@ -737,7 +737,7 @@ mod hue_ng_tests {
         }
     }
 
-    impl<F: ColourComponent> Hue<F, P> {
+    impl<F: ColourComponent> Hue<F> {
         fn indices(&self) -> (CCI, CCI, CCI) {
             match self {
                 Self::Primary(rgb_hue) => rgb_hue.indices(),
