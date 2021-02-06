@@ -5,7 +5,9 @@ use std::{
     convert::{Into, TryFrom},
 };
 
-use crate::proportion::{Chroma, Proportion, Sum};
+use crate::hue_ng::Hue::Primary;
+use crate::hue_ng::SumOrdering::Shade;
+use crate::proportion::{Chroma, Proportion, ProportionConstants, Sum, SumConstants, Validation};
 pub use crate::{
     chroma, hcv::*, rgb_ng::RGB, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
     RGBConstants, CCI,
@@ -13,20 +15,20 @@ pub use crate::{
 use normalised_angles::Degrees;
 use num_traits_plus::float_plus::FloatApproxEq;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
-pub struct SumRange<F: ColourComponent>((F, F, F));
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub struct SumRange<F: ColourComponent>((Sum<F>, Sum<F>, Sum<F>));
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
-pub enum SumRangeComparisonResult<F: ColourComponent> {
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum SumOrdering<F: ColourComponent> {
     TooSmall,
-    Shade(F, F),
-    Tint(F, F),
+    Shade(Sum<F>, Sum<F>),
+    Tint(Sum<F>, Sum<F>),
     TooBig,
 }
 
-impl<F: ColourComponent> SumRangeComparisonResult<F> {
+impl<F: ColourComponent> SumOrdering<F> {
     pub fn is_failure(&self) -> bool {
-        use SumRangeComparisonResult::*;
+        use SumOrdering::*;
         match self {
             TooSmall | TooBig => true,
             _ => false,
@@ -34,7 +36,7 @@ impl<F: ColourComponent> SumRangeComparisonResult<F> {
     }
 
     pub fn is_success(&self) -> bool {
-        use SumRangeComparisonResult::*;
+        use SumOrdering::*;
         match self {
             TooSmall | TooBig => false,
             _ => true,
@@ -43,43 +45,42 @@ impl<F: ColourComponent> SumRangeComparisonResult<F> {
 }
 
 impl<F: ColourComponent> SumRange<F> {
-    pub fn compare_sum(&self, sum: F) -> SumRangeComparisonResult<F> {
+    pub fn compare_sum(&self, sum: Sum<F>) -> SumOrdering<F> {
         if sum < self.0 .0 {
-            SumRangeComparisonResult::TooSmall
+            SumOrdering::TooSmall
         } else if sum <= self.0 .1 {
-            SumRangeComparisonResult::Shade(self.0 .0, self.0 .1)
+            SumOrdering::Shade(self.0 .0, self.0 .1)
         } else if sum < self.0 .2 {
-            SumRangeComparisonResult::Tint(self.0 .1, self.0 .2)
+            SumOrdering::Tint(self.0 .1, self.0 .2)
         } else {
-            SumRangeComparisonResult::TooBig
+            SumOrdering::TooBig
         }
     }
 
-    pub fn shade_min(&self) -> F {
+    pub fn shade_min(&self) -> Sum<F> {
         self.0 .0
     }
 
-    pub fn shade_max(&self) -> F {
+    pub fn shade_max(&self) -> Sum<F> {
         self.0 .1
     }
 
-    pub fn tint_min(&self) -> F {
+    pub fn tint_min(&self) -> Sum<F> {
         self.0 .1
     }
 
-    pub fn tint_max(&self) -> F {
+    pub fn tint_max(&self) -> Sum<F> {
         self.0 .2
     }
 }
 
 pub trait HueIfceTmp<F: ColourComponent> {
     fn hue_angle(&self) -> Degrees<F>;
-    fn chroma_correction(&self) -> F;
     fn sum_range_for_chroma(&self, chroma_value: Proportion<F>) -> Option<SumRange<F>>;
-    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Chroma<F>;
+    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>>;
 
     fn max_chroma_rgb(&self) -> RGB<F>;
-    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> RGB<F>;
+    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> Option<RGB<F>>;
     fn min_sum_rgb_for_chroma(&self, chroma_value: Proportion<F>) -> RGB<F>;
     fn max_sum_rgb_for_chroma(&self, chroma_value: Proportion<F>) -> RGB<F>;
     fn rgb_for_sum_and_chroma(&self, sum: Sum<F>, chroma_value: Proportion<F>) -> Option<RGB<F>>;
@@ -103,7 +104,10 @@ impl RGBHue {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
+impl<F: ColourComponent> HueIfceTmp<F> for RGBHue
+where
+    F: ProportionConstants + PartialOrd + Ord,
+{
     fn hue_angle(&self) -> Degrees<F> {
         match self {
             RGBHue::Red => Degrees::RED,
@@ -112,33 +116,29 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
         }
     }
 
-    fn chroma_correction(&self) -> F {
-        F::ONE
-    }
-
-    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             None
         } else {
             Some(SumRange((
-                chroma,
-                (F::THREE - F::TWO * chroma).min(F::THREE),
-                F::ONE,
+                chroma.into(),
+                Sum::ONE,
+                (Sum::THREE - Sum::TWO * chroma).min(Sum::THREE),
             )))
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: F) -> F {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if sum == F::ZERO || sum == F::THREE {
-            F::ZERO
-        } else if sum < F::ONE {
-            sum
-        } else if sum > F::ONE {
-            ((F::THREE - sum) / F::TWO).min(F::ONE)
+    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
+            None
+        } else if sum < Sum::ONE {
+            Some(Chroma::Shade(sum.into()))
+        } else if sum > Sum::ONE {
+            Some(Chroma::Tint(((Sum::THREE - sum) / 2).min(Proportion::ONE)))
         } else {
-            F::ONE
+            Some(Chroma::ONE)
         }
     }
 
@@ -150,50 +150,51 @@ impl<F: ColourComponent> HueIfceTmp<F> for RGBHue {
         }
     }
 
-    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if sum == F::ZERO {
-            RGB::BLACK
-        } else if sum == F::THREE {
-            RGB::WHITE
+    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> Option<RGB<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
+            None
         } else {
-            if sum <= F::ONE {
-                self.make_rgb((sum, F::ZERO))
+            if sum <= Sum::ONE {
+                Some(self.make_rgb((sum.into(), Proportion::ZERO)))
             } else {
-                self.make_rgb((F::ONE, ((sum - F::ONE) / F::TWO).min(F::ONE)))
+                Some(self.make_rgb((Proportion::ONE, ((sum - Sum::ONE) / 2).min(Proportion::ONE))))
             }
         }
     }
 
-    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn min_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
+        // TODO: Needs major revision taking into account Shade/Tint
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             RGB::BLACK
-        } else if chroma == F::ONE {
+        } else if chroma == Proportion::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((chroma, F::ZERO))
+            self.make_rgb((chroma, Proportion::ZERO))
         }
     }
 
-    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn max_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
+        // TODO: Needs major revision taking into account Shade/Tint
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             RGB::WHITE
-        } else if chroma == F::ONE {
+        } else if chroma == Proportion::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((F::ONE, F::ONE - chroma))
+            self.make_rgb((Proportion::ONE, Proportion::ONE - chroma))
         }
     }
 
-    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        debug_assert!(chroma.is_proportion());
+    fn rgb_for_sum_and_chroma(&self, sum: Sum<F>, chroma: Proportion<F>) -> Option<RGB<F>> {
+        // TODO: Needs major revision taking into account Shade/Tint
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
-            let other = (sum - chroma) / F::THREE;
-            Some(self.make_rgb(((chroma + other), other)))
+            let other: Proportion<F> = (sum - chroma) / 3;
+            Some(self.make_rgb(((other + chroma).into(), other)))
         } else {
             None
         }
@@ -218,7 +219,10 @@ impl CMYHue {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
+impl<F: ColourComponent> HueIfceTmp<F> for CMYHue
+where
+    F: ProportionConstants + PartialOrd + Ord,
+{
     fn hue_angle(&self) -> Degrees<F> {
         match self {
             CMYHue::Cyan => Degrees::CYAN,
@@ -227,29 +231,25 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
         }
     }
 
-    fn chroma_correction(&self) -> F {
-        F::ONE
-    }
-
-    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             None
         } else {
-            Some(SumRange((chroma * F::TWO, F::THREE - chroma, F::TWO)))
+            Some(SumRange((chroma * 2, Sum::TWO, Sum::THREE - chroma)))
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: F) -> F {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if sum == F::ZERO || sum == F::THREE {
-            F::ZERO
-        } else if sum < F::TWO {
-            (sum / (F::TWO)).min(F::ONE)
-        } else if sum > F::TWO {
-            (F::THREE - sum).min(F::ONE)
+    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
+            None
+        } else if sum < Sum::TWO {
+            Some(Chroma::Shade((sum / 2).min(Proportion::ONE)))
+        } else if sum > Sum::TWO {
+            Some((Chroma::Tint((Sum::THREE - sum).min(Sum::ONE).into())))
         } else {
-            F::ONE
+            Some(Chroma::ONE)
         }
     }
 
@@ -261,53 +261,53 @@ impl<F: ColourComponent> HueIfceTmp<F> for CMYHue {
         }
     }
 
-    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if sum == F::ZERO {
-            RGB::BLACK
-        } else if sum == F::THREE {
-            RGB::WHITE
+    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> Option<RGB<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
+            None
+        } else if sum < Sum::TWO {
+            Some(self.make_rgb(((sum / 2).min(Proportion::ONE), Proportion::ZERO)))
+        } else if sum > Sum::TWO {
+            Some(self.make_rgb((
+                Proportion::ONE,
+                (sum - Sum::TWO).max(Sum::ZERO).min(Sum::ONE).into(),
+            )))
         } else {
-            if sum <= F::TWO {
-                self.make_rgb(((sum / F::TWO).min(F::ONE), F::ZERO))
-            } else {
-                self.make_rgb((F::ONE, (sum - F::TWO).max(F::ZERO).min(F::ONE)))
-            }
+            Some(self.max_chroma_rgb())
         }
     }
 
-    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn min_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
+        // TODO: Needs major revision taking into account Shade/Tint
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             RGB::BLACK
-        } else if chroma == F::ONE {
+        } else if chroma == Proportion::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((chroma, F::ZERO))
+            self.make_rgb((chroma, Proportion::ZERO))
         }
     }
 
-    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn max_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
+        // TODO: Needs major revision taking into account Shade/Tint
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             RGB::WHITE
-        } else if chroma == F::ONE {
+        } else if chroma == Proportion::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((F::ONE, F::ONE - chroma))
+            self.make_rgb((Proportion::ONE, Proportion::ONE - chroma))
         }
     }
 
-    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        debug_assert!(chroma.is_proportion());
+    fn rgb_for_sum_and_chroma(&self, sum: Sum<F>, chroma: Proportion<F>) -> Option<RGB<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        debug_assert!(chroma.is_valid());
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation
-            Some(self.make_rgb((
-                (sum + chroma) / F::THREE,
-                (sum - chroma * F::TWO) / F::THREE,
-            )))
+            Some(self.make_rgb(((sum + chroma) / 3, (sum - chroma * 2) / 3)))
         } else {
             None
         }
@@ -350,7 +350,10 @@ impl<F: ColourComponent> SextantHue<F> {
     }
 }
 
-impl<F: ColourComponent> FloatApproxEq<F> for SextantHue<F> {
+impl<F: ColourComponent> FloatApproxEq<F> for SextantHue<F>
+where
+    F: FloatApproxEq<F>,
+{
     fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
         if self.0 == other.0 {
             self.1.approx_eq(&other.1, max_diff)
@@ -360,24 +363,63 @@ impl<F: ColourComponent> FloatApproxEq<F> for SextantHue<F> {
     }
 }
 
+fn second_from_ordered_parts<F>(
+    parts: (Proportion<F>, Proportion<F>, Proportion<F>),
+) -> Proportion<F>
+where
+    F: ColourComponent + std::ops::Sub + std::ops::Sub<Output = Proportion<F>>,
+{
+    debug_assert!(parts.0 < parts.1 && parts.1 < parts.2);
+    let val = (parts.1 - parts.2) / (parts.0 - parts.2);
+    Proportion::<F>::from(val)
+}
+
 impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
     fn from(arg: (Sextant, &RGB<F>)) -> Self {
         use Sextant::*;
         use CCI::*;
         match arg.0 {
-            RedMagenta => Self(arg.0, (arg.1[Blue] - arg.1[Green]) / arg.1[Red]),
-            RedYellow => Self(arg.0, (arg.1[Green] - arg.1[Blue]) / arg.1[Red]),
-            GreenYellow => Self(arg.0, (arg.1[Red] - arg.1[Blue]) / arg.1[Green]),
-            GreenCyan => Self(arg.0, (arg.1[Blue] - arg.1[Red]) / arg.1[Green]),
-            BlueCyan => Self(arg.0, (arg.1[Green] - arg.1[Red]) / arg.1[Blue]),
-            BlueMagenta => Self(arg.0, (arg.1[Red] - arg.1[Green]) / arg.1[Blue]),
+            RedMagenta => Self(
+                arg.0,
+                // (arg.1[Blue] - arg.1[Green]) / (arg.1[Red] - arg.1[Green]),
+                second_from_ordered_parts((arg.1[Red], arg.1[Blue], arg.1[Green])),
+            ),
+            RedYellow => Self(
+                arg.0,
+                // (arg.1[Green] - arg.1[Blue]) / (arg.1[Red]) - arg.1[Blue],
+                second_from_ordered_parts((arg.1[Red], arg.1[Green], arg.1[Blue])),
+            ),
+            GreenYellow => Self(
+                arg.0,
+                // (arg.1[Red] - arg.1[Blue]) / (arg.1[Green]) - arg.1[Blue],
+                second_from_ordered_parts((arg.1[Green], arg.1[Red], arg.1[Blue])),
+            ),
+            GreenCyan => Self(
+                arg.0,
+                // (arg.1[Blue] - arg.1[Red]) / (arg.1[Green]) - arg.1[Red],
+                second_from_ordered_parts((arg.1[Green], arg.1[Blue], arg.1[Red])),
+            ),
+            BlueCyan => Self(
+                arg.0,
+                // (arg.1[Green] - arg.1[Red]) / (arg.1[Blue]) - arg.1[Red],
+                second_from_ordered_parts((arg.1[Blue], arg.1[Green], arg.1[Red])),
+            ),
+            BlueMagenta => Self(
+                arg.0,
+                // (arg.1[Red] - arg.1[Green]) / (arg.1[Blue]) - arg.1[Green],
+                second_from_ordered_parts((arg.1[Blue], arg.1[Red], arg.1[Green])),
+            ),
         }
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
+impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F>
+where
+    F: ProportionConstants + PartialOrd + Ord,
+{
     fn hue_angle(&self) -> Degrees<F> {
-        let sin = F::SQRT_3 * self.1 / F::TWO / (F::ONE - self.1 + self.1.powi(2)).sqrt();
+        let second = self.1.value();
+        let sin = F::SQRT_3 * second / F::TWO / (F::ONE - second + second.powi(2)).sqrt();
         let angle = Degrees::asin(sin);
         match self.0 {
             Sextant::RedMagenta => -angle,
@@ -389,44 +431,44 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
         }
     }
 
-    fn chroma_correction(&self) -> F {
-        // Careful of fact floats only approximate real numbers
-        (F::ONE + self.1 * self.1 - F::TWO * self.1)
-            .sqrt()
-            .min(F::ONE)
-            .recip()
-    }
-
-    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             None
-        } else if chroma == F::ONE {
-            Some(SumRange((
-                (F::ONE + self.1).min(F::TWO),
-                (F::ONE + self.1).min(F::TWO),
-                (F::ONE + self.1).min(F::TWO),
-            )))
         } else {
-            let temp = self.1 * chroma;
-            Some(SumRange((
-                (chroma + temp).min(F::THREE),
-                (F::THREE + temp - F::TWO * chroma).min(F::THREE),
-                F::THREE - temp,
-            )))
+            let max_c_sum = (Sum::ONE + self.1).min(Sum::TWO);
+            if chroma == Proportion::ONE {
+                Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
+            } else {
+                let temp: Sum<F> = (self.1 * chroma).into();
+                Some(SumRange((
+                    (temp + chroma).min(Sum::THREE),
+                    max_c_sum,
+                    (Sum::THREE + temp - chroma * 2).min(Sum::THREE),
+                )))
+            }
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: F) -> F {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        if sum == F::ZERO || sum == F::THREE {
-            F::ZERO
-        } else if sum < F::ONE + self.1 {
-            (sum / (F::ONE + self.1)).min(F::ONE)
-        } else if sum > F::ONE + self.1 {
-            ((F::THREE - sum) / (F::TWO - self.1)).min(F::ONE)
+    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
+            None
         } else {
-            F::ONE
+            match sum.cmp(&(Sum::ONE + self.1)) {
+                Ordering::Less => {
+                    let temp = Ord::min((sum.value() / (F::ONE + self.1.value())), F::ONE);
+                    Some(Chroma::Shade(temp.into()))
+                }
+                Ordering::Greater => {
+                    let temp = Ord::min(
+                        F::ONE,
+                        ((F::THREE - sum.value()) / (F::TWO - self.1.value())),
+                    );
+                    Some(Chroma::Tint(temp.into()))
+                }
+                Ordering::Equal => Some(Chroma::ONE),
+            }
         }
     }
 
@@ -434,68 +476,74 @@ impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F> {
         self.make_rgb((Proportion::ONE, self.1, Proportion::ZERO))
     }
 
-    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
+    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> Option<RGB<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         // TODO: make hue drift an error
-        if sum == F::ZERO {
-            RGB::BLACK
-        } else if sum == F::THREE {
-            RGB::WHITE
+        if sum == Sum::ZERO || sum == Sum::THREE {
+            None
         } else {
-            let max_chroma_sum = self.1 + F::ONE;
+            let max_chroma_sum = self.1 + Proportion::ONE;
             if sum == max_chroma_sum {
-                self.max_chroma_rgb()
+                Some(self.max_chroma_rgb())
             } else {
                 let components = if sum < max_chroma_sum {
-                    let first = (sum / max_chroma_sum).min(F::ONE);
-                    (first, first * self.1, F::ZERO)
+                    let first = Proportion::<F>::from(sum.value() / max_chroma_sum.value())
+                        .min(Proportion::ONE);
+                    (first, first * self.1, Proportion::ZERO)
                 } else {
-                    let temp = sum - F::ONE;
-                    let second = ((temp + self.1) / F::TWO).min(F::ONE);
-                    (F::ONE, second, (temp - second).max(F::ZERO))
+                    let temp = sum - Proportion::ONE;
+                    let second = ((temp + self.1) / 2).min(Proportion::ONE);
+                    (
+                        Proportion::ONE,
+                        second,
+                        (temp - second).max(Sum::ZERO).into(),
+                    )
                 };
-                self.make_rgb(components)
+                Some(self.make_rgb(components))
             }
         }
     }
 
-    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn min_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             RGB::BLACK
-        } else if chroma == F::ONE {
+        } else if chroma == Proportion::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((chroma, self.1 * chroma, F::ZERO))
+            self.make_rgb((chroma, self.1 * chroma, Proportion::ZERO))
         }
     }
 
-    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
-        debug_assert!(chroma.is_proportion(), "chroma: {:?}", chroma);
-        if chroma == F::ZERO {
+    fn max_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
+        debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
+        if chroma == Proportion::ZERO {
             RGB::WHITE
-        } else if chroma == F::ONE {
+        } else if chroma == Proportion::ONE {
             self.max_chroma_rgb()
         } else {
-            let third = F::ONE - chroma;
-            self.make_rgb((F::ONE, chroma * self.1 + third, third))
+            let third = Proportion::ONE - chroma;
+            let second: Proportion<F> = (chroma * self.1 + third).into();
+            self.make_rgb((Proportion::ONE, second, third))
         }
     }
 
-    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
-        debug_assert!(sum >= F::ZERO && sum <= F::THREE, "sum: {:?}", sum);
-        debug_assert!(chroma.is_proportion());
-        use SumRangeComparisonResult::*;
+    fn rgb_for_sum_and_chroma(&self, sum: Sum<F>, chroma: Proportion<F>) -> Option<RGB<F>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        debug_assert!(chroma.is_valid());
+        use SumOrdering::*;
         let sum_range = self.sum_range_for_chroma(chroma)?;
         match sum_range.compare_sum(sum) {
             Shade(min_sum, _max_sun) => {
-                let delta = (sum - min_sum) / F::THREE;
-                Some(self.make_rgb((chroma + delta, chroma * self.1 + delta, delta)))
+                let delta = (sum - min_sum) / 3;
+                let first = Proportion::from(chroma + delta).into();
+                let second = Proportion::from(chroma * self.1 + delta);
+                Some(self.make_rgb((first, second, delta)))
             }
             Tint(_min_sum, _max_sum) => {
-                let second = (sum - F::ONE + chroma * self.1) / F::TWO;
-                let third = (sum - F::ONE - chroma * self.1) / F::TWO;
-                Some(self.make_rgb((F::ONE, second, third)))
+                let second = (sum - Proportion::ONE + chroma * self.1) / 2;
+                let third = (sum - Proportion::ONE - chroma * self.1) / 2;
+                Some(self.make_rgb((Proportion::ONE, second, third)))
             }
             _ => None,
         }
@@ -554,7 +602,10 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
+impl<F: ColourComponent> HueIfceTmp<F> for Hue<F>
+where
+    F: ProportionConstants + PartialOrd + Ord,
+{
     fn hue_angle(&self) -> Degrees<F> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
@@ -563,15 +614,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn chroma_correction(&self) -> F {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.chroma_correction(),
-            Self::Secondary(cmy_hue) => cmy_hue.chroma_correction(),
-            Self::Sextant(sextant_hue) => sextant_hue.chroma_correction(),
-        }
-    }
-
-    fn sum_range_for_chroma(&self, chroma: F) -> Option<SumRange<F>> {
+    fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
@@ -579,7 +622,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: F) -> F {
+    fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_for_sum(sum),
@@ -595,7 +638,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn max_chroma_rgb_for_sum(&self, sum: F) -> RGB<F> {
+    fn max_chroma_rgb_for_sum(&self, sum: Sum<F>) -> Option<RGB<F>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb_for_sum(sum),
@@ -603,7 +646,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn min_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+    fn min_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.min_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.min_sum_rgb_for_chroma(chroma),
@@ -611,7 +654,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn max_sum_rgb_for_chroma(&self, chroma: F) -> RGB<F> {
+    fn max_sum_rgb_for_chroma(&self, chroma: Proportion<F>) -> RGB<F> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.max_sum_rgb_for_chroma(chroma),
@@ -619,7 +662,7 @@ impl<F: ColourComponent> HueIfceTmp<F> for Hue<F> {
         }
     }
 
-    fn rgb_for_sum_and_chroma(&self, sum: F, chroma: F) -> Option<RGB<F>> {
+    fn rgb_for_sum_and_chroma(&self, sum: Sum<F>, chroma: Proportion<F>) -> Option<RGB<F>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.rgb_for_sum_and_chroma(sum, chroma),
             Self::Secondary(cmy_hue) => cmy_hue.rgb_for_sum_and_chroma(sum, chroma),
@@ -1102,7 +1145,7 @@ mod hue_ng_tests {
                             hue.sum_range_for_chroma(*chroma)
                         );
                         if let Some(rgb) = hue.rgb_for_sum_and_chroma(*sum, *chroma) {
-                            use SumRangeComparisonResult::*;
+                            use SumOrdering::*;
                             match sum_range.compare_sum(*sum) {
                                 Shade(_, _) => {
                                     assert_approx_eq!(rgb.sum(), *sum, 0.000_000_000_1);
