@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
 
+colour_math = { path = "../colour_math" }
 colour_math_gtk = { path = "../colour_math_gtk" }

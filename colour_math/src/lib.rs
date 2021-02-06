@@ -5,10 +5,10 @@ extern crate serde_derive;
 
 use std::{cmp::PartialEq, fmt::Debug};
 
-pub use num_traits_plus;
-pub use num_traits_plus::float_plus::*;
+use num_traits_plus;
+use num_traits_plus::float_plus::*;
 
-pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
+use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
 pub mod attributes;
 pub mod chroma;
@@ -17,7 +17,7 @@ pub mod hue;
 //pub mod hue_ng;
 pub mod image;
 pub mod manipulator;
-pub mod proportion;
+//pub mod proportion;
 pub mod rgb;
 //pub mod rgb_ng;
 pub mod rgba;

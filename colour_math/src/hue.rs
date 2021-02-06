@@ -8,6 +8,7 @@ use std::{
 };
 
 use normalised_angles::*;
+use num_traits_plus::float_plus::FloatApproxEq;
 
 use crate::rgb::RGB;
 use crate::{chroma, ColourComponent, ColourInterface, HueConstants, RGBConstants, CCI};

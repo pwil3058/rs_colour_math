@@ -8,10 +8,9 @@ use pw_gix::{
     wrapper::*,
 };
 
-use crate::{
-    colour::{HueConstants, UnsignedComponent, RGB, URGB},
-    coloured::Colourable,
-};
+use colour_math::{urgb::UnsignedComponent, HueConstants, URGB};
+
+use crate::{colour::RGB, coloured::Colourable};
 
 type BoxedChangeCallback<U> = Box<dyn Fn(U)>;
 

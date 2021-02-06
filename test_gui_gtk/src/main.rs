@@ -5,9 +5,11 @@ use pw_gix::{
     wrapper::*,
 };
 
+use colour_math::{attributes::hue_wheel::Shape, HueConstants, ScalarAttribute};
+
 use colour_math_gtk::{
     attributes::{AttributeSelectorBuilder, ColourAttributeDisplayStackBuilder},
-    colour::{ColouredShape, HueConstants, ScalarAttribute, Shape, RGB},
+    colour::{ColouredShape, RGB},
     colour_edit::ColourEditorBuilder,
     hue_wheel::GtkHueWheelBuilder,
     //manipulator::ColourManipulatorGUIBuilder,

@@ -6,13 +6,14 @@ use pw_gix::{
     wrapper::*,
 };
 
-use crate::colour::RGBConstants;
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
-    colour::{ScalarAttribute, RGB},
+    colour::RGB,
     manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
     rgb_entry::{RGBHexEntry, RGBHexEntryBuilder},
 };
+
+use colour_math::{RGBConstants, ScalarAttribute};
 
 type ChangeCallback = Box<dyn Fn(&RGB)>;
 

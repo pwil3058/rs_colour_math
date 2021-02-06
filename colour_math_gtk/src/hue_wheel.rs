@@ -14,11 +14,13 @@ use pw_gix::{
     wrapper::*,
 };
 
+use colour_math::ScalarAttribute;
+
 use colour_math_cairo::*;
 
 use crate::{
     attributes::{AttributeSelector, AttributeSelectorBuilder},
-    colour::{ColouredShape, HueWheel, ScalarAttribute},
+    colour::{ColouredShape, HueWheel},
 };
 
 type PopupCallback = Box<dyn Fn(&str)>;

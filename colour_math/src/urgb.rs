@@ -4,6 +4,10 @@ use std::{fmt::UpperHex, ops::Index, str::FromStr};
 
 use regex::Regex;
 
+use num_traits;
+
+use num_traits_plus;
+
 use crate::{
     rgb::{ColourComponent, RGB},
     HueConstants, RGBConstants,
@@ -14,9 +18,9 @@ pub trait UnsignedComponent:
     + Default
     + Ord
     + UpperHex
-    + num_traits_plus::num_traits::Unsigned
-    + num_traits_plus::num_traits::NumCast
-    + num_traits_plus::num_traits::ToPrimitive
+    + num_traits::Unsigned
+    + num_traits::NumCast
+    + num_traits::ToPrimitive
     + num_traits_plus::NumberConstants
 {
     fn from_fcc<F: ColourComponent>(cc: F) -> Self {

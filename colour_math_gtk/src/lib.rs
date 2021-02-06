@@ -1,9 +1,7 @@
 // Copyright 2020 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-pub use colour_math_cairo;
-
 pub mod angles {
-    pub use normalised_angles;
+    use normalised_angles;
 
     pub type Angle = normalised_angles::Angle<f64>;
     pub type Degrees = normalised_angles::Degrees<f64>;
@@ -11,11 +9,7 @@ pub mod angles {
 }
 
 pub mod colour {
-    pub use colour_math::{
-        attributes::{hue_wheel::Shape, ColourAttributeDisplayIfce},
-        urgb::{UnsignedComponent, URGB},
-        ColourInterface, HueConstants, RGBConstants, ScalarAttribute, CCI,
-    };
+    use colour_math::CCI;
     use pw_gix::gdk;
     pub type RGB = colour_math::rgb::RGB<f64>;
     pub type ColourManipulator = colour_math::manipulator::ColourManipulator<f64>;
@@ -35,6 +29,8 @@ pub mod colour {
 
 pub mod coloured {
     use pw_gix::gtk::{self, prelude::*};
+
+    use colour_math::ColourInterface;
 
     use crate::colour::*;
 
@@ -95,14 +91,16 @@ pub mod attributes {
         rc::Rc,
     };
 
-    pub use pw_gix::{
+    use pw_gix::{
         gtk::{self, BoxExt, RadioButtonExt, ToggleButtonExt, WidgetExt},
         wrapper::*,
     };
 
     use colour_math_cairo::{Drawer, Size};
 
-    use crate::colour::{ColourAttributeDisplayIfce, ColourInterface, ScalarAttribute, RGB};
+    use colour_math::{attributes::ColourAttributeDisplayIfce, ColourInterface, ScalarAttribute};
+
+    use crate::colour::RGB;
 
     pub type ChromaCAD = ColourAttributeDisplay<colour_math::attributes::ChromaCAD<f64>>;
     pub type GreynessCAD = ColourAttributeDisplay<colour_math::attributes::GreynessCAD<f64>>;
