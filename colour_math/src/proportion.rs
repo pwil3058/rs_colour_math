@@ -6,7 +6,7 @@ use std::{
 };
 
 use normalised_angles::{DegreesConst, RadiansConst};
-use num_traits::{FromPrimitive, Num, NumOps, ToPrimitive};
+use num_traits::{FromPrimitive, Num, ToPrimitive};
 use num_traits_plus::{float_plus::*, NumberConstants};
 
 pub trait Validation {
@@ -57,7 +57,10 @@ impl Number for f64 {}
 impl Number for u8 {}
 impl Number for u16 {}
 
-pub trait Float: Number + FloatPlus + DegreesConst + RadiansConst + std::iter::Sum {}
+pub trait Float:
+    Number + FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + FloatApproxEq<Self>
+{
+}
 
 impl Float for f32 {}
 impl Float for f64 {}
@@ -230,8 +233,8 @@ impl<F: Float + ProportionConstants> Chroma<F> {
 
     pub fn is_zero(&self) -> bool {
         match self {
-            Chroma::Shade(proportion) => proportion == Proportion::P_ZERO,
-            Chroma::Tint(proportion) => proportion == Proportion::P_ZERO,
+            Chroma::Shade(proportion) => *proportion == Proportion::<F>::P_ZERO,
+            Chroma::Tint(proportion) => *proportion == Proportion::<F>::P_ZERO,
         }
     }
 
