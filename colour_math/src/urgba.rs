@@ -274,10 +274,7 @@ impl FromStr for URGBA<u16> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use num_traits_plus::{
-        assert_approx_eq,
-        float_plus::{FloatApproxEq, FloatPlus},
-    };
+    use num_traits_plus::{assert_approx_eq, float_plus::*, NumberConstants};
 
     #[test]
     fn component_conversion() {

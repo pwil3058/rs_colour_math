@@ -5,162 +5,136 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use num_traits::{FromPrimitive, Num, NumOps};
-use num_traits_plus::float_plus::{FloatApproxEq, FloatPlus};
-use num_traits_plus::NumberConstants;
+use normalised_angles::{DegreesConst, RadiansConst};
+use num_traits::{FromPrimitive, Num, NumOps, ToPrimitive};
+use num_traits_plus::{float_plus::*, NumberConstants};
 
 pub trait Validation {
     fn is_valid(&self) -> bool;
 }
 
-pub trait PropTraits:
-    NumberConstants
-    + ProportionConstants
-    + PartialOrd
-    + Ord
-    + NumOps
-    + Sized
-    + Num
-    + FromPrimitive
-    + Clone
-    + Copy
-{
-}
-
 pub trait ProportionConstants {
-    const PROPORTION_MIN: Self;
-    const PROPORTION_MAX: Self;
+    const P_ZERO: Self;
+    const P_ONE: Self;
 }
 
 impl ProportionConstants for f32 {
-    const PROPORTION_MIN: Self = 0.0;
-    const PROPORTION_MAX: Self = 1.0;
+    const P_ZERO: Self = Self::ZERO;
+    const P_ONE: Self = Self::ONE;
 }
 
 impl ProportionConstants for f64 {
-    const PROPORTION_MIN: Self = 0.0;
-    const PROPORTION_MAX: Self = 1.0;
+    const P_ZERO: Self = Self::ZERO;
+    const P_ONE: Self = Self::ONE;
 }
 
 impl ProportionConstants for u8 {
-    const PROPORTION_MIN: Self = 0;
-    const PROPORTION_MAX: Self = u8::MAX;
+    const P_ZERO: Self = Self::ZERO;
+    const P_ONE: Self = Self::MAX;
 }
 
 impl ProportionConstants for u16 {
-    const PROPORTION_MIN: Self = 0;
-    const PROPORTION_MAX: Self = u16::MAX;
+    const P_ZERO: Self = Self::ZERO;
+    const P_ONE: Self = Self::MAX;
 }
 
-#[derive(
-    Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
-)]
-pub struct Proportion<P: PropTraits>(P);
-
-impl<P: PropTraits> Proportion<P> {
-    pub const ZERO: Self = Self(P::PROPORTION_MIN);
-    pub const ONE: Self = Self(P::PROPORTION_MAX);
+pub trait Number:
+    ProportionConstants
+    + FromPrimitive
+    + ToPrimitive
+    + PartialOrd
+    + Clone
+    + Copy
+    + Debug
+    + Default
+    + PartialEq
+    + Num
+{
 }
 
-impl<P: PropTraits> Validation for Proportion<P> {
+impl Number for f32 {}
+impl Number for f64 {}
+impl Number for u8 {}
+impl Number for u16 {}
+
+pub trait Float: Number + FloatPlus + DegreesConst + RadiansConst + std::iter::Sum {}
+
+impl Float for f32 {}
+impl Float for f64 {}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd)]
+pub struct Proportion<N: Number>(N);
+
+impl<N: Number> ProportionConstants for Proportion<N> {
+    const P_ZERO: Self = Self(N::P_ZERO);
+    const P_ONE: Self = Self(N::P_ONE);
+}
+
+impl<N: Number> Validation for Proportion<N> {
     fn is_valid(&self) -> bool {
-        self.0 >= P::PROPORTION_MIN || self.0 <= P::PROPORTION_MAX
+        self.0 >= N::P_ZERO || self.0 <= N::P_ONE
     }
 }
 
-impl<P: PropTraits> From<Sum<P>> for Proportion<P> {
-    fn from(sum: Sum<P>) -> Self {
-        debug_assert!(sum.is_valid());
-        let proportion = Self(sum.0);
-        debug_assert!(proportion.is_valid());
-        proportion
-    }
-}
-
-impl<P: PropTraits> Proportion<P> {
-    pub fn value(&self) -> P {
+impl<N: Number> Proportion<N> {
+    pub fn value(&self) -> N {
         self.0
     }
 }
 
-impl<P: PropTraits> Sub for Proportion<P> {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        debug_assert!(rhs.is_valid());
-        let val = Self(self.0 - rhs.0);
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Add for Proportion<P> {
-    type Output = Sum<P>;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        debug_assert!(rhs.is_valid());
-        let val = Sum(self.0 + rhs.0);
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Mul<u8> for Proportion<P> {
-    type Output = Sum<P>;
-
-    fn mul(self, scalar: u8) -> Self::Output {
-        debug_assert!(scalar >= 1 && scalar <= 3);
-        let val = Sum(self.0 * P::from_u8(scalar).unwrap());
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Mul for Proportion<P> {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        debug_assert!(rhs.is_valid());
-        let val = Self(self.0 * rhs.0);
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Div for Proportion<P> {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        debug_assert!(rhs.is_valid());
-        let val = Self(self.0 / rhs.0);
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Div<u8> for Proportion<P> {
-    type Output = Self;
-
-    fn div(self, rhs: u8) -> Self::Output {
-        let val = Self(self.0 / P::from_u8(rhs).unwrap());
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> From<P> for Proportion<P> {
-    fn from(arg: P) -> Self {
+impl<N: Number> From<N> for Proportion<N> {
+    fn from(arg: N) -> Self {
         let proportion = Self(arg);
         debug_assert!(proportion.is_valid());
         proportion
     }
 }
 
-impl<P: PropTraits> FloatApproxEq<P> for Proportion<P>
-where
-    P: FloatApproxEq<P> + FloatPlus,
-{
-    fn approx_eq(&self, other: &Self, max_diff: Option<P>) -> bool {
+impl<F: Float> From<Sum<F>> for Proportion<F> {
+    fn from(sum: Sum<F>) -> Self {
+        let proportion = Self(sum.0);
+        debug_assert!(proportion.is_valid());
+        proportion
+    }
+}
+
+impl<F: Float> Sub for Proportion<F> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let val = Self(self.0 - rhs.0);
+        val
+    }
+}
+
+impl<F: Float> Add for Proportion<F> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl<F: Float> Mul for Proportion<F> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let val = Self(self.0 * rhs.0);
+        val
+    }
+}
+
+impl<F: Float> Div for Proportion<F> {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        let val = Self(self.0 / rhs.0);
+        val
+    }
+}
+
+impl<F: Float> FloatApproxEq<F> for Proportion<F> {
+    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
         self.0.approx_eq(&other.0, max_diff)
     }
 }
@@ -168,123 +142,112 @@ where
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
 )]
-pub struct Sum<P: PropTraits>(P);
+pub struct Sum<F: Float>(F);
 
-impl<P: PropTraits> Validation for Sum<P> {
+impl<F: Float> ProportionConstants for Sum<F> {
+    const P_ZERO: Self = Self(F::P_ZERO);
+    const P_ONE: Self = Self(F::P_ONE);
+}
+
+impl<F: Float> Validation for Sum<F> {
     fn is_valid(&self) -> bool {
-        self.0 >= P::ZERO && self.0 <= P::ONE
+        self.0 >= F::ZERO && self.0 <= F::THREE
     }
 }
 
-impl<P: PropTraits> Sum<P> {
-    pub const ZERO: Self = Self(P::PROPORTION_MIN);
-    pub const ONE: Self = Self(P::PROPORTION_MAX);
-    pub const TWO: Self = Self(P::TWO);
-    pub const THREE: Self = Self(P::THREE);
+impl<F: Float> NumberConstants for Sum<F> {
+    const BYTES: usize = F::BYTES;
+    const DIGITS: u32 = F::DIGITS;
+    const MIN: Self = Self(F::MIN);
+    const MAX: Self = Self(F::MAX);
+    const ZERO: Self = Self(F::ZERO);
+    const ONE: Self = Self(F::ONE);
+    const TWO: Self = Self(F::TWO);
+    const THREE: Self = Self(F::THREE);
 }
 
-impl<P: PropTraits> Sum<P> {
-    pub fn value(&self) -> P {
+impl<F: Float> Sum<F> {
+    pub fn value(&self) -> F {
         self.0
     }
 }
 
-impl<P: PropTraits> From<&[Proportion<P>; 3]> for Sum<P> {
-    fn from(array: &[Proportion<P>; 3]) -> Self {
-        let sum = (array[0].value() + array[1].value() + array[2].value()).min(P::THREE);
-        Self(sum)
+impl<F: Float> From<&[Proportion<F>; 3]> for Sum<F> {
+    fn from(array: &[Proportion<F>; 3]) -> Self {
+        debug_assert!(array[0].is_valid() && array[1].is_valid() && array[2].is_valid());
+        Self((array[0].0 + array[1].0 + array[2].0).min(F::THREE))
     }
 }
 
-impl<P: PropTraits> From<Proportion<P>> for Sum<P> {
-    fn from(proportion: Proportion<P>) -> Self {
+impl<F: Float> From<Proportion<F>> for Sum<F> {
+    fn from(proportion: Proportion<F>) -> Self {
         debug_assert!(proportion.is_valid());
         Self(proportion.0)
     }
 }
 
-impl<P: PropTraits> Mul<Proportion<P>> for Sum<P> {
+impl<F: Float> Mul for Sum<F> {
     type Output = Self;
 
-    fn mul(self, proportion: Proportion<P>) -> Self::Output {
-        debug_assert!(proportion.is_valid());
-        let val = Self(self.0 * proportion.0);
-        debug_assert!(val.is_valid());
-        val
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(self.0 * rhs.0)
     }
 }
 
-impl<P: PropTraits> Div<u8> for Sum<P> {
-    type Output = Proportion<P>;
+impl<F: Float> Div for Sum<F> {
+    type Output = Self;
 
-    fn div(self, scalar: u8) -> Self::Output {
-        debug_assert!(scalar >= 1 && scalar <= 3);
-        let proportion = Proportion(self.0 / P::from_u8(scalar).unwrap());
-        debug_assert!(proportion.is_valid());
-        proportion
+    fn div(self, rhs: Self) -> Self::Output {
+        Self(self.0 / rhs.0)
     }
 }
 
-impl<P: PropTraits> Sub for Sum<P> {
+impl<F: Float> Sub for Sum<F> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        debug_assert!(rhs.is_valid());
-        let val = Self(self.0 - rhs.0);
-        debug_assert!(val.is_valid());
-        val
+        Self(self.0 - rhs.0)
     }
 }
 
-impl<P: PropTraits> Sub<Proportion<P>> for Sum<P> {
-    type Output = Self;
-
-    fn sub(self, proportion: Proportion<P>) -> Self::Output {
-        debug_assert!(proportion.is_valid());
-        let val = Self(self.0 - proportion.0);
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Add<Proportion<P>> for Sum<P> {
-    type Output = Self;
-
-    fn add(self, proportion: Proportion<P>) -> Self::Output {
-        debug_assert!(proportion.is_valid());
-        let val = Self(self.0 + proportion.0);
-        debug_assert!(val.is_valid());
-        val
-    }
-}
-
-impl<P: PropTraits> Add for Sum<P> {
+impl<F: Float> Add for Sum<F> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        debug_assert!(rhs.is_valid());
-        let val = Self(self.0 + rhs.0);
-        debug_assert!(val.is_valid());
-        val
+        Self(self.0 + rhs.0)
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum Chroma<P: PropTraits> {
-    Shade(Proportion<P>),
-    Tint(Proportion<P>),
+pub enum Chroma<F: Float> {
+    Shade(Proportion<F>),
+    Tint(Proportion<F>),
 }
 
-impl<P: PropTraits + ProportionConstants> Chroma<P> {
-    pub const ZERO: Self = Self::Shade(Proportion::ZERO);
-    pub const ONE: Self = Self::Tint(Proportion::ONE);
+impl<F: Float + ProportionConstants> Chroma<F> {
+    pub const ZERO: Self = Self::Shade(Proportion::P_ZERO);
+    pub const ONE: Self = Self::Tint(Proportion::P_ONE);
+
+    pub fn is_zero(&self) -> bool {
+        match self {
+            Chroma::Shade(proportion) => proportion == Proportion::P_ZERO,
+            Chroma::Tint(proportion) => proportion == Proportion::P_ZERO,
+        }
+    }
+
+    pub fn proportion(&self) -> Proportion<F> {
+        match self {
+            Chroma::Shade(proportion) => *proportion,
+            Chroma::Tint(proportion) => *proportion,
+        }
+    }
 }
 
-impl<P: PropTraits + ProportionConstants> Validation for Chroma<P> {
+impl<F: Float + ProportionConstants> Validation for Chroma<F> {
     fn is_valid(&self) -> bool {
         match self {
-            Chroma::Shade(val) => val.0 >= P::ZERO && val.0 <= P::ONE,
-            Chroma::Tint(val) => val.0 >= P::ZERO && val.0 <= P::ONE,
+            Chroma::Shade(proportion) => proportion.is_valid(),
+            Chroma::Tint(proportion) => proportion.is_valid(),
         }
     }
 }

@@ -5,28 +5,28 @@ use std::{
     convert::{Into, TryFrom},
 };
 
-use crate::hue_ng::Hue::Primary;
-use crate::hue_ng::SumOrdering::Shade;
-use crate::proportion::{Chroma, Proportion, ProportionConstants, Sum, SumConstants, Validation};
-pub use crate::{
-    chroma, hcv::*, rgb_ng::RGB, urgb::URGB, ColourComponent, ColourInterface, HueConstants,
-    RGBConstants, CCI,
+use normalised_angles::{Degrees, DegreesConst};
+use num_traits_plus::float_plus::{FloatApproxEq, FloatPlus};
+
+use crate::{
+    proportion::{Chroma, PropTraits, Proportion, ProportionConstants, Sum, Validation},
+    rgb_ng::RGB,
+    HueConstants, RGBConstants, CCI,
 };
-use normalised_angles::Degrees;
-use num_traits_plus::float_plus::FloatApproxEq;
+use std::fmt::Debug;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub struct SumRange<F: ColourComponent>((Sum<F>, Sum<F>, Sum<F>));
+pub struct SumRange<F: PropTraits>((Sum<F>, Sum<F>, Sum<F>));
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum SumOrdering<F: ColourComponent> {
+pub enum SumOrdering<F: PropTraits> {
     TooSmall,
     Shade(Sum<F>, Sum<F>),
     Tint(Sum<F>, Sum<F>),
     TooBig,
 }
 
-impl<F: ColourComponent> SumOrdering<F> {
+impl<F: PropTraits> SumOrdering<F> {
     pub fn is_failure(&self) -> bool {
         use SumOrdering::*;
         match self {
@@ -44,7 +44,7 @@ impl<F: ColourComponent> SumOrdering<F> {
     }
 }
 
-impl<F: ColourComponent> SumRange<F> {
+impl<F: PropTraits> SumRange<F> {
     pub fn compare_sum(&self, sum: Sum<F>) -> SumOrdering<F> {
         if sum < self.0 .0 {
             SumOrdering::TooSmall
@@ -74,8 +74,14 @@ impl<F: ColourComponent> SumRange<F> {
     }
 }
 
-pub trait HueIfceTmp<F: ColourComponent> {
+pub trait HueAngle<F>
+where
+    F: DegreesConst + FloatPlus,
+{
     fn hue_angle(&self) -> Degrees<F>;
+}
+
+pub trait HueIfceTmp<F: PropTraits> {
     fn sum_range_for_chroma(&self, chroma_value: Proportion<F>) -> Option<SumRange<F>>;
     fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>>;
 
@@ -94,7 +100,7 @@ pub enum RGBHue {
 }
 
 impl RGBHue {
-    fn make_rgb<F: ColourComponent>(&self, components: (Proportion<F>, Proportion<F>)) -> RGB<F> {
+    fn make_rgb<F: PropTraits>(&self, components: (Proportion<F>, Proportion<F>)) -> RGB<F> {
         use RGBHue::*;
         match self {
             Red => [components.0, components.1, components.1].into(),
@@ -104,9 +110,9 @@ impl RGBHue {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for RGBHue
+impl<F> HueAngle<F> for RGBHue
 where
-    F: ProportionConstants + PartialOrd + Ord,
+    F: DegreesConst + FloatPlus + Debug,
 {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
@@ -115,7 +121,12 @@ where
             RGBHue::Blue => Degrees::BLUE,
         }
     }
+}
 
+impl<F: PropTraits> HueIfceTmp<F> for RGBHue
+where
+    F: ProportionConstants + PartialOrd,
+{
     fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
         debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
         if chroma == Proportion::ZERO {
@@ -136,7 +147,7 @@ where
         } else if sum < Sum::ONE {
             Some(Chroma::Shade(sum.into()))
         } else if sum > Sum::ONE {
-            Some(Chroma::Tint(((Sum::THREE - sum) / 2).min(Proportion::ONE)))
+            Some(Chroma::Tint(((Sum::THREE - sum) / 2)))
         } else {
             Some(Chroma::ONE)
         }
@@ -209,7 +220,7 @@ pub enum CMYHue {
 }
 
 impl CMYHue {
-    fn make_rgb<F: ColourComponent>(&self, components: (Proportion<F>, Proportion<F>)) -> RGB<F> {
+    fn make_rgb<F: PropTraits>(&self, components: (Proportion<F>, Proportion<F>)) -> RGB<F> {
         use CMYHue::*;
         match self {
             Cyan => [components.1, components.0, components.0].into(),
@@ -219,9 +230,9 @@ impl CMYHue {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for CMYHue
+impl<F> HueAngle<F> for CMYHue
 where
-    F: ProportionConstants + PartialOrd + Ord,
+    F: DegreesConst + FloatPlus + Debug,
 {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
@@ -230,7 +241,12 @@ where
             CMYHue::Yellow => Degrees::YELLOW,
         }
     }
+}
 
+impl<F: PropTraits> HueIfceTmp<F> for CMYHue
+where
+    F: ProportionConstants + PartialOrd,
+{
     fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
         debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
         if chroma == Proportion::ZERO {
@@ -247,7 +263,7 @@ where
         } else if sum < Sum::TWO {
             Some(Chroma::Shade((sum / 2).min(Proportion::ONE)))
         } else if sum > Sum::TWO {
-            Some((Chroma::Tint((Sum::THREE - sum).min(Sum::ONE).into())))
+            Some(Chroma::Tint((Sum::THREE - sum).min(Sum::ONE).into()))
         } else {
             Some(Chroma::ONE)
         }
@@ -325,11 +341,11 @@ pub enum Sextant {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
-pub struct SextantHue<F: ColourComponent>(Sextant, Proportion<F>);
+pub struct SextantHue<F: PropTraits>(Sextant, Proportion<F>);
 
-impl<F: ColourComponent> Eq for SextantHue<F> {}
+impl<F: PropTraits> Eq for SextantHue<F> {}
 
-impl<F: ColourComponent> SextantHue<F> {
+impl<F: PropTraits> SextantHue<F> {
     fn make_rgb(&self, components: (Proportion<F>, Proportion<F>, Proportion<F>)) -> RGB<F> {
         debug_assert!(
             components.0 >= components.1 && components.1 >= components.2,
@@ -350,9 +366,9 @@ impl<F: ColourComponent> SextantHue<F> {
     }
 }
 
-impl<F: ColourComponent> FloatApproxEq<F> for SextantHue<F>
+impl<F: PropTraits> FloatApproxEq<F> for SextantHue<F>
 where
-    F: FloatApproxEq<F>,
+    F: FloatApproxEq<F> + FloatPlus,
 {
     fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
         if self.0 == other.0 {
@@ -363,62 +379,45 @@ where
     }
 }
 
-fn second_from_ordered_parts<F>(
-    parts: (Proportion<F>, Proportion<F>, Proportion<F>),
-) -> Proportion<F>
-where
-    F: ColourComponent + std::ops::Sub + std::ops::Sub<Output = Proportion<F>>,
-{
-    debug_assert!(parts.0 < parts.1 && parts.1 < parts.2);
-    let val = (parts.1 - parts.2) / (parts.0 - parts.2);
-    Proportion::<F>::from(val)
-}
-
-impl<F: ColourComponent> From<(Sextant, &RGB<F>)> for SextantHue<F> {
+impl<F: PropTraits> From<(Sextant, &RGB<F>)> for SextantHue<F> {
     fn from(arg: (Sextant, &RGB<F>)) -> Self {
         use Sextant::*;
         use CCI::*;
         match arg.0 {
             RedMagenta => Self(
                 arg.0,
-                // (arg.1[Blue] - arg.1[Green]) / (arg.1[Red] - arg.1[Green]),
-                second_from_ordered_parts((arg.1[Red], arg.1[Blue], arg.1[Green])),
+                (arg.1[Blue] - arg.1[Green]) / (arg.1[Red] - arg.1[Green]),
             ),
             RedYellow => Self(
                 arg.0,
-                // (arg.1[Green] - arg.1[Blue]) / (arg.1[Red]) - arg.1[Blue],
-                second_from_ordered_parts((arg.1[Red], arg.1[Green], arg.1[Blue])),
+                (arg.1[Green] - arg.1[Blue]) / (arg.1[Red]) - arg.1[Blue],
             ),
             GreenYellow => Self(
                 arg.0,
-                // (arg.1[Red] - arg.1[Blue]) / (arg.1[Green]) - arg.1[Blue],
-                second_from_ordered_parts((arg.1[Green], arg.1[Red], arg.1[Blue])),
+                (arg.1[Red] - arg.1[Blue]) / (arg.1[Green]) - arg.1[Blue],
             ),
             GreenCyan => Self(
                 arg.0,
-                // (arg.1[Blue] - arg.1[Red]) / (arg.1[Green]) - arg.1[Red],
-                second_from_ordered_parts((arg.1[Green], arg.1[Blue], arg.1[Red])),
+                (arg.1[Blue] - arg.1[Red]) / (arg.1[Green]) - arg.1[Red],
             ),
             BlueCyan => Self(
                 arg.0,
-                // (arg.1[Green] - arg.1[Red]) / (arg.1[Blue]) - arg.1[Red],
-                second_from_ordered_parts((arg.1[Blue], arg.1[Green], arg.1[Red])),
+                (arg.1[Green] - arg.1[Red]) / (arg.1[Blue]) - arg.1[Red],
             ),
             BlueMagenta => Self(
                 arg.0,
-                // (arg.1[Red] - arg.1[Green]) / (arg.1[Blue]) - arg.1[Green],
-                second_from_ordered_parts((arg.1[Blue], arg.1[Red], arg.1[Green])),
+                (arg.1[Red] - arg.1[Green]) / (arg.1[Blue]) - arg.1[Green],
             ),
         }
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for SextantHue<F>
+impl<F, P: PropTraits> HueAngle<F> for SextantHue<P>
 where
-    F: ProportionConstants + PartialOrd + Ord,
+    F: DegreesConst + FloatPlus + Debug + From<P>,
 {
     fn hue_angle(&self) -> Degrees<F> {
-        let second = self.1.value();
+        let second: F = self.1.value().into();
         let sin = F::SQRT_3 * second / F::TWO / (F::ONE - second + second.powi(2)).sqrt();
         let angle = Degrees::asin(sin);
         match self.0 {
@@ -430,7 +429,9 @@ where
             Sextant::BlueMagenta => Degrees::BLUE + angle,
         }
     }
+}
 
+impl<F: PropTraits> HueIfceTmp<F> for SextantHue<F> {
     fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
         debug_assert!(chroma.is_valid(), "chroma: {:?}", chroma);
         if chroma == Proportion::ZERO {
@@ -457,14 +458,12 @@ where
         } else {
             match sum.cmp(&(Sum::ONE + self.1)) {
                 Ordering::Less => {
-                    let temp = Ord::min((sum.value() / (F::ONE + self.1.value())), F::ONE);
+                    let temp = Ord::min(sum.value() / (F::ONE + self.1.value()), F::ONE);
                     Some(Chroma::Shade(temp.into()))
                 }
                 Ordering::Greater => {
-                    let temp = Ord::min(
-                        F::ONE,
-                        ((F::THREE - sum.value()) / (F::TWO - self.1.value())),
-                    );
+                    let temp =
+                        Ord::min(F::ONE, (F::THREE - sum.value()) / (F::TWO - self.1.value()));
                     Some(Chroma::Tint(temp.into()))
                 }
                 Ordering::Equal => Some(Chroma::ONE),
@@ -551,15 +550,15 @@ where
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum Hue<F: ColourComponent> {
+pub enum Hue<F: PropTraits> {
     Primary(RGBHue),
     Secondary(CMYHue),
     Sextant(SextantHue<F>),
 }
 
-impl<F: ColourComponent> Eq for Hue<F> {}
+impl<F: PropTraits> Eq for Hue<F> {}
 
-impl<F: ColourComponent> HueConstants for Hue<F> {
+impl<F: PropTraits> HueConstants for Hue<F> {
     const RED: Self = Self::Primary(RGBHue::Red);
     const GREEN: Self = Self::Primary(RGBHue::Green);
     const BLUE: Self = Self::Primary(RGBHue::Blue);
@@ -569,7 +568,7 @@ impl<F: ColourComponent> HueConstants for Hue<F> {
     const YELLOW: Self = Self::Secondary(CMYHue::Yellow);
 }
 
-impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
+impl<F: PropTraits> TryFrom<&RGB<F>> for Hue<F> {
     type Error = &'static str;
 
     fn try_from(rgb: &RGB<F>) -> Result<Self, Self::Error> {
@@ -602,9 +601,9 @@ impl<F: ColourComponent> TryFrom<&RGB<F>> for Hue<F> {
     }
 }
 
-impl<F: ColourComponent> HueIfceTmp<F> for Hue<F>
+impl<P: PropTraits, F> HueAngle<F> for Hue<P>
 where
-    F: ProportionConstants + PartialOrd + Ord,
+    F: DegreesConst + FloatPlus + Debug + From<P>,
 {
     fn hue_angle(&self) -> Degrees<F> {
         match self {
@@ -613,7 +612,12 @@ where
             Self::Sextant(sextant_hue) => sextant_hue.hue_angle(),
         }
     }
+}
 
+impl<F: PropTraits> HueIfceTmp<F> for Hue<F>
+where
+    F: ProportionConstants + PartialOrd + Ord,
+{
     fn sum_range_for_chroma(&self, chroma: Proportion<F>) -> Option<SumRange<F>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
@@ -671,13 +675,16 @@ where
     }
 }
 
-impl<F: ColourComponent> Hue<F> {
+impl<F: PropTraits> Hue<F> {
     pub fn ord_index(&self) -> u8 {
         0
     }
 }
 
-impl<F: ColourComponent> FloatApproxEq<F> for Hue<F> {
+impl<F: PropTraits> FloatApproxEq<F> for Hue<F>
+where
+    F: FloatApproxEq<F> + FloatPlus,
+{
     fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
         match self {
             Self::Primary(rgb_hue) => match other {
@@ -698,13 +705,13 @@ impl<F: ColourComponent> FloatApproxEq<F> for Hue<F> {
     }
 }
 
-impl<F: ColourComponent> PartialOrd for Hue<F> {
+impl<F: PropTraits> PartialOrd for Hue<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.ord_index().partial_cmp(&other.ord_index())
     }
 }
 
-impl<F: ColourComponent> Ord for Hue<F> {
+impl<F: PropTraits> Ord for Hue<F> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
@@ -714,6 +721,8 @@ impl<F: ColourComponent> Ord for Hue<F> {
 mod hue_ng_tests {
     use super::*;
     use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
+
+    use crate::{proportion::*, rgb_ng::RGB};
 
     const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
     const VALID_OTHER_SUMS: [f64; 20] = [
@@ -774,13 +783,13 @@ mod hue_ng_tests {
         }
     }
 
-    impl<F: ColourComponent> SextantHue<F> {
+    impl<F: PropTraits> SextantHue<F> {
         fn indices(&self) -> (CCI, CCI, CCI) {
             self.0.indices()
         }
     }
 
-    impl<F: ColourComponent> Hue<F> {
+    impl<F: PropTraits> Hue<F> {
         fn indices(&self) -> (CCI, CCI, CCI) {
             match self {
                 Self::Primary(rgb_hue) => rgb_hue.indices(),
