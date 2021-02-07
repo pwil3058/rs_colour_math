@@ -10,7 +10,7 @@ use num_traits_plus::float_plus::{FloatApproxEq, FloatPlus};
 
 use crate::{
     proportion::{Chroma, PropTraits, Proportion, ProportionConstants, Sum, Validation},
-    rgb_ng::RGB,
+    rgb::RGB,
     HueConstants, RGBConstants, CCI,
 };
 use std::fmt::Debug;

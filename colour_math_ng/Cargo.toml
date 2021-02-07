@@ -7,3 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# cargo.io crates
+num-traits = "0.2.14"
+serde = "1.0"
+serde_derive = "1.0"
+
+# crates from my github account
+normalised_angles = { git = "https://github.com/pwil3058/rs_normalised_angles.git" }
+num_traits_plus = { git = "https://github.com/pwil3058/rs_num_traits_plus.git" }
