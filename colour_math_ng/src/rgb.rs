@@ -100,6 +100,15 @@ impl<T: Number> From<&[Proportion<T>; 3]> for RGB<T> {
     }
 }
 
+impl<T: Number> From<[T; 3]> for RGB<T> {
+    fn from(array: [T; 3]) -> Self {
+        let red = Proportion::from(&array[0]);
+        let green = Proportion::from(&array[1]);
+        let blue = Proportion::from(&array[2]);
+        Self([red, green, blue])
+    }
+}
+
 // Arithmetic
 impl<F: Float> Mul<Proportion<F>> for RGB<F> {
     type Output = Self;

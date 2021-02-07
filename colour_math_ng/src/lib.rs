@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-//pub mod hue;
+pub mod hue;
 pub mod proportion;
 pub mod rgb;
 

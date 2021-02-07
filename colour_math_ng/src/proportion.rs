@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
 use std::{
+    cmp::Ordering,
     fmt::Debug,
     ops::{Add, Div, Mul, Sub},
 };
@@ -65,12 +66,21 @@ pub trait Float:
 impl Float for f32 {}
 impl Float for f64 {}
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd)]
-pub struct Proportion<N: Number>(N);
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default, PartialOrd)]
+pub struct Proportion<N: Number>(pub(crate) N);
 
 impl<N: Number> ProportionConstants for Proportion<N> {
     const P_ZERO: Self = Self(N::P_ZERO);
     const P_ONE: Self = Self(N::P_ONE);
+}
+
+impl<F: Float> Eq for Proportion<F> {}
+
+impl<F: Float> Ord for Proportion<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other)
+            .expect("both operands should always ve valid floats")
+    }
 }
 
 impl<N: Number> Validation for Proportion<N> {
@@ -88,6 +98,14 @@ impl<N: Number> Proportion<N> {
 impl<N: Number> From<N> for Proportion<N> {
     fn from(arg: N) -> Self {
         let proportion = Self(arg);
+        debug_assert!(proportion.is_valid());
+        proportion
+    }
+}
+
+impl<N: Number> From<&N> for Proportion<N> {
+    fn from(arg: &N) -> Self {
+        let proportion = Self(*arg);
         debug_assert!(proportion.is_valid());
         proportion
     }
@@ -142,10 +160,17 @@ impl<F: Float> FloatApproxEq<F> for Proportion<F> {
     }
 }
 
-#[derive(
-    Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
-)]
-pub struct Sum<F: Float>(F);
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default, PartialOrd)]
+pub struct Sum<F: Float>(pub(crate) F);
+
+impl<F: Float> Eq for Sum<F> {}
+
+impl<F: Float> Ord for Sum<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other)
+            .expect("both operands should always ve valid floats")
+    }
+}
 
 impl<F: Float> ProportionConstants for Sum<F> {
     const P_ZERO: Self = Self(F::P_ZERO);
@@ -251,6 +276,21 @@ impl<F: Float + ProportionConstants> Validation for Chroma<F> {
         match self {
             Chroma::Shade(proportion) => proportion.is_valid(),
             Chroma::Tint(proportion) => proportion.is_valid(),
+        }
+    }
+}
+
+impl<F: Float> FloatApproxEq<F> for Chroma<F> {
+    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
+        match self {
+            Chroma::Shade(proportion) => match other {
+                Chroma::Shade(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
+                Chroma::Tint(other_proportion) => false,
+            },
+            Chroma::Tint(proportion) => match other {
+                Chroma::Shade(other_proportion) => false,
+                Chroma::Tint(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
+            },
         }
     }
 }
