@@ -119,6 +119,14 @@ impl<F: Float> From<Sum<F>> for Proportion<F> {
     }
 }
 
+impl<F: Float + Copy> From<&Sum<F>> for Proportion<F> {
+    fn from(sum: &Sum<F>) -> Self {
+        let proportion = Self(sum.0);
+        debug_assert!(proportion.is_valid());
+        proportion
+    }
+}
+
 impl<F: Float> Sub for Proportion<F> {
     type Output = Self;
 
@@ -285,10 +293,10 @@ impl<F: Float> FloatApproxEq<F> for Chroma<F> {
         match self {
             Chroma::Shade(proportion) => match other {
                 Chroma::Shade(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
-                Chroma::Tint(other_proportion) => false,
+                Chroma::Tint(_) => false,
             },
             Chroma::Tint(proportion) => match other {
-                Chroma::Shade(other_proportion) => false,
+                Chroma::Shade(_) => false,
                 Chroma::Tint(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
             },
         }
