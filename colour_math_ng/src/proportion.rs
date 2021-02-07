@@ -14,8 +14,8 @@ pub trait Validation {
     fn is_valid(&self) -> bool;
 }
 
-pub trait ProportionConstants {
-    const P_ZERO: Self;
+pub trait ProportionConstants: NumberConstants + Sized {
+    const P_ZERO: Self = Self::ZERO;
     const P_ONE: Self;
 }
 
@@ -74,6 +74,17 @@ impl<N: Number> ProportionConstants for Proportion<N> {
     const P_ONE: Self = Self(N::P_ONE);
 }
 
+impl<N: Number> NumberConstants for Proportion<N> {
+    const BYTES: usize = N::BYTES;
+    const DIGITS: u32 = N::DIGITS;
+    const MIN: Self = Self(N::MIN);
+    const MAX: Self = Self(N::MAX);
+    const ZERO: Self = Self(N::ZERO);
+    const ONE: Self = Self(N::ONE);
+    const TWO: Self = Self(N::TWO);
+    const THREE: Self = Self(N::THREE);
+}
+
 impl<F: Float> Eq for Proportion<F> {}
 
 impl<F: Float> Ord for Proportion<F> {
@@ -127,40 +138,71 @@ impl<F: Float + Copy> From<&Sum<F>> for Proportion<F> {
     }
 }
 
-impl<F: Float> Sub for Proportion<F> {
-    type Output = Self;
+macro_rules! impl_op {
+    ($op_name:ident, $op_fn:ident, $type:ident) => {
+        impl<F: Float> $op_name for $type<F> {
+            type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        let val = Self(self.0 - rhs.0);
-        val
-    }
+            fn $op_fn(self, rhs: Self) -> Self {
+                Self(self.0.$op_fn(rhs.0))
+            }
+        }
+    };
+    ($op_name:ident, $op_fn:ident, $type:ident, $rhs:ident) => {
+        impl<F: Float> $op_name<$rhs<F>> for $type<F> {
+            type Output = Self;
+
+            fn $op_fn(self, rhs: $rhs<F>) -> Self {
+                Self(self.0.$op_fn(rhs.0))
+            }
+        }
+    };
 }
 
-impl<F: Float> Add for Proportion<F> {
-    type Output = Self;
+impl_op!(Sub, sub, Proportion);
+impl_op!(Add, add, Proportion);
+impl_op!(Div, div, Proportion);
+impl_op!(Mul, mul, Proportion);
 
-    fn add(self, rhs: Self) -> Self::Output {
-        Self(self.0 + rhs.0)
-    }
-}
+impl_op!(Sub, sub, Proportion, Sum);
+impl_op!(Add, add, Proportion, Sum);
+impl_op!(Div, div, Proportion, Sum);
+impl_op!(Mul, mul, Proportion, Sum);
 
-impl<F: Float> Mul for Proportion<F> {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        let val = Self(self.0 * rhs.0);
-        val
-    }
-}
-
-impl<F: Float> Div for Proportion<F> {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        let val = Self(self.0 / rhs.0);
-        val
-    }
-}
+// impl<F: Float> Sub for Proportion<F> {
+//     type Output = Self;
+//
+//     fn sub(self, rhs: Self) -> Self::Output {
+//         let val = Self(self.0 - rhs.0);
+//         val
+//     }
+// }
+//
+// impl<F: Float> Add for Proportion<F> {
+//     type Output = Self;
+//
+//     fn add(self, rhs: Self) -> Self::Output {
+//         Self(self.0 + rhs.0)
+//     }
+// }
+//
+// impl<F: Float> Mul for Proportion<F> {
+//     type Output = Self;
+//
+//     fn mul(self, rhs: Self) -> Self::Output {
+//         let val = Self(self.0 * rhs.0);
+//         val
+//     }
+// }
+//
+// impl<F: Float> Div for Proportion<F> {
+//     type Output = Self;
+//
+//     fn div(self, rhs: Self) -> Self::Output {
+//         let val = Self(self.0 / rhs.0);
+//         val
+//     }
+// }
 
 impl<F: Float> FloatApproxEq<F> for Proportion<F> {
     fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
@@ -222,37 +264,47 @@ impl<F: Float> From<Proportion<F>> for Sum<F> {
     }
 }
 
-impl<F: Float> Mul for Sum<F> {
-    type Output = Self;
+impl_op!(Sub, sub, Sum);
+impl_op!(Add, add, Sum);
+impl_op!(Div, div, Sum);
+impl_op!(Mul, mul, Sum);
 
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self(self.0 * rhs.0)
-    }
-}
+impl_op!(Sub, sub, Sum, Proportion);
+impl_op!(Add, add, Sum, Proportion);
+impl_op!(Div, div, Sum, Proportion);
+impl_op!(Mul, mul, Sum, Proportion);
 
-impl<F: Float> Div for Sum<F> {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        Self(self.0 / rhs.0)
-    }
-}
-
-impl<F: Float> Sub for Sum<F> {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self(self.0 - rhs.0)
-    }
-}
-
-impl<F: Float> Add for Sum<F> {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self(self.0 + rhs.0)
-    }
-}
+// impl<F: Float> Mul for Sum<F> {
+//     type Output = Self;
+//
+//     fn mul(self, rhs: Self) -> Self::Output {
+//         Self(self.0 * rhs.0)
+//     }
+// }
+//
+// impl<F: Float> Div for Sum<F> {
+//     type Output = Self;
+//
+//     fn div(self, rhs: Self) -> Self::Output {
+//         Self(self.0 / rhs.0)
+//     }
+// }
+//
+// impl<F: Float> Sub for Sum<F> {
+//     type Output = Self;
+//
+//     fn sub(self, rhs: Self) -> Self::Output {
+//         Self(self.0 - rhs.0)
+//     }
+// }
+//
+// impl<F: Float> Add for Sum<F> {
+//     type Output = Self;
+//
+//     fn add(self, rhs: Self) -> Self::Output {
+//         Self(self.0 + rhs.0)
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma<F: Float> {
