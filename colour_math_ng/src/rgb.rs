@@ -10,10 +10,7 @@ pub struct RGB<T: Number>(pub(crate) [Proportion<T>; 3]);
 
 impl<T: Number> Eq for RGB<T> where T: Eq {}
 
-impl<T: Number> HueConstants for RGB<T>
-where
-    T: Copy,
-{
+impl<T: Number> HueConstants for RGB<T> {
     const RED: Self = Self([Proportion::P_ONE, Proportion::P_ZERO, Proportion::P_ZERO]);
     const GREEN: Self = Self([Proportion::P_ZERO, Proportion::P_ONE, Proportion::P_ZERO]);
     const BLUE: Self = Self([Proportion::P_ZERO, Proportion::P_ZERO, Proportion::P_ONE]);
@@ -23,9 +20,16 @@ where
     const YELLOW: Self = Self([Proportion::P_ONE, Proportion::P_ONE, Proportion::P_ZERO]);
 }
 
-impl<T: Copy + Number> RGBConstants for RGB<T> {
+impl<T: Number> RGBConstants for RGB<T> {
     const WHITE: Self = Self([Proportion::P_ONE, Proportion::P_ONE, Proportion::P_ONE]);
     const BLACK: Self = Self([Proportion::P_ZERO, Proportion::P_ZERO, Proportion::P_ZERO]);
+}
+
+impl<T: Number> RGB<T> {
+    pub fn new_grey(value: Proportion<T>) -> Self {
+        debug_assert!(value.is_valid());
+        Self([value, value, value])
+    }
 }
 
 impl<T: Number> Index<CCI> for RGB<T> {
