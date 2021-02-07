@@ -32,6 +32,12 @@ impl<T: Number> RGB<T> {
     }
 }
 
+impl<F: Float> RGB<F> {
+    pub fn sum(&self) -> Sum<F> {
+        Sum::from(&self.0)
+    }
+}
+
 impl<T: Number> Index<CCI> for RGB<T> {
     type Output = Proportion<T>;
 

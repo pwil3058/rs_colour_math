@@ -8,7 +8,7 @@ pub mod rgb;
 
 use normalised_angles::Degrees;
 
-use crate::proportion::Float;
+use crate::{proportion::Float, rgb::RGB};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CCI {
@@ -47,10 +47,11 @@ impl<F: Float> HueConstants for Degrees<F> {
     const YELLOW: Self = Self::DEG_60;
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
+pub trait HueAngle<F: Float> {
+    fn hue_angle(&self) -> Degrees<F>;
+}
+
+pub trait ChromaOneRGB<F: Float> {
+    /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
+    fn chroma_one_rgb(&self) -> RGB<F>;
 }

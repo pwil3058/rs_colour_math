@@ -5,16 +5,13 @@ use std::{
     convert::{Into, TryFrom},
 };
 
-use normalised_angles::{Degrees, DegreesConst};
-use num_traits_plus::{
-    float_plus::{FloatApproxEq, FloatPlus},
-    NumberConstants,
-};
+use normalised_angles::Degrees;
+use num_traits_plus::{float_plus::FloatApproxEq, NumberConstants};
 
 use crate::{
     proportion::{Chroma, Float, Proportion, ProportionConstants, Sum, Validation},
     rgb::RGB,
-    HueConstants, RGBConstants, CCI,
+    ChromaOneRGB, HueAngle, HueConstants, RGBConstants, CCI,
 };
 use std::fmt::Debug;
 
@@ -77,13 +74,6 @@ impl<F: Float> SumRange<F> {
     }
 }
 
-pub trait HueAngle<F>
-where
-    F: DegreesConst + FloatPlus,
-{
-    fn hue_angle(&self) -> Degrees<F>;
-}
-
 pub trait HueIfceTmp<F: Float> {
     fn sum_range_for_chroma(&self, chroma_value: Proportion<F>) -> Option<SumRange<F>>;
     fn max_chroma_for_sum(&self, sum: Sum<F>) -> Option<Chroma<F>>;
@@ -119,6 +109,17 @@ impl<F: Float> HueAngle<F> for RGBHue {
             RGBHue::Red => Degrees::RED,
             RGBHue::Green => Degrees::GREEN,
             RGBHue::Blue => Degrees::BLUE,
+        }
+    }
+}
+
+impl<F: Float> ChromaOneRGB<F> for RGBHue {
+    /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
+    fn chroma_one_rgb(&self) -> RGB<F> {
+        match self {
+            RGBHue::Red => RGB::RED,
+            RGBHue::Green => RGB::GREEN,
+            RGBHue::Blue => RGB::BLUE,
         }
     }
 }
