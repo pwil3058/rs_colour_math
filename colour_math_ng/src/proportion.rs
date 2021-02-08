@@ -73,10 +73,10 @@ impl Float for f64 {}
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
 )]
-pub struct UFDFraction(u128);
+pub struct UFDFraction(u64);
 
 impl UFDFraction {
-    const DENOM: u128 = u32::MAX as u128 + 1;
+    const DENOM: u64 = u32::MAX as u64;
     pub const ONE: Self = Self(Self::DENOM);
     pub const TWO: Self = Self(Self::DENOM * 2);
     pub const THREE: Self = Self(Self::DENOM * 3);
@@ -88,6 +88,12 @@ impl UFDFraction {
     pub fn val_vp(self) -> Self {
         debug_assert!(self.is_vp());
         self
+    }
+
+    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+        let me = f64::from(*self);
+        let other = f64::from(*other);
+        me.approx_eq(&other, max_diff)
     }
 }
 
@@ -106,18 +112,38 @@ macro_rules! impl_ufdr_add_sub {
 impl_ufdr_add_sub!(Add, add);
 impl_ufdr_add_sub!(Sub, sub);
 
+impl Div for UFDFraction {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        let mut ws: u128 = self.0 as u128 * Self::DENOM as u128;
+        ws /= rhs.0 as u128;
+        Self(ws as u64)
+    }
+}
+
+impl Mul for UFDFraction {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        let mut ws: u128 = self.0 as u128 * rhs.0 as u128;
+        ws /= Self::DENOM as u128;
+        Self(ws as u64)
+    }
+}
+
 impl From<f64> for UFDFraction {
     fn from(arg: f64) -> Self {
-        let one = f64::from_u128(Self::DENOM).unwrap();
-        let val = u128::from_f64(arg * one).unwrap();
+        let one = f64::from_u64(Self::DENOM).unwrap();
+        let val = u64::from_f64(arg * one).unwrap();
         Self(val)
     }
 }
 
 impl From<UFDFraction> for f64 {
     fn from(arg: UFDFraction) -> Self {
-        let one = f64::from_u128(UFDFraction::DENOM).unwrap();
-        f64::from_u128(arg.0).unwrap() / one
+        let one = f64::from_u64(UFDFraction::DENOM).unwrap();
+        f64::from_u64(arg.0).unwrap() / one
     }
 }
 
@@ -359,57 +385,73 @@ mod proportion_tests {
 
     #[test]
     fn add_ufdf() {
-        for [a, b, c] in &[[0.0f64, 1.0, 1.0], [24.0, 0.5, 24.5], [0.8, 0.5, 1.3]] {
-            println!("{:?} | {:?} {:?}", a, b, c);
+        for [a, b] in &[[0.0f64, 1.0], [24.0, 0.5], [0.8, 0.5]] {
+            let expected = UFDFraction::from(a + b);
+            println!("{:?} | {:?} {:?}", a, b, expected);
             let result = UFDFraction::from(*a) + UFDFraction::from(*b);
-            let expected = UFDFraction::from(*c);
             assert_eq!(result, expected);
             println!(
-                "{:?} == {:?} == {:?} == {:?}",
+                "ADD{:?} == {:?} == {:?} == {:?}",
                 result,
                 expected,
                 f64::from(result),
-                *c
+                f64::from(expected)
             );
-            assert_approx_eq!(f64::from(result), *c, 0.000_000_001);
+            assert_approx_eq!(&f64::from(result), &(a + b), 0.000_000_001);
         }
     }
 
     #[test]
     fn sub_ufdf() {
-        for [a, b, c] in &[[2.0f64, 1.0, 1.0], [24.0, 0.5, 23.5], [0.8, 0.5, 0.3]] {
-            println!("{:?} | {:?} {:?}", a, b, c);
+        for [a, b] in &[[2.0f64, 1.0], [24.0, 0.5], [0.8, 0.5]] {
+            let expected = UFDFraction::from(a - b);
+            println!("{:?} | {:?} {:?}", a, b, expected);
             let result = UFDFraction::from(*a) - UFDFraction::from(*b);
-            let expected = UFDFraction::from(*c);
             println!(
-                "{:?} == {:?} == {:?} == {:?}",
+                "SUB{:?} == {:?} == {:?} == {:?}",
                 result,
                 expected,
                 f64::from(result),
-                *c
+                f64::from(expected)
             );
-            assert_eq!(result, expected);
-            assert_approx_eq!(f64::from(result), *c, 0.000_000_001);
+            assert_approx_eq!(result, expected, 0.000_000_001);
+            assert_approx_eq!(f64::from(result), &(a - b), 0.000_000_001);
         }
     }
 
-    // #[test]
-    // fn multiply() {
-    //     assert_eq!(
-    //         UFDFraction::from(1.0_f64) * UFDFraction::from(3.0_f64),
-    //         UFDFraction::from(3.0_f64)
-    //     );
-    //     // assert_eq!(f64::from(UFDFraction::ONE), 1.0);
-    //     // for f in &[0.0f64, 24.0, 0.8, 0.5] {
-    //     //     assert_approx_eq!(f64::from(UFDFraction::from(*f)), *f, 0.000_000_001);
-    //     // }
-    // }
-    //
-    // #[test]
-    // fn divide() {
-    //     assert_eq!(
-    //         UFDFraction::from(6.0_f64) / UFDFraction::from(3.0_f64),
-    //         UFDFraction::from(2.0_f64)
-    //     );
-    // }
+    #[test]
+    fn div_ufdf() {
+        for [a, b] in &[[2.0f64, 4.0], [24.0, 0.5], [0.8, 0.5]] {
+            let expected = UFDFraction::from(a / b);
+            println!("{:?} | {:?} {:?}", a, b, expected);
+            let result = UFDFraction::from(*a) / UFDFraction::from(*b);
+            println!(
+                "DIV {:?} == {:?} == {:?} == {:?}",
+                result,
+                expected,
+                f64::from(result),
+                f64::from(expected)
+            );
+            assert_approx_eq!(result, expected, 0.000_000_001);
+            assert_approx_eq!(f64::from(result), &(a / b), 0.000_000_01);
+        }
+    }
+
+    #[test]
+    fn mul_ufdf() {
+        for [a, b] in &[[2.0f64, 4.0], [24.0, 0.5], [0.8, 0.5]] {
+            let expected = UFDFraction::from(a * b);
+            println!("{:?} | {:?} {:?}", a, b, expected);
+            let result = UFDFraction::from(*a) * UFDFraction::from(*b);
+            println!(
+                "DIV {:?} == {:?} == {:?} == {:?}",
+                result,
+                expected,
+                f64::from(result),
+                f64::from(expected)
+            );
+            assert_approx_eq!(result, expected, 0.000_000_001);
+            assert_approx_eq!(f64::from(result), &(a * b), 0.000_000_01);
+        }
+    }
 }
