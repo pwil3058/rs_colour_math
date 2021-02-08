@@ -10,32 +10,36 @@ use normalised_angles::{DegreesConst, RadiansConst};
 use num_traits::{FromPrimitive, Num, ToPrimitive};
 use num_traits_plus::{float_plus::*, NumberConstants};
 
-pub trait Validation {
+pub trait Validation: Sized {
     fn is_valid(&self) -> bool;
+    fn validated(self) -> Self {
+        debug_assert!(self.is_valid());
+        self
+    }
 }
 
-pub trait ProportionConstants: NumberConstants + Sized {
-    const P_ZERO: Self = Self::ZERO;
+pub trait ProportionConstants: Sized {
+    const P_ZERO: Self;
     const P_ONE: Self;
 }
 
 impl ProportionConstants for f32 {
-    const P_ZERO: Self = Self::ZERO;
-    const P_ONE: Self = Self::ONE;
+    const P_ZERO: Self = 0.0;
+    const P_ONE: Self = 1.0;
 }
 
 impl ProportionConstants for f64 {
-    const P_ZERO: Self = Self::ZERO;
-    const P_ONE: Self = Self::ONE;
+    const P_ZERO: Self = 0.0;
+    const P_ONE: Self = 1.0;
 }
 
 impl ProportionConstants for u8 {
-    const P_ZERO: Self = Self::ZERO;
+    const P_ZERO: Self = 0;
     const P_ONE: Self = Self::MAX;
 }
 
 impl ProportionConstants for u16 {
-    const P_ZERO: Self = Self::ZERO;
+    const P_ZERO: Self = 0;
     const P_ONE: Self = Self::MAX;
 }
 
@@ -66,6 +70,57 @@ pub trait Float:
 impl Float for f32 {}
 impl Float for f64 {}
 
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
+)]
+pub struct UFDFraction(u128);
+
+impl UFDFraction {
+    const DENOM: u128 = u32::MAX as u128 + 1;
+    pub const ONE: Self = Self(Self::DENOM);
+    pub const TWO: Self = Self(Self::DENOM * 2);
+    pub const THREE: Self = Self(Self::DENOM * 3);
+
+    pub fn is_vp(self) -> bool {
+        self <= Self::ONE
+    }
+
+    pub fn val_vp(self) -> Self {
+        debug_assert!(self.is_vp());
+        self
+    }
+}
+
+macro_rules! impl_ufdr_add_sub {
+    ($op_name:ident, $op_fn:ident) => {
+        impl $op_name for UFDFraction {
+            type Output = Self;
+
+            fn $op_fn(self, rhs: Self) -> Self {
+                Self(self.0.$op_fn(rhs.0))
+            }
+        }
+    };
+}
+
+impl_ufdr_add_sub!(Add, add);
+impl_ufdr_add_sub!(Sub, sub);
+
+impl From<f64> for UFDFraction {
+    fn from(arg: f64) -> Self {
+        let one = f64::from_u128(Self::DENOM).unwrap();
+        let val = u128::from_f64(arg * one).unwrap();
+        Self(val)
+    }
+}
+
+impl From<UFDFraction> for f64 {
+    fn from(arg: UFDFraction) -> Self {
+        let one = f64::from_u128(UFDFraction::DENOM).unwrap();
+        f64::from_u128(arg.0).unwrap() / one
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default, PartialOrd)]
 pub struct Proportion<N: Number>(pub(crate) N);
 
@@ -74,7 +129,7 @@ impl<N: Number> ProportionConstants for Proportion<N> {
     const P_ONE: Self = Self(N::P_ONE);
 }
 
-impl<N: Number> NumberConstants for Proportion<N> {
+impl<N: Number + NumberConstants> NumberConstants for Proportion<N> {
     const BYTES: usize = N::BYTES;
     const DIGITS: u32 = N::DIGITS;
     const MIN: Self = Self(N::MIN);
@@ -169,41 +224,6 @@ impl_op!(Add, add, Proportion, Sum);
 impl_op!(Div, div, Proportion, Sum);
 impl_op!(Mul, mul, Proportion, Sum);
 
-// impl<F: Float> Sub for Proportion<F> {
-//     type Output = Self;
-//
-//     fn sub(self, rhs: Self) -> Self::Output {
-//         let val = Self(self.0 - rhs.0);
-//         val
-//     }
-// }
-//
-// impl<F: Float> Add for Proportion<F> {
-//     type Output = Self;
-//
-//     fn add(self, rhs: Self) -> Self::Output {
-//         Self(self.0 + rhs.0)
-//     }
-// }
-//
-// impl<F: Float> Mul for Proportion<F> {
-//     type Output = Self;
-//
-//     fn mul(self, rhs: Self) -> Self::Output {
-//         let val = Self(self.0 * rhs.0);
-//         val
-//     }
-// }
-//
-// impl<F: Float> Div for Proportion<F> {
-//     type Output = Self;
-//
-//     fn div(self, rhs: Self) -> Self::Output {
-//         let val = Self(self.0 / rhs.0);
-//         val
-//     }
-// }
-
 impl<F: Float> FloatApproxEq<F> for Proportion<F> {
     fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
         self.0.approx_eq(&other.0, max_diff)
@@ -274,38 +294,6 @@ impl_op!(Add, add, Sum, Proportion);
 impl_op!(Div, div, Sum, Proportion);
 impl_op!(Mul, mul, Sum, Proportion);
 
-// impl<F: Float> Mul for Sum<F> {
-//     type Output = Self;
-//
-//     fn mul(self, rhs: Self) -> Self::Output {
-//         Self(self.0 * rhs.0)
-//     }
-// }
-//
-// impl<F: Float> Div for Sum<F> {
-//     type Output = Self;
-//
-//     fn div(self, rhs: Self) -> Self::Output {
-//         Self(self.0 / rhs.0)
-//     }
-// }
-//
-// impl<F: Float> Sub for Sum<F> {
-//     type Output = Self;
-//
-//     fn sub(self, rhs: Self) -> Self::Output {
-//         Self(self.0 - rhs.0)
-//     }
-// }
-//
-// impl<F: Float> Add for Sum<F> {
-//     type Output = Self;
-//
-//     fn add(self, rhs: Self) -> Self::Output {
-//         Self(self.0 + rhs.0)
-//     }
-// }
-
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma<F: Float> {
     Shade(Proportion<F>),
@@ -353,4 +341,75 @@ impl<F: Float> FloatApproxEq<F> for Chroma<F> {
             },
         }
     }
+}
+
+#[cfg(test)]
+mod proportion_tests {
+    use super::*;
+    use num_traits_plus::assert_approx_eq;
+
+    #[test]
+    fn to_from_ufdf() {
+        assert_eq!(UFDFraction::from(1.0_f64), UFDFraction::ONE);
+        assert_eq!(f64::from(UFDFraction::ONE), 1.0);
+        for f in &[0.0f64, 24.0, 0.8, 0.5, 2.0] {
+            assert_approx_eq!(f64::from(UFDFraction::from(*f)), *f, 0.000_000_001);
+        }
+    }
+
+    #[test]
+    fn add_ufdf() {
+        for [a, b, c] in &[[0.0f64, 1.0, 1.0], [24.0, 0.5, 24.5], [0.8, 0.5, 1.3]] {
+            println!("{:?} | {:?} {:?}", a, b, c);
+            let result = UFDFraction::from(*a) + UFDFraction::from(*b);
+            let expected = UFDFraction::from(*c);
+            assert_eq!(result, expected);
+            println!(
+                "{:?} == {:?} == {:?} == {:?}",
+                result,
+                expected,
+                f64::from(result),
+                *c
+            );
+            assert_approx_eq!(f64::from(result), *c, 0.000_000_001);
+        }
+    }
+
+    #[test]
+    fn sub_ufdf() {
+        for [a, b, c] in &[[2.0f64, 1.0, 1.0], [24.0, 0.5, 23.5], [0.8, 0.5, 0.3]] {
+            println!("{:?} | {:?} {:?}", a, b, c);
+            let result = UFDFraction::from(*a) - UFDFraction::from(*b);
+            let expected = UFDFraction::from(*c);
+            println!(
+                "{:?} == {:?} == {:?} == {:?}",
+                result,
+                expected,
+                f64::from(result),
+                *c
+            );
+            assert_eq!(result, expected);
+            assert_approx_eq!(f64::from(result), *c, 0.000_000_001);
+        }
+    }
+
+    // #[test]
+    // fn multiply() {
+    //     assert_eq!(
+    //         UFDFraction::from(1.0_f64) * UFDFraction::from(3.0_f64),
+    //         UFDFraction::from(3.0_f64)
+    //     );
+    //     // assert_eq!(f64::from(UFDFraction::ONE), 1.0);
+    //     // for f in &[0.0f64, 24.0, 0.8, 0.5] {
+    //     //     assert_approx_eq!(f64::from(UFDFraction::from(*f)), *f, 0.000_000_001);
+    //     // }
+    // }
+    //
+    // #[test]
+    // fn divide() {
+    //     assert_eq!(
+    //         UFDFraction::from(6.0_f64) / UFDFraction::from(3.0_f64),
+    //         UFDFraction::from(2.0_f64)
+    //     );
+    // }
 }

@@ -716,7 +716,7 @@ mod hue_ng_tests {
         Proportion::<f64>(0.75),
         Proportion::<f64>(0.9),
         Proportion::<f64>(0.99),
-        Proportion::ONE,
+        Proportion::P_ONE,
     ];
     const VALID_OTHER_SUMS: [Sum<f64>; 20] = [
         Sum::<f64>(0.01),
