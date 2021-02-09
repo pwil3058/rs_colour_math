@@ -1,31 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{cmp::Ordering, convert::From, ops::Index, ops::Mul};
 
-use crate::{proportion::*, HueConstants, RGBConstants, CCI};
-
-pub trait LightLevel: Clone + Copy + From<UFDFraction> + Into<UFDFraction> {
-    const ZERO: Self;
-    const ONE: Self;
-}
-
-impl LightLevel for f32 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-}
-impl LightLevel for f64 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-}
-
-impl LightLevel for u8 {
-    const ZERO: Self = 0;
-    const ONE: Self = u8::MAX;
-}
-
-impl LightLevel for u16 {
-    const ZERO: Self = 0;
-    const ONE: Self = u16::MAX;
-}
+use crate::{proportion::*, Float, HueConstants, LightLevel, RGBConstants, CCI};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<T: LightLevel>(pub(crate) [T; 3]);

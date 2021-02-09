@@ -2,19 +2,52 @@
 #[macro_use]
 extern crate serde_derive;
 
+use normalised_angles::{Degrees, DegreesConst, RadiansConst};
+use num_traits_plus::float_plus::*;
+
 pub mod hue;
 pub mod proportion;
 pub mod rgb;
 
-use normalised_angles::Degrees;
-
-use crate::{proportion::Float, rgb::RGB};
+use crate::{proportion::UFDFraction, rgb::RGB};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CCI {
     Red,
     Green,
     Blue,
+}
+
+pub trait Float:
+    FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + FloatApproxEq<Self>
+{
+}
+
+impl Float for f32 {}
+impl Float for f64 {}
+
+pub trait LightLevel: Clone + Copy + From<UFDFraction> + Into<UFDFraction> {
+    const ZERO: Self;
+    const ONE: Self;
+}
+
+impl LightLevel for f32 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+}
+impl LightLevel for f64 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+}
+
+impl LightLevel for u8 {
+    const ZERO: Self = 0;
+    const ONE: Self = u8::MAX;
+}
+
+impl LightLevel for u16 {
+    const ZERO: Self = 0;
+    const ONE: Self = u16::MAX;
 }
 
 pub trait HueConstants: Sized + Copy {
@@ -51,7 +84,7 @@ pub trait HueAngle<T: Float> {
     fn hue_angle(&self) -> Degrees<T>;
 }
 
-pub trait ChromaOneRGB<T: rgb::LightLevel> {
+pub trait ChromaOneRGB<T: LightLevel> {
     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
     fn chroma_one_rgb(&self) -> RGB<T>;
 }

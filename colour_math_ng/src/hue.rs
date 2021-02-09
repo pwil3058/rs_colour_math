@@ -8,9 +8,9 @@ use std::{
 use normalised_angles::Degrees;
 
 use crate::{
-    proportion::{Chroma, Float, UFDFraction},
+    proportion::{Chroma, ProportionValidation, SumValidation, UFDFraction},
     rgb::*,
-    ChromaOneRGB, HueAngle, HueConstants, RGBConstants, CCI,
+    ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, RGBConstants, CCI,
 };
 use std::fmt::Debug;
 

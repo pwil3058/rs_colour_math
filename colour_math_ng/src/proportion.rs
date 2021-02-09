@@ -1,74 +1,30 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
 use std::{
-    cmp::Ordering,
     fmt::Debug,
     ops::{Add, Div, Mul, Sub},
 };
 
-use normalised_angles::{DegreesConst, RadiansConst};
-use num_traits::{FromPrimitive, Num, ToPrimitive};
-use num_traits_plus::{float_plus::*, NumberConstants};
+use num_traits::FromPrimitive;
+use num_traits_plus::float_plus::*;
 
-pub trait Validation: Sized {
-    fn is_valid(&self) -> bool;
-    fn validated(self) -> Self {
-        debug_assert!(self.is_valid());
+pub trait ProportionValidation: Sized + Copy {
+    fn is_vp(self) -> bool;
+
+    fn validated_p(self) -> Self {
+        debug_assert!(self.is_vp());
         self
     }
 }
 
-pub trait ProportionConstants: Sized {
-    const P_ZERO: Self;
-    const P_ONE: Self;
+pub trait SumValidation: Sized + Copy {
+    fn is_vs(self) -> bool;
+
+    fn validated_s(self) -> Self {
+        debug_assert!(self.is_vs());
+        self
+    }
 }
-
-impl ProportionConstants for f32 {
-    const P_ZERO: Self = 0.0;
-    const P_ONE: Self = 1.0;
-}
-
-impl ProportionConstants for f64 {
-    const P_ZERO: Self = 0.0;
-    const P_ONE: Self = 1.0;
-}
-
-impl ProportionConstants for u8 {
-    const P_ZERO: Self = 0;
-    const P_ONE: Self = Self::MAX;
-}
-
-impl ProportionConstants for u16 {
-    const P_ZERO: Self = 0;
-    const P_ONE: Self = Self::MAX;
-}
-
-pub trait Number:
-    ProportionConstants
-    + FromPrimitive
-    + ToPrimitive
-    + PartialOrd
-    + Clone
-    + Copy
-    + Debug
-    + Default
-    + PartialEq
-    + Num
-{
-}
-
-impl Number for f32 {}
-impl Number for f64 {}
-impl Number for u8 {}
-impl Number for u16 {}
-
-pub trait Float:
-    Number + FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + FloatApproxEq<Self>
-{
-}
-
-impl Float for f32 {}
-impl Float for f64 {}
 
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
@@ -82,28 +38,22 @@ impl UFDFraction {
     pub const TWO: Self = Self(Self::DENOM * 2);
     pub const THREE: Self = Self(Self::DENOM * 3);
 
-    pub fn is_vp(self) -> bool {
-        self <= Self::ONE
-    }
-
-    pub fn val_vp(self) -> Self {
-        debug_assert!(self.is_vp());
-        self
-    }
-
-    pub fn is_vs(self) -> bool {
-        self <= Self::THREE
-    }
-
-    pub fn val_vs(self) -> Self {
-        debug_assert!(self.is_vp());
-        self
-    }
-
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         let me = f64::from(*self);
         let other = f64::from(*other);
         me.approx_eq(&other, max_diff)
+    }
+}
+
+impl ProportionValidation for UFDFraction {
+    fn is_vp(self) -> bool {
+        self <= Self::ONE
+    }
+}
+
+impl SumValidation for UFDFraction {
+    fn is_vs(self) -> bool {
+        self <= Self::THREE
     }
 }
 
@@ -194,179 +144,6 @@ macro_rules! impl_unsigned_to_from {
 impl_unsigned_to_from!(u8);
 impl_unsigned_to_from!(u16);
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default, PartialOrd)]
-pub struct Proportion<N: Number>(pub(crate) N);
-
-impl<N: Number> ProportionConstants for Proportion<N> {
-    const P_ZERO: Self = Self(N::P_ZERO);
-    const P_ONE: Self = Self(N::P_ONE);
-}
-
-impl<N: Number + NumberConstants> NumberConstants for Proportion<N> {
-    const BYTES: usize = N::BYTES;
-    const DIGITS: u32 = N::DIGITS;
-    const MIN: Self = Self(N::MIN);
-    const MAX: Self = Self(N::MAX);
-    const ZERO: Self = Self(N::ZERO);
-    const ONE: Self = Self(N::ONE);
-    const TWO: Self = Self(N::TWO);
-    const THREE: Self = Self(N::THREE);
-}
-
-impl<F: Float> Eq for Proportion<F> {}
-
-impl<F: Float> Ord for Proportion<F> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other)
-            .expect("both operands should always ve valid floats")
-    }
-}
-
-impl<N: Number> Validation for Proportion<N> {
-    fn is_valid(&self) -> bool {
-        self.0 >= N::P_ZERO || self.0 <= N::P_ONE
-    }
-}
-
-impl<N: Number> Proportion<N> {
-    pub fn value(&self) -> N {
-        self.0
-    }
-}
-
-impl<N: Number> From<N> for Proportion<N> {
-    fn from(arg: N) -> Self {
-        let proportion = Self(arg);
-        debug_assert!(proportion.is_valid());
-        proportion
-    }
-}
-
-impl<N: Number> From<&N> for Proportion<N> {
-    fn from(arg: &N) -> Self {
-        let proportion = Self(*arg);
-        debug_assert!(proportion.is_valid());
-        proportion
-    }
-}
-
-impl<F: Float> From<Sum<F>> for Proportion<F> {
-    fn from(sum: Sum<F>) -> Self {
-        let proportion = Self(sum.0);
-        debug_assert!(proportion.is_valid());
-        proportion
-    }
-}
-
-impl<F: Float + Copy> From<&Sum<F>> for Proportion<F> {
-    fn from(sum: &Sum<F>) -> Self {
-        let proportion = Self(sum.0);
-        debug_assert!(proportion.is_valid());
-        proportion
-    }
-}
-
-macro_rules! impl_op {
-    ($op_name:ident, $op_fn:ident, $type:ident) => {
-        impl<F: Float> $op_name for $type<F> {
-            type Output = Self;
-
-            fn $op_fn(self, rhs: Self) -> Self {
-                Self(self.0.$op_fn(rhs.0))
-            }
-        }
-    };
-    ($op_name:ident, $op_fn:ident, $type:ident, $rhs:ident) => {
-        impl<F: Float> $op_name<$rhs<F>> for $type<F> {
-            type Output = Self;
-
-            fn $op_fn(self, rhs: $rhs<F>) -> Self {
-                Self(self.0.$op_fn(rhs.0))
-            }
-        }
-    };
-}
-
-impl_op!(Sub, sub, Proportion);
-impl_op!(Add, add, Proportion);
-impl_op!(Div, div, Proportion);
-impl_op!(Mul, mul, Proportion);
-
-impl_op!(Sub, sub, Proportion, Sum);
-impl_op!(Add, add, Proportion, Sum);
-impl_op!(Div, div, Proportion, Sum);
-impl_op!(Mul, mul, Proportion, Sum);
-
-impl<F: Float> FloatApproxEq<F> for Proportion<F> {
-    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
-        self.0.approx_eq(&other.0, max_diff)
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default, PartialOrd)]
-pub struct Sum<F: Float>(pub(crate) F);
-
-impl<F: Float> Eq for Sum<F> {}
-
-impl<F: Float> Ord for Sum<F> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other)
-            .expect("both operands should always ve valid floats")
-    }
-}
-
-impl<F: Float> ProportionConstants for Sum<F> {
-    const P_ZERO: Self = Self(F::P_ZERO);
-    const P_ONE: Self = Self(F::P_ONE);
-}
-
-impl<F: Float> Validation for Sum<F> {
-    fn is_valid(&self) -> bool {
-        self.0 >= F::ZERO && self.0 <= F::THREE
-    }
-}
-
-impl<F: Float> NumberConstants for Sum<F> {
-    const BYTES: usize = F::BYTES;
-    const DIGITS: u32 = F::DIGITS;
-    const MIN: Self = Self(F::MIN);
-    const MAX: Self = Self(F::MAX);
-    const ZERO: Self = Self(F::ZERO);
-    const ONE: Self = Self(F::ONE);
-    const TWO: Self = Self(F::TWO);
-    const THREE: Self = Self(F::THREE);
-}
-
-impl<F: Float> Sum<F> {
-    pub fn value(&self) -> F {
-        self.0
-    }
-}
-
-impl<F: Float> From<&[Proportion<F>; 3]> for Sum<F> {
-    fn from(array: &[Proportion<F>; 3]) -> Self {
-        debug_assert!(array[0].is_valid() && array[1].is_valid() && array[2].is_valid());
-        Self((array[0].0 + array[1].0 + array[2].0).min(F::THREE))
-    }
-}
-
-impl<F: Float> From<Proportion<F>> for Sum<F> {
-    fn from(proportion: Proportion<F>) -> Self {
-        debug_assert!(proportion.is_valid());
-        Self(proportion.0)
-    }
-}
-
-impl_op!(Sub, sub, Sum);
-impl_op!(Add, add, Sum);
-impl_op!(Div, div, Sum);
-impl_op!(Mul, mul, Sum);
-
-impl_op!(Sub, sub, Sum, Proportion);
-impl_op!(Add, add, Sum, Proportion);
-impl_op!(Div, div, Sum, Proportion);
-impl_op!(Mul, mul, Sum, Proportion);
-
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma {
     Shade(UFDFraction),
@@ -405,8 +182,8 @@ impl Chroma {
     }
 }
 
-impl Validation for Chroma {
-    fn is_valid(&self) -> bool {
+impl ProportionValidation for Chroma {
+    fn is_vp(self) -> bool {
         match self {
             Chroma::Shade(proportion) => proportion.is_vp(),
             Chroma::Tint(proportion) => proportion.is_vp(),
