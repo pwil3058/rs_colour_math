@@ -416,7 +416,7 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
         //let [red, green, blue] = <[UFDFraction; 3]>::from(arg.1);
         let red: UFDFraction = arg.1[Red].into();
         let green: UFDFraction = arg.1[Green].into();
-        let blue: UFDFraction = arg.1[Green].into();
+        let blue: UFDFraction = arg.1[Blue].into();
         match arg.0 {
             RedMagenta => Self(arg.0, (blue - green) / (red - green)),
             RedYellow => Self(arg.0, (green - blue) / (red - blue)),
@@ -583,6 +583,7 @@ impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
     fn try_from(rgb: &RGB<T>) -> Result<Self, Self::Error> {
         use Sextant::*;
         let [red, green, blue] = <[UFDFraction; 3]>::from(*rgb);
+        println!("RGB: {:?}", [red, green, blue]);
         match red.partial_cmp(&green).unwrap() {
             Ordering::Greater => match green.partial_cmp(&blue).unwrap() {
                 Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedYellow, rgb)))),
@@ -890,7 +891,7 @@ mod hue_ng_tests {
                 UFDFraction::from(array[2]),
             ]);
             let hue = Hue::Sextant(SextantHue(*sextant, *second));
-            assert_eq!(Hue::try_from(&rgb), Ok(hue));
+            assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0.000_000_001);
         }
     }
 
@@ -960,6 +961,7 @@ mod hue_ng_tests {
         ] {
             let rgb = RGB::<f64>::from(*array);
             let hue = Hue::Sextant(SextantHue(*sextant, *second));
+            println!("{:?} {:?} {:?} {:?}", rgb, sextant, second, hue);
             assert_eq!(Hue::try_from(&rgb), Ok(hue));
         }
     }
