@@ -33,6 +33,10 @@ impl<T: LightLevel + Copy + From<UFDFraction>> RGB<T> {
 }
 
 impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
+    pub fn is_grey(&self) -> bool {
+        self.0[0] == self.0[1] && self.0[1] == self.0[2]
+    }
+
     pub fn sum(&self) -> UFDFraction {
         let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
         red + green + blue
@@ -40,6 +44,11 @@ impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
 
     pub fn value(&self) -> UFDFraction {
         self.sum() / UFDFraction::THREE
+    }
+
+    pub fn warmth(&self) -> UFDFraction {
+        let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
+        (UFDFraction::ONE + red - (blue + green) / UFDFraction::TWO) / UFDFraction::TWO
     }
 
     pub fn max_chroma_rgb(&self) -> RGB<T> {

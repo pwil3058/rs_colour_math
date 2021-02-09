@@ -26,7 +26,7 @@ pub trait Float:
 impl Float for f32 {}
 impl Float for f64 {}
 
-pub trait LightLevel: Clone + Copy + From<UFDFraction> + Into<UFDFraction> {
+pub trait LightLevel: Clone + Copy + From<UFDFraction> + Into<UFDFraction> + PartialEq {
     const ZERO: Self;
     const ONE: Self;
 }
