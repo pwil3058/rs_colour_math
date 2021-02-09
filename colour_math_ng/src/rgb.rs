@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{cmp::Ordering, convert::From, ops::Index, ops::Mul};
 
+use crate::hue::HueIfceTmp;
 use crate::{hue::Hue, proportion::*, Float, HueConstants, LightLevel, RGBConstants, CCI};
 use std::convert::TryFrom;
 
@@ -35,6 +36,18 @@ impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
     pub fn sum(&self) -> UFDFraction {
         let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
         red + green + blue
+    }
+
+    pub fn value(&self) -> UFDFraction {
+        self.sum() / UFDFraction::THREE
+    }
+
+    pub fn max_chroma_rgb(&self) -> RGB<T> {
+        if let Ok(hue) = Hue::try_from(self) {
+            hue.max_chroma_rgb::<T>()
+        } else {
+            RGB::<T>::new_grey(self.value())
+        }
     }
 
     pub fn chroma_proportion(&self) -> UFDFraction {

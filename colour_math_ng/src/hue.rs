@@ -3,6 +3,7 @@
 use std::{
     cmp::Ordering,
     convert::{Into, TryFrom},
+    fmt::Debug,
 };
 
 use normalised_angles::Degrees;
@@ -12,7 +13,6 @@ use crate::{
     rgb::*,
     ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, RGBConstants,
 };
-use std::fmt::Debug;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub struct SumRange((UFDFraction, UFDFraction, UFDFraction));
@@ -1233,12 +1233,20 @@ mod hue_ng_tests {
                 hue.max_sum_rgb_for_chroma::<f64>(UFDFraction::from(1.0_f64)),
                 *expected_rgb
             );
-            // let shade = hue.min_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
-            // let tint = hue.max_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
-            //assert!(shade.value() < tint.value());
-            // assert_approx_eq!(shade.chroma(), UFDFraction::from(0.5_f64), 0.00000000001);
-            // assert_approx_eq!(tint.chroma(), UFDFraction::from(0.5_f64), 0.00000000001);
-            // assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
+            let shade = hue.min_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
+            let tint = hue.max_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
+            assert!(shade.value() < tint.value());
+            assert_approx_eq!(
+                shade.chroma_proportion(),
+                UFDFraction::from(0.5_f64),
+                0.00000000001
+            );
+            assert_approx_eq!(
+                tint.chroma_proportion(),
+                UFDFraction::from(0.5_f64),
+                0.00000000001
+            );
+            assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
         }
         for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
             println!("{:?} : {:?}", hue, expected_rgb);
@@ -1250,12 +1258,20 @@ mod hue_ng_tests {
                 hue.max_sum_rgb_for_chroma(UFDFraction::from(1.0_f64)),
                 *expected_rgb
             );
-            // let shade = hue.min_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
-            // let tint = hue.max_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
-            // assert!(shade.value() < tint.value());
-            // assert_approx_eq!(shade.chroma(), UFDFraction::from(0.5_f64), 0.00000000001);
-            // assert_approx_eq!(tint.chroma(), UFDFraction::from(0.5_f64), 0.00000000001);
-            // assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
+            let shade = hue.min_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
+            let tint = hue.max_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
+            assert!(shade.value() < tint.value());
+            assert_approx_eq!(
+                shade.chroma_proportion(),
+                UFDFraction::from(0.5_f64),
+                0.00000000001
+            );
+            assert_approx_eq!(
+                tint.chroma_proportion(),
+                UFDFraction::from(0.5_f64),
+                0.00000000001
+            );
+            assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
         }
         use Sextant::*;
         for sextant in &[
@@ -1277,14 +1293,14 @@ mod hue_ng_tests {
                     hue.max_sum_rgb_for_chroma::<f64>(UFDFraction::from(0.0_f64)),
                     RGB::WHITE
                 );
-                // for chroma in NON_ZERO_CHROMAS.iter() {
-                //     let shade = hue.min_sum_rgb_for_chroma(*chroma);
-                //     let tint = hue.max_sum_rgb_for_chroma(*chroma);
-                //     // assert!(shade.sum() <= tint.sum());
-                //     // assert_approx_eq!(shade.chroma(), *chroma, 0.00000000001);
-                //     // assert_approx_eq!(tint.chroma(), *chroma, 0.00000000001);
-                //     // assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.000_001);
-                // }
+                for chroma in NON_ZERO_CHROMAS.iter().map(|a| UFDFraction::from(*a)) {
+                    let shade = hue.min_sum_rgb_for_chroma(chroma);
+                    let tint = hue.max_sum_rgb_for_chroma(chroma);
+                    assert!(shade.sum() <= tint.sum());
+                    assert_approx_eq!(shade.chroma_proportion(), chroma, 0.00000000001);
+                    assert_approx_eq!(tint.chroma_proportion(), chroma, 0.00000000001);
+                    assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.000_001);
+                }
             }
         }
     }
@@ -1342,8 +1358,8 @@ mod hue_ng_tests {
                 for item in &VALID_OTHER_SUMS {
                     let sum = UFDFraction::from(*item);
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<f64>(sum, chroma) {
-                        // assert_approx_eq!(rgb.sum(), *sum, 0.000_000_1);
-                        // assert_approx_eq!(rgb.chroma(), *chroma, 0.000_000_1);
+                        assert_approx_eq!(rgb.sum(), sum, 0.000_000_1);
+                        assert_approx_eq!(rgb.chroma_proportion(), chroma, 0.000_000_1);
                         assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue);
                     } else {
                         let range = hue.sum_range_for_chroma(chroma).unwrap();
@@ -1354,74 +1370,70 @@ mod hue_ng_tests {
         }
     }
 
-    // #[test]
-    // fn general_rgb_for_sum_and_chroma() {
-    //     use Sextant::*;
-    //     for sextant in &[
-    //         RedYellow,
-    //         RedMagenta,
-    //         GreenCyan,
-    //         GreenYellow,
-    //         BlueCyan,
-    //         BlueMagenta,
-    //     ] {
-    //         for second in SECOND_VALUES.iter() {
-    //             let sextant_hue = SextantHue(*sextant, *second);
-    //             let hue = Hue::Sextant(sextant_hue);
-    //             assert!(hue
-    //                 .rgb_for_sum_and_chroma(UFDFraction::ZERO, UFDFraction::from(1.0_f64))
-    //                 .is_none());
-    //             assert!(hue
-    //                 .rgb_for_sum_and_chroma(UFDFraction::THREE, UFDFraction::from(1.0_f64))
-    //                 .is_none());
-    //             assert!(hue
-    //                 .rgb_for_sum_and_chroma(UFDFraction::ZERO, UFDFraction::from(0.0_f64))
-    //                 .is_none());
-    //             assert!(hue
-    //                 .rgb_for_sum_and_chroma(UFDFraction::THREE, UFDFraction::from(0.0_f64))
-    //                 .is_none());
-    //             for chroma in &NON_ZERO_CHROMAS {
-    //                 let sum_range = hue.sum_range_for_chroma(*chroma).unwrap();
-    //                 for sum in &VALID_OTHER_SUMS {
-    //                     println!(
-    //                         "{:?}, {:?}, {:?} :: {:?}",
-    //                         hue,
-    //                         sum,
-    //                         chroma,
-    //                         hue.sum_range_for_chroma(*chroma)
-    //                     );
-    //                     if let Some(rgb) = hue.rgb_for_sum_and_chroma(*sum, *chroma) {
-    //                         use SumOrdering::*;
-    //                         match sum_range.compare_sum(*sum) {
-    //                             Shade(_, _) => {
-    //                                 // assert_approx_eq!(rgb.sum(), *sum, 0.000_000_000_1);
-    //                                 // assert_approx_eq!(rgb.chroma(), *chroma, 0.000_000_1);
-    //                                 // TODO: examine hue drift problem
-    //                                 // assert_approx_eq!(
-    //                                 //     Hue::try_from(&rgb).unwrap(),
-    //                                 //     hue,
-    //                                 //     0.000_000_000_1
-    //                                 // );
-    //                             }
-    //                             Tint(_, _) => {
-    //                                 // assert_approx_eq!(rgb.sum(), *sum, 0.000_000_000_1);
-    //                                 // TODO: try harder for creating tints
-    //                                 //    assert_approx_eq!(rgb.chroma(), *chroma, 0.000_000_1);
-    //                                 // assert_approx_eq!(
-    //                                 //     Hue::try_from(&rgb).unwrap(),
-    //                                 //     hue,
-    //                                 //     0.000_000_000_1
-    //                                 // );
-    //                             }
-    //                             _ => (),
-    //                         }
-    //                     } else {
-    //                         let range = hue.sum_range_for_chroma(*chroma).unwrap();
-    //                         assert!(range.compare_sum(*sum).is_failure());
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    #[test]
+    fn general_rgb_for_sum_and_chroma() {
+        use Sextant::*;
+        for sextant in &[
+            RedYellow,
+            RedMagenta,
+            GreenCyan,
+            GreenYellow,
+            BlueCyan,
+            BlueMagenta,
+        ] {
+            for second in SECOND_VALUES.iter().map(|a| UFDFraction::from(*a)) {
+                let sextant_hue = SextantHue(*sextant, second);
+                let hue = Hue::Sextant(sextant_hue);
+                assert!(hue
+                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(1.0_f64))
+                    .is_none());
+                assert!(hue
+                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(1.0_f64))
+                    .is_none());
+                assert!(hue
+                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(0.0_f64))
+                    .is_none());
+                assert!(hue
+                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(0.0_f64))
+                    .is_none());
+                for chroma in NON_ZERO_CHROMAS.iter().map(|a| UFDFraction::from(*a)) {
+                    let sum_range = hue.sum_range_for_chroma(chroma).unwrap();
+                    for sum in VALID_OTHER_SUMS.iter().map(|a| UFDFraction::from(*a)) {
+                        println!(
+                            "{:?}, {:?}, {:?} :: {:?}",
+                            hue,
+                            sum,
+                            chroma,
+                            hue.sum_range_for_chroma(chroma)
+                        );
+                        if let Some(rgb) = hue.rgb_for_sum_and_chroma::<f64>(sum, chroma) {
+                            use SumOrdering::*;
+                            match sum_range.compare_sum(sum) {
+                                Shade(_, _) => {
+                                    assert_approx_eq!(rgb.sum(), sum, 0.000_000_001);
+                                    assert_approx_eq!(rgb.chroma_proportion(), chroma, 0.000_000_1);
+                                    // TODO: examine hue drift problem
+                                    assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0.000_001);
+                                }
+                                Tint(_, _) => {
+                                    assert_approx_eq!(rgb.sum(), sum, 0.000_000_001);
+                                    // TODO: try harder for creating tints
+                                    assert_approx_eq!(rgb.chroma_proportion(), chroma, 0.000_000_1);
+                                    assert_approx_eq!(
+                                        Hue::try_from(&rgb).unwrap(),
+                                        hue,
+                                        0.000_000_1
+                                    );
+                                }
+                                _ => (),
+                            }
+                        } else {
+                            let range = hue.sum_range_for_chroma(chroma).unwrap();
+                            assert!(range.compare_sum(sum).is_failure());
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
