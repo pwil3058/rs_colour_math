@@ -10,7 +10,7 @@ use normalised_angles::Degrees;
 use crate::{
     proportion::{Chroma, ProportionValidation, SumValidation, UFDFraction},
     rgb::*,
-    ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, RGBConstants, CCI,
+    ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, RGBConstants,
 };
 use std::fmt::Debug;
 
@@ -382,13 +382,6 @@ impl SextantHue {
         &self,
         components: (UFDFraction, UFDFraction, UFDFraction),
     ) -> RGB<T> {
-        debug_assert!(
-            components.0 >= components.1 && components.1 >= components.2,
-            "{:?} >= {:?} >= {:?}",
-            components.0,
-            components.1,
-            components.2
-        );
         use Sextant::*;
         match self.0 {
             RedMagenta => [components.0, components.2, components.1].into(),
@@ -412,11 +405,7 @@ impl SextantHue {
 impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     fn from(arg: (Sextant, &RGB<T>)) -> Self {
         use Sextant::*;
-        use CCI::*;
-        //let [red, green, blue] = <[UFDFraction; 3]>::from(arg.1);
-        let red: UFDFraction = arg.1[Red].into();
-        let green: UFDFraction = arg.1[Green].into();
-        let blue: UFDFraction = arg.1[Blue].into();
+        let [red, green, blue] = <[UFDFraction; 3]>::from(*arg.1);
         match arg.0 {
             RedMagenta => Self(arg.0, (blue - green) / (red - green)),
             RedYellow => Self(arg.0, (green - blue) / (red - blue)),
@@ -454,12 +443,9 @@ impl HueIfceTmp for SextantHue {
             if chroma == UFDFraction::ONE {
                 Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
             } else {
-                let temp: UFDFraction = (self.1 * chroma).into();
-                Some(SumRange((
-                    (temp + chroma).min(UFDFraction::THREE),
-                    max_c_sum,
-                    (UFDFraction::THREE + temp - UFDFraction::TWO * chroma).min(UFDFraction::THREE),
-                )))
+                let min = max_c_sum * chroma;
+                let max = UFDFraction::THREE - (UFDFraction::TWO - self.1) * chroma;
+                Some(SumRange((min, max_c_sum, max)))
             }
         }
     }
@@ -471,13 +457,12 @@ impl HueIfceTmp for SextantHue {
         } else {
             match sum.cmp(&(UFDFraction::ONE + self.1)) {
                 Ordering::Less => {
-                    let temp = (sum / (UFDFraction::ONE + self.1)).min(UFDFraction::ONE);
-                    Some(Chroma::Shade(temp.into()))
+                    let temp = sum / (UFDFraction::ONE + self.1);
+                    Some(Chroma::Shade(temp))
                 }
                 Ordering::Greater => {
-                    let temp = ((UFDFraction::THREE - sum) / (UFDFraction::TWO - self.1))
-                        .min(UFDFraction::ONE);
-                    Some(Chroma::Tint(temp.into()))
+                    let temp = (UFDFraction::THREE - sum) / (UFDFraction::TWO - self.1);
+                    Some(Chroma::Tint(temp))
                 }
                 Ordering::Equal => Some(Chroma::ONE),
             }
@@ -726,7 +711,7 @@ mod hue_ng_tests {
     use super::*;
     use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
-    use crate::{proportion::*, rgb::RGB};
+    use crate::{proportion::*, rgb::RGB, CCI};
 
     const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
     const VALID_OTHER_SUMS: [f64; 20] = [
@@ -1008,7 +993,6 @@ mod hue_ng_tests {
                 UFDFraction::from(0.5_f64),
                 Degrees::<f64>::DEG_150,
             ),
-            //(Sextant::RedYellow, UFDFraction::from(0.25_f64), Degrees::<f64>::from(1UFDFraction::from(5.0_f64))),
         ] {
             let hue = Hue::Sextant(SextantHue(*sextant, *second));
             assert_approx_eq!(hue.hue_angle(), *angle, 0.0000001);
@@ -1034,13 +1018,9 @@ mod hue_ng_tests {
                 let chroma = UFDFraction::from(*item);
                 let range = hue.sum_range_for_chroma(chroma).unwrap();
                 let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
-                assert_approx_eq!(max_chroma.proportion(), range.shade_min().into());
-                // let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
-                // assert_approx_eq!(
-                //     max_chroma.proportion(),
-                //     range.tint_max().into(),
-                //     0.000_000_000_000_001
-                // );
+                assert_approx_eq!(max_chroma.proportion(), chroma);
+                let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
+                assert_approx_eq!(max_chroma.proportion(), chroma, 0.000_000_000_000_001);
             }
         }
         for hue in &Hue::SECONDARIES {
@@ -1059,16 +1039,9 @@ mod hue_ng_tests {
                 let chroma = UFDFraction::from(*item);
                 let range = hue.sum_range_for_chroma(chroma).unwrap();
                 let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
-                assert_approx_eq!(
-                    max_chroma.proportion(),
-                    (range.shade_min() / UFDFraction::from(2.0_f64)).into()
-                );
-                // let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
-                // assert_approx_eq!(
-                //     max_chroma.proportion(),
-                //     (range.tint_max() / UFDFraction::from(2.0_f64)).into(),
-                //     0.000000000000001
-                // );
+                assert_approx_eq!(max_chroma.proportion(), chroma);
+                let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
+                assert_approx_eq!(max_chroma.proportion(), chroma, 0.000000000000001);
             }
         }
         use Sextant::*;
