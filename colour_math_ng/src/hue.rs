@@ -56,6 +56,10 @@ impl SumRange {
         }
     }
 
+    pub fn min(&self) -> UFDFraction {
+        self.0 .0
+    }
+
     pub fn shade_min(&self) -> UFDFraction {
         self.0 .0
     }
@@ -64,11 +68,19 @@ impl SumRange {
         self.0 .1
     }
 
+    pub fn crossover(&self) -> UFDFraction {
+        self.0 .1
+    }
+
     pub fn tint_min(&self) -> UFDFraction {
         self.0 .1
     }
 
     pub fn tint_max(&self) -> UFDFraction {
+        self.0 .2
+    }
+
+    pub fn max(&self) -> UFDFraction {
         self.0 .2
     }
 }
@@ -134,7 +146,7 @@ impl HueIfceTmp for RGBHue {
             None
         } else {
             Some(SumRange((
-                chroma.into(),
+                chroma,
                 UFDFraction::ONE,
                 (UFDFraction::THREE - UFDFraction::TWO * chroma).min(UFDFraction::THREE),
             )))
@@ -146,11 +158,9 @@ impl HueIfceTmp for RGBHue {
         if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
             None
         } else if sum < UFDFraction::ONE {
-            Some(Chroma::Shade(sum.into()))
+            Some(Chroma::Shade(sum))
         } else if sum > UFDFraction::ONE {
-            Some(Chroma::Tint(
-                ((UFDFraction::THREE - sum) / UFDFraction::TWO).into(),
-            ))
+            Some(Chroma::Tint((UFDFraction::THREE - sum) / UFDFraction::TWO))
         } else {
             Some(Chroma::ONE)
         }
@@ -170,16 +180,12 @@ impl HueIfceTmp for RGBHue {
             None
         } else {
             if sum <= UFDFraction::ONE {
-                Some(self.make_rgb((sum.into(), UFDFraction::ZERO)))
+                Some(self.make_rgb((sum, UFDFraction::ZERO)))
             } else {
-                Some(
-                    self.make_rgb((
-                        UFDFraction::ONE,
-                        ((sum - UFDFraction::ONE) / UFDFraction::TWO)
-                            .min(UFDFraction::ONE)
-                            .into(),
-                    )),
-                )
+                Some(self.make_rgb((
+                    UFDFraction::ONE,
+                    ((sum - UFDFraction::ONE) / UFDFraction::TWO).min(UFDFraction::ONE),
+                )))
             }
         }
     }
@@ -218,8 +224,8 @@ impl HueIfceTmp for RGBHue {
         debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
-            let other: UFDFraction = ((sum - chroma) / UFDFraction::THREE).into();
-            Some(self.make_rgb(((other + chroma).into(), other)))
+            let other: UFDFraction = (sum - chroma) / UFDFraction::THREE;
+            Some(self.make_rgb((other + chroma, other)))
         } else {
             None
         }
@@ -260,11 +266,10 @@ impl HueIfceTmp for CMYHue {
         if chroma == UFDFraction::ZERO {
             None
         } else {
-            let c_sum: UFDFraction = chroma.into();
             Some(SumRange((
-                c_sum * UFDFraction::TWO,
+                chroma * UFDFraction::TWO,
                 UFDFraction::TWO,
-                UFDFraction::THREE - c_sum,
+                UFDFraction::THREE - chroma,
             )))
         }
     }
@@ -275,11 +280,11 @@ impl HueIfceTmp for CMYHue {
             None
         } else if sum < UFDFraction::TWO {
             Some(Chroma::Shade(
-                (sum / UFDFraction::TWO).min(UFDFraction::ONE).into(),
+                (sum / UFDFraction::TWO).min(UFDFraction::ONE),
             ))
         } else if sum > UFDFraction::TWO {
             Some(Chroma::Tint(
-                (UFDFraction::THREE - sum).min(UFDFraction::ONE).into(),
+                (UFDFraction::THREE - sum).min(UFDFraction::ONE),
             ))
         } else {
             Some(Chroma::ONE)
@@ -300,19 +305,14 @@ impl HueIfceTmp for CMYHue {
             None
         } else if sum < UFDFraction::TWO {
             Some(self.make_rgb((
-                (sum / UFDFraction::TWO).min(UFDFraction::ONE).into(),
+                (sum / UFDFraction::TWO).min(UFDFraction::ONE),
                 UFDFraction::ZERO,
             )))
         } else if sum > UFDFraction::TWO {
-            Some(
-                self.make_rgb((
-                    UFDFraction::ONE,
-                    (sum - UFDFraction::TWO)
-                        .max(UFDFraction::ZERO)
-                        .min(UFDFraction::ONE)
-                        .into(),
-                )),
-            )
+            Some(self.make_rgb((
+                UFDFraction::ONE,
+                (sum - UFDFraction::TWO).min(UFDFraction::ONE),
+            )))
         } else {
             Some(self.max_chroma_rgb())
         }
@@ -353,8 +353,8 @@ impl HueIfceTmp for CMYHue {
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation
             Some(self.make_rgb((
-                ((sum + chroma) / UFDFraction::THREE).into(),
-                ((sum - UFDFraction::TWO * chroma) / UFDFraction::THREE).into(),
+                (sum + chroma) / UFDFraction::THREE,
+                (sum - UFDFraction::TWO * chroma) / UFDFraction::THREE,
             )))
         } else {
             None
@@ -484,16 +484,12 @@ impl HueIfceTmp for SextantHue {
                 Some(self.max_chroma_rgb())
             } else {
                 let components = if sum < max_chroma_sum {
-                    let first: UFDFraction = (sum / max_chroma_sum).min(UFDFraction::ONE).into();
+                    let first: UFDFraction = (sum / max_chroma_sum).min(UFDFraction::ONE);
                     (first, first * self.1, UFDFraction::ZERO)
                 } else {
                     let temp = sum - UFDFraction::ONE;
                     let second = ((temp + self.1) / UFDFraction::TWO).min(UFDFraction::ONE);
-                    (
-                        UFDFraction::ONE,
-                        second.into(),
-                        (temp - second).max(UFDFraction::ZERO).into(),
-                    )
+                    (UFDFraction::ONE, second, (temp - second))
                 };
                 Some(self.make_rgb(components))
             }
@@ -519,7 +515,7 @@ impl HueIfceTmp for SextantHue {
             self.max_chroma_rgb()
         } else {
             let third = UFDFraction::ONE - chroma;
-            let second: UFDFraction = (chroma * self.1 + third).into();
+            let second: UFDFraction = chroma * self.1 + third;
             self.make_rgb((UFDFraction::ONE, second, third))
         }
     }
