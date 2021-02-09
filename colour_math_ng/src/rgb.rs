@@ -1,7 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{cmp::Ordering, convert::From, ops::Index, ops::Mul};
 
-use crate::{proportion::*, Float, HueConstants, LightLevel, RGBConstants, CCI};
+use crate::{hue::Hue, proportion::*, Float, HueConstants, LightLevel, RGBConstants, CCI};
+use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<T: LightLevel>(pub(crate) [T; 3]);
@@ -35,6 +36,35 @@ impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
         let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
         red + green + blue
     }
+
+    pub fn chroma_proportion(&self) -> UFDFraction {
+        let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
+        match red.cmp(&green) {
+            Ordering::Greater => match green.cmp(&blue) {
+                Ordering::Greater => red - blue,
+                Ordering::Less => match red.cmp(&blue) {
+                    Ordering::Greater => red - green,
+                    Ordering::Less => blue - green,
+                    Ordering::Equal => blue - green,
+                },
+                Ordering::Equal => red - blue,
+            },
+            Ordering::Less => match red.cmp(&blue) {
+                Ordering::Greater => green - blue,
+                Ordering::Less => match green.cmp(&blue) {
+                    Ordering::Greater => green - red,
+                    Ordering::Less => blue - red,
+                    Ordering::Equal => blue - red,
+                },
+                Ordering::Equal => green - blue,
+            },
+            Ordering::Equal => match red.cmp(&blue) {
+                Ordering::Greater => red - blue,
+                Ordering::Less => blue - red,
+                Ordering::Equal => UFDFraction::ZERO,
+            },
+        }
+    }
 }
 
 impl<T: LightLevel> Index<CCI> for RGB<T> {
@@ -54,25 +84,30 @@ impl<T: LightLevel> PartialOrd for RGB<T>
 where
     T: PartialOrd,
 {
-    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
-        //         if self.0 == other.0 {
-        //             Some(Ordering::Equal)
-        //         } else if let Ok(hue) = Hue::<T>::try_from(self) {
-        //             if let Ok(other_hue) = Hue::<T>::try_from(other) {
-        //                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
-        //                 hue.partial_cmp(&other_hue)
-        //             } else {
-        //                 Some(Ordering::Greater)
-        //             }
-        //         } else if Hue::<T>::try_from(other).is_ok() {
-        //             Some(Ordering::Less)
-        //         } else {
-        //             // No need to look a chroma as it will be zero for both
-        //             //self.sum().partial_cmp(&other.sum())
-        //             Some(Ordering::Equal)
-        //         }
-        //     }
-        None
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.0 == other.0 {
+            Some(Ordering::Equal)
+        } else if let Ok(hue) = Hue::try_from(self) {
+            if let Ok(other_hue) = Hue::try_from(other) {
+                // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
+                match hue.cmp(&other_hue) {
+                    Ordering::Equal => match self.sum().cmp(&other.sum()) {
+                        Ordering::Equal => {
+                            Some(self.chroma_proportion().cmp(&self.chroma_proportion()))
+                        }
+                        order => Some(order),
+                    },
+                    order => Some(order),
+                }
+            } else {
+                Some(Ordering::Greater)
+            }
+        } else if Hue::try_from(other).is_ok() {
+            Some(Ordering::Less)
+        } else {
+            // No need to look a chroma as it will be zero for both
+            self.sum().partial_cmp(&other.sum())
+        }
     }
 }
 

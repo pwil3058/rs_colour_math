@@ -568,27 +568,26 @@ impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
     fn try_from(rgb: &RGB<T>) -> Result<Self, Self::Error> {
         use Sextant::*;
         let [red, green, blue] = <[UFDFraction; 3]>::from(*rgb);
-        println!("RGB: {:?}", [red, green, blue]);
-        match red.partial_cmp(&green).unwrap() {
-            Ordering::Greater => match green.partial_cmp(&blue).unwrap() {
+        match red.cmp(&green) {
+            Ordering::Greater => match green.cmp(&blue) {
                 Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedYellow, rgb)))),
-                Ordering::Less => match red.partial_cmp(&blue).unwrap() {
+                Ordering::Less => match red.cmp(&blue) {
                     Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedMagenta, rgb)))),
                     Ordering::Less => Ok(Hue::Sextant(SextantHue::from((BlueMagenta, rgb)))),
                     Ordering::Equal => Ok(Hue::Secondary(CMYHue::Magenta)),
                 },
                 Ordering::Equal => Ok(Hue::Primary(RGBHue::Red)),
             },
-            Ordering::Less => match red.partial_cmp(&blue).unwrap() {
+            Ordering::Less => match red.cmp(&blue) {
                 Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((GreenYellow, rgb)))),
-                Ordering::Less => match green.partial_cmp(&blue).unwrap() {
+                Ordering::Less => match green.cmp(&blue) {
                     Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((GreenCyan, rgb)))),
                     Ordering::Less => Ok(Hue::Sextant(SextantHue::from((BlueCyan, rgb)))),
                     Ordering::Equal => Ok(Hue::Secondary(CMYHue::Cyan)),
                 },
                 Ordering::Equal => Ok(Hue::Primary(RGBHue::Green)),
             },
-            Ordering::Equal => match red.partial_cmp(&blue).unwrap() {
+            Ordering::Equal => match red.cmp(&blue) {
                 Ordering::Greater => Ok(Hue::Secondary(CMYHue::Yellow)),
                 Ordering::Less => Ok(Hue::Primary(RGBHue::Blue)),
                 Ordering::Equal => Err("RGB is grey and hs no hue"),
