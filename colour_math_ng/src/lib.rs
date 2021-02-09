@@ -47,11 +47,11 @@ impl<F: Float> HueConstants for Degrees<F> {
     const YELLOW: Self = Self::DEG_60;
 }
 
-pub trait HueAngle<F: Float> {
-    fn hue_angle(&self) -> Degrees<F>;
+pub trait HueAngle<T: Float> {
+    fn hue_angle(&self) -> Degrees<T>;
 }
 
-pub trait ChromaOneRGB<F: Float> {
+pub trait ChromaOneRGB<T: rgb::LightLevel> {
     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
-    fn chroma_one_rgb(&self) -> RGB<F>;
+    fn chroma_one_rgb(&self) -> RGB<T>;
 }

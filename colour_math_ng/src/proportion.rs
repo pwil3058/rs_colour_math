@@ -73,7 +73,7 @@ impl Float for f64 {}
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, Default, PartialOrd, Ord,
 )]
-pub struct UFDFraction(u64);
+pub struct UFDFraction(pub(crate) u64);
 
 impl UFDFraction {
     const DENOM: u64 = u32::MAX as u64;
@@ -87,6 +87,15 @@ impl UFDFraction {
     }
 
     pub fn val_vp(self) -> Self {
+        debug_assert!(self.is_vp());
+        self
+    }
+
+    pub fn is_vs(self) -> bool {
+        self <= Self::THREE
+    }
+
+    pub fn val_vs(self) -> Self {
         debug_assert!(self.is_vp());
         self
     }
@@ -359,41 +368,30 @@ impl_op!(Div, div, Sum, Proportion);
 impl_op!(Mul, mul, Sum, Proportion);
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum Chroma<F: Float> {
-    Shade(Proportion<F>),
-    Tint(Proportion<F>),
+pub enum Chroma {
+    Shade(UFDFraction),
+    Tint(UFDFraction),
 }
 
-impl<F: Float + ProportionConstants> Chroma<F> {
-    pub const ZERO: Self = Self::Shade(Proportion::P_ZERO);
-    pub const ONE: Self = Self::Tint(Proportion::P_ONE);
+impl Chroma {
+    pub const ZERO: Self = Self::Shade(UFDFraction::ZERO);
+    pub const ONE: Self = Self::Tint(UFDFraction::ONE);
 
     pub fn is_zero(&self) -> bool {
         match self {
-            Chroma::Shade(proportion) => *proportion == Proportion::<F>::P_ZERO,
-            Chroma::Tint(proportion) => *proportion == Proportion::<F>::P_ZERO,
+            Chroma::Shade(proportion) => *proportion == UFDFraction::ZERO,
+            Chroma::Tint(proportion) => *proportion == UFDFraction::ZERO,
         }
     }
 
-    pub fn proportion(&self) -> Proportion<F> {
+    pub fn proportion(&self) -> UFDFraction {
         match self {
             Chroma::Shade(proportion) => *proportion,
             Chroma::Tint(proportion) => *proportion,
         }
     }
-}
 
-impl<F: Float + ProportionConstants> Validation for Chroma<F> {
-    fn is_valid(&self) -> bool {
-        match self {
-            Chroma::Shade(proportion) => proportion.is_valid(),
-            Chroma::Tint(proportion) => proportion.is_valid(),
-        }
-    }
-}
-
-impl<F: Float> FloatApproxEq<F> for Chroma<F> {
-    fn approx_eq(&self, other: &Self, max_diff: Option<F>) -> bool {
+    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         match self {
             Chroma::Shade(proportion) => match other {
                 Chroma::Shade(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
@@ -403,6 +401,15 @@ impl<F: Float> FloatApproxEq<F> for Chroma<F> {
                 Chroma::Shade(_) => false,
                 Chroma::Tint(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
             },
+        }
+    }
+}
+
+impl Validation for Chroma {
+    fn is_valid(&self) -> bool {
+        match self {
+            Chroma::Shade(proportion) => proportion.is_vp(),
+            Chroma::Tint(proportion) => proportion.is_vp(),
         }
     }
 }

@@ -1,47 +1,70 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{cmp::Ordering, convert::From, ops::Index, ops::Mul};
 
-use num_traits_plus::float_plus::FloatApproxEq;
-
 use crate::{proportion::*, HueConstants, RGBConstants, CCI};
 
+pub trait LightLevel: Clone + Copy + From<UFDFraction> + Into<UFDFraction> {
+    const ZERO: Self;
+    const ONE: Self;
+}
+
+impl LightLevel for f32 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+}
+impl LightLevel for f64 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+}
+
+impl LightLevel for u8 {
+    const ZERO: Self = 0;
+    const ONE: Self = u8::MAX;
+}
+
+impl LightLevel for u16 {
+    const ZERO: Self = 0;
+    const ONE: Self = u16::MAX;
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
-pub struct RGB<T: Number>(pub(crate) [Proportion<T>; 3]);
+pub struct RGB<T: LightLevel>(pub(crate) [T; 3]);
 
-impl<T: Number> Eq for RGB<T> where T: Eq {}
+impl<T: LightLevel> Eq for RGB<T> where T: Eq {}
 
-impl<T: Number> HueConstants for RGB<T> {
-    const RED: Self = Self([Proportion::P_ONE, Proportion::P_ZERO, Proportion::P_ZERO]);
-    const GREEN: Self = Self([Proportion::P_ZERO, Proportion::P_ONE, Proportion::P_ZERO]);
-    const BLUE: Self = Self([Proportion::P_ZERO, Proportion::P_ZERO, Proportion::P_ONE]);
+impl<T: LightLevel> HueConstants for RGB<T> {
+    const RED: Self = Self([T::ONE, T::ZERO, T::ZERO]);
+    const GREEN: Self = Self([T::ZERO, T::ONE, T::ZERO]);
+    const BLUE: Self = Self([T::ZERO, T::ZERO, T::ONE]);
 
-    const CYAN: Self = Self([Proportion::P_ZERO, Proportion::P_ONE, Proportion::P_ONE]);
-    const MAGENTA: Self = Self([Proportion::P_ONE, Proportion::P_ZERO, Proportion::P_ONE]);
-    const YELLOW: Self = Self([Proportion::P_ONE, Proportion::P_ONE, Proportion::P_ZERO]);
+    const CYAN: Self = Self([T::ZERO, T::ONE, T::ONE]);
+    const MAGENTA: Self = Self([T::ONE, T::ZERO, T::ONE]);
+    const YELLOW: Self = Self([T::ONE, T::ONE, T::ZERO]);
 }
 
-impl<T: Number> RGBConstants for RGB<T> {
-    const WHITE: Self = Self([Proportion::P_ONE, Proportion::P_ONE, Proportion::P_ONE]);
-    const BLACK: Self = Self([Proportion::P_ZERO, Proportion::P_ZERO, Proportion::P_ZERO]);
+impl<T: LightLevel> RGBConstants for RGB<T> {
+    const WHITE: Self = Self([T::ONE, T::ONE, T::ONE]);
+    const BLACK: Self = Self([T::ZERO, T::ZERO, T::ZERO]);
 }
 
-impl<T: Number> RGB<T> {
-    pub fn new_grey(value: Proportion<T>) -> Self {
-        debug_assert!(value.is_valid());
-        Self([value, value, value])
+impl<T: LightLevel + Copy + From<UFDFraction>> RGB<T> {
+    pub fn new_grey(value: UFDFraction) -> Self {
+        debug_assert!(value.is_vp());
+        Self::from([value, value, value])
     }
 }
 
-impl<F: Float> RGB<F> {
-    pub fn sum(&self) -> Sum<F> {
-        Sum::from(&self.0)
+impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
+    pub fn sum(&self) -> UFDFraction {
+        let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
+        red + green + blue
     }
 }
 
-impl<T: Number> Index<CCI> for RGB<T> {
-    type Output = Proportion<T>;
+impl<T: LightLevel> Index<CCI> for RGB<T> {
+    type Output = T;
 
-    fn index(&self, index: CCI) -> &Proportion<T> {
+    fn index(&self, index: CCI) -> &T {
         match index {
             CCI::Red => &self.0[0],
             CCI::Green => &self.0[1],
@@ -51,7 +74,7 @@ impl<T: Number> Index<CCI> for RGB<T> {
 }
 
 // Comparisons
-impl<T: Number> PartialOrd for RGB<T>
+impl<T: LightLevel> PartialOrd for RGB<T>
 where
     T: PartialOrd,
 {
@@ -77,7 +100,7 @@ where
     }
 }
 
-impl<T: Number> Ord for RGB<T>
+impl<T: LightLevel> Ord for RGB<T>
 where
     T: PartialOrd + Eq,
 {
@@ -87,8 +110,8 @@ where
     }
 }
 
-impl<F: Float> FloatApproxEq<F> for RGB<F> {
-    fn approx_eq(&self, other: &RGB<F>, max_diff: Option<F>) -> bool {
+impl<T: LightLevel + Float> RGB<T> {
+    pub fn approx_eq(&self, other: &Self, max_diff: Option<T>) -> bool {
         for i in 0..3 {
             if !self.0[i].approx_eq(&other.0[i], max_diff) {
                 return false;
@@ -98,34 +121,40 @@ impl<F: Float> FloatApproxEq<F> for RGB<F> {
     }
 }
 
-impl<T: Number> From<[Proportion<T>; 3]> for RGB<T> {
-    fn from(array: [Proportion<T>; 3]) -> Self {
+impl<T: LightLevel> From<[T; 3]> for RGB<T> {
+    fn from(array: [T; 3]) -> Self {
         Self(array)
     }
 }
 
-impl<T: Number> From<&[Proportion<T>; 3]> for RGB<T> {
-    fn from(array: &[Proportion<T>; 3]) -> Self {
+impl<T: LightLevel> From<&[T; 3]> for RGB<T> {
+    fn from(array: &[T; 3]) -> Self {
         Self(*array)
     }
 }
 
-impl<T: Number> From<[T; 3]> for RGB<T> {
-    fn from(array: [T; 3]) -> Self {
-        let red = Proportion::from(&array[0]);
-        let green = Proportion::from(&array[1]);
-        let blue = Proportion::from(&array[2]);
+impl<T: LightLevel + From<UFDFraction>> From<[UFDFraction; 3]> for RGB<T> {
+    fn from(array: [UFDFraction; 3]) -> Self {
+        let red: T = array[0].into();
+        let green: T = array[1].into();
+        let blue: T = array[2].into();
         Self([red, green, blue])
     }
 }
 
+impl<T: LightLevel + Into<UFDFraction>> From<RGB<T>> for [UFDFraction; 3] {
+    fn from(rgb: RGB<T>) -> Self {
+        [rgb.0[0].into(), rgb.0[1].into(), rgb.0[2].into()]
+    }
+}
+
 // Arithmetic
-impl<F: Float> Mul<Proportion<F>> for RGB<F> {
+impl<F: Float + LightLevel + From<UFDFraction>> Mul<UFDFraction> for RGB<F> {
     type Output = Self;
 
-    fn mul(self, scalar: Proportion<F>) -> Self {
-        let array: [Proportion<F>; 3] =
-            [self.0[0] * scalar, self.0[1] * scalar, self.0[2] * scalar];
-        array.into()
+    fn mul(self, scalar: UFDFraction) -> Self {
+        let [red, green, blue] = <[UFDFraction; 3]>::from(self);
+        let array: [UFDFraction; 3] = [red * scalar, green * scalar, blue * scalar];
+        Self::from(array)
     }
 }
