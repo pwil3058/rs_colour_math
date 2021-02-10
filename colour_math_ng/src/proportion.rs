@@ -1,5 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
+#[cfg(test)]
+mod proportion_tests;
+
 use std::{
     fmt::Debug,
     ops::{Add, Div, Mul, Sub},
@@ -191,5 +194,150 @@ impl ProportionValidation for Chroma {
     }
 }
 
-#[cfg(test)]
-mod proportion_tests;
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Prop(pub(crate) u64);
+
+impl Prop {
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(u64::MAX);
+
+    #[cfg(test)]
+    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+        let me = f64::from(*self);
+        let other = f64::from(*other);
+        me.approx_eq(&other, max_diff)
+    }
+}
+
+impl From<f32> for Prop {
+    fn from(arg: f32) -> Self {
+        debug_assert!(arg <= 1.0);
+        let one = f32::from_u64(u64::MAX).unwrap();
+        let val = u64::from_f32(arg * one).unwrap();
+        Self(val)
+    }
+}
+
+impl From<Prop> for f32 {
+    fn from(arg: Prop) -> Self {
+        let one = f32::from_u64(u64::MAX).unwrap();
+        f32::from_u64(arg.0).unwrap() / one
+    }
+}
+
+impl From<f64> for Prop {
+    fn from(arg: f64) -> Self {
+        debug_assert!(arg <= 1.0);
+        let one = f64::from_u64(u64::MAX).unwrap();
+        let val = u64::from_f64(arg * one).unwrap();
+        Self(val)
+    }
+}
+
+impl From<Prop> for f64 {
+    fn from(arg: Prop) -> Self {
+        let one = f64::from_u64(u64::MAX).unwrap();
+        f64::from_u64(arg.0).unwrap() / one
+    }
+}
+
+macro_rules! impl_unsigned_to_from_prop {
+    ($unsigned:ty) => {
+        impl From<$unsigned> for Prop {
+            fn from(arg: $unsigned) -> Self {
+                let val = arg as u128 * u64::MAX as u128 / <$unsigned>::MAX as u128;
+                Self(val as u64)
+            }
+        }
+
+        impl From<Prop> for $unsigned {
+            fn from(arg: Prop) -> Self {
+                let val = arg.0 as u128 * <$unsigned>::MAX as u128 / u64::MAX as u128;
+                val as $unsigned
+            }
+        }
+    };
+}
+
+impl_unsigned_to_from_prop!(u8);
+impl_unsigned_to_from_prop!(u16);
+impl_unsigned_to_from_prop!(u32);
+
+impl Mul for Prop {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        Self(((self.0 as u128 * rhs.0 as u128) / u64::MAX as u128) as u64)
+    }
+}
+
+impl Div for Prop {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        debug_assert!(self.0 <= rhs.0);
+        let result = (self.0 as u128 * u64::MAX as u128) / rhs.0 as u128;
+        Self(result as u64)
+    }
+}
+
+impl Add for Prop {
+    type Output = Sum;
+
+    fn add(self, rhs: Self) -> Sum {
+        Sum(self.0 as u128 + rhs.0 as u128)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Sum(pub(crate) u128);
+
+impl Sum {
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(u64::MAX as u128);
+    pub const TWO: Self = Self(u64::MAX as u128 * 2);
+    pub const THREE: Self = Self(u64::MAX as u128 * 3);
+
+    pub fn is_valid(self) -> bool {
+        self <= Self::THREE
+    }
+
+    #[cfg(test)]
+    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+        let me = f64::from(*self);
+        let other = f64::from(*other);
+        me.approx_eq(&other, max_diff)
+    }
+}
+
+// impl From<f32> for Sum {
+//     fn from(arg: f32) -> Self {
+//         debug_assert!(arg <= 3.0);
+//         let one = f32::from_u128(u64::MAX as u128).unwrap();
+//         let val = u128::from_f32(arg * one).unwrap();
+//         Self(val)
+//     }
+// }
+//
+// impl From<Sum> for f32 {
+//     fn from(arg: Sum) -> Self {
+//         let one = f32::from_u128(u64::MAX as u128).unwrap();
+//         f32::from_u128(arg.0).unwrap() / one
+//     }
+// }
+
+impl From<f64> for Sum {
+    fn from(arg: f64) -> Self {
+        debug_assert!(arg <= 3.0);
+        let one = f64::from_u128(u64::MAX as u128).unwrap();
+        let val = u128::from_f64(arg * one).unwrap();
+        Self(val)
+    }
+}
+
+impl From<Sum> for f64 {
+    fn from(arg: Sum) -> Self {
+        let one = f64::from_u128(u64::MAX as u128).unwrap();
+        f64::from_u128(arg.0).unwrap() / one
+    }
+}

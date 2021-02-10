@@ -3,6 +3,39 @@ use super::*;
 use num_traits_plus::assert_approx_eq;
 
 #[test]
+fn prop_mul() {
+    for [a, b] in &[[0.0f64, 0.3], [0.024, 0.5], [0.8, 0.5]] {
+        let expected = Prop::from(a * b);
+        println!("{:?} * {:?} = {:?} : {:?}", a, b, a * b, expected);
+        let result = Prop::from(*a) * Prop::from(*b);
+        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(f64::from(result), &(a * b), 0.000_000_01);
+    }
+}
+
+#[test]
+fn prop_div() {
+    for [a, b] in &[[0.0f64, 0.3], [0.024, 0.5], [0.18, 0.5]] {
+        let expected = Prop::from(a / b);
+        println!("{:?} / {:?} = {:?} {:?}", a, b, a / b, expected);
+        let result = Prop::from(*a) / Prop::from(*b);
+        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(f64::from(result), &(a / b), 0.000_000_01);
+    }
+}
+
+#[test]
+fn prop_add() {
+    for [a, b] in &[[0.0f64, 0.3], [0.024, 0.5], [0.18, 0.5], [0.5, 0.8]] {
+        let expected = Sum::from(a + b);
+        println!("{:?} + {:?} = {:?} {:?}", a, b, a + b, expected);
+        let result = Prop::from(*a) + Prop::from(*b);
+        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(f64::from(result), &(a + b), 0.000_000_01);
+    }
+}
+
+#[test]
 fn to_from_ufdf() {
     assert_eq!(UFDFraction::from(1.0_f64), UFDFraction::ONE);
     assert_eq!(f64::from(UFDFraction::ONE), 1.0);
