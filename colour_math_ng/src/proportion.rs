@@ -4,7 +4,7 @@
 mod proportion_tests;
 
 use std::{
-    fmt::Debug,
+    fmt::{self, Debug, Formatter},
     ops::{Add, Div, Mul, Sub},
 };
 
@@ -192,7 +192,7 @@ impl Chroma {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Prop(pub(crate) u64);
 
 impl Prop {
@@ -206,6 +206,12 @@ impl Prop {
         let me = f64::from(*self);
         let other = f64::from(*other);
         me.approx_eq(&other, max_diff)
+    }
+}
+
+impl Debug for Prop {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
     }
 }
 
@@ -318,7 +324,7 @@ impl Sub for Prop {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Sum(pub(crate) u128);
 
 impl Sum {
@@ -329,6 +335,12 @@ impl Sum {
 
     pub fn is_valid(self) -> bool {
         self <= Self::THREE
+    }
+}
+
+impl Debug for Sum {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        formatter.write_fmt(format_args!("Sum({:?})", f64::from(*self)))
     }
 }
 
@@ -351,7 +363,7 @@ impl From<f64> for Sum {
     }
 }
 
-#[cfg(test)]
+//#[cfg(test)]
 impl From<Sum> for f64 {
     fn from(arg: Sum) -> Self {
         let one = f64::from_u128(u64::MAX as u128).unwrap();
@@ -386,8 +398,11 @@ impl Div for Sum {
     type Output = Prop;
 
     fn div(self, rhs: Self) -> Prop {
-        let result = if self.0 >= u64::MAX as u128 {
-            // Over flow territory
+        let result = if rhs.0 == u64::MAX as u128 {
+            self.0
+        // Avoid subtraction overflow
+        } else if self.0 >= u64::MAX as u128 {
+            // do the operation in two parts to avoid multiply overflow problems
             let a = self.0 - u64::MAX as u128;
             let b = self.0 - a;
             let adiv = (a * u64::MAX as u128) / rhs.0;
@@ -396,6 +411,8 @@ impl Div for Sum {
         } else {
             (self.0 * u64::MAX as u128) / rhs.0
         };
+        // NB: this requirement enforces policy made about when this operation should be used
+        // and is designed to detect policy violations
         debug_assert!(result <= u64::MAX as u128);
         Prop(result as u64)
     }
@@ -406,6 +423,7 @@ impl Div<u8> for Sum {
 
     fn div(self, rhs: u8) -> Prop {
         let result = self.0 as u128 / rhs as u128;
+        // this requirement enforces decisions made about when this operation should be used
         debug_assert!(result <= u64::MAX as u128);
         Prop(result as u64)
     }
@@ -435,19 +453,14 @@ impl Mul<Prop> for Sum {
         if rhs.0 == u64::MAX {
             self
         } else if self.0 >= u64::MAX as u128 {
-            // NB: this means there's a danger of overflow so we'll break the operation into parts
+            // NB this is being done in two parts to avoid overflow problems
             let a = self.0 - u64::MAX as u128;
             let b = self.0 - a;
-            let adiv = (a * rhs.0 as u128) / u64::MAX as u128;
-            let bdiv = (b * rhs.0 as u128) / u64::MAX as u128;
-            // adiv + bdiv
-            // let quotient = self.0 / u64::MAX as u128;
-            // let remainder = self.0 % u64::MAX as u128;
-            // let qprod = quotient * rhs.0 as u128;
-            // let rprod = (remainder * rhs.0 as u128) / u64::MAX as u128;
-            Self(adiv + bdiv)
+            let amul = (a * rhs.0 as u128) / u64::MAX as u128;
+            let bmul = (b * rhs.0 as u128) / u64::MAX as u128;
+            Self(amul + bmul)
         } else {
-            Self(((self.0 * rhs.0 as u128) / u64::MAX as u128) as u128)
+            Self((self.0 * rhs.0 as u128) / u64::MAX as u128)
         }
     }
 }
