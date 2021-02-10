@@ -1,9 +1,13 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::{cmp::Ordering, convert::From, ops::Index, ops::Mul};
+use std::{
+    cmp::Ordering,
+    convert::{From, TryFrom},
+    ops::Index,
+    ops::Mul,
+};
 
 use crate::hue::HueIfceTmp;
-use crate::{hue::Hue, proportion::*, Float, HueConstants, LightLevel, RGBConstants, CCI};
-use std::convert::TryFrom;
+use crate::{hue::Hue, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<T: LightLevel>(pub(crate) [T; 3]);
@@ -25,30 +29,29 @@ impl<T: LightLevel> RGBConstants for RGB<T> {
     const BLACK: Self = Self([T::ZERO, T::ZERO, T::ZERO]);
 }
 
-impl<T: LightLevel + Copy + From<UFDFraction>> RGB<T> {
-    pub fn new_grey(value: UFDFraction) -> Self {
-        debug_assert!(value.is_vp());
+impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
+    pub fn new_grey(value: Prop) -> Self {
         Self::from([value, value, value])
     }
 }
 
-impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
+impl<T: LightLevel + Into<Prop>> RGB<T> {
     pub fn is_grey(&self) -> bool {
         self.0[0] == self.0[1] && self.0[1] == self.0[2]
     }
 
-    pub fn sum(&self) -> UFDFraction {
-        let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
+    pub fn sum(&self) -> Sum {
+        let [red, green, blue] = <[Prop; 3]>::from(*self);
         red + green + blue
     }
 
-    pub fn value(&self) -> UFDFraction {
-        self.sum() / UFDFraction::THREE
+    pub fn value(&self) -> Prop {
+        self.sum() / 3
     }
 
-    pub fn warmth(&self) -> UFDFraction {
-        let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
-        (UFDFraction::ONE + red - (blue + green) / UFDFraction::TWO) / UFDFraction::TWO
+    pub fn warmth(&self) -> Prop {
+        let [red, green, blue] = <[Prop; 3]>::from(*self);
+        (Sum::ONE + red - (blue + green) / 2) / 2
     }
 
     pub fn max_chroma_rgb(&self) -> RGB<T> {
@@ -59,8 +62,8 @@ impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
         }
     }
 
-    pub fn chroma_proportion(&self) -> UFDFraction {
-        let [red, green, blue] = <[UFDFraction; 3]>::from(*self);
+    pub fn chroma_proportion(&self) -> Prop {
+        let [red, green, blue] = <[Prop; 3]>::from(*self);
         match red.cmp(&green) {
             Ordering::Greater => match green.cmp(&blue) {
                 Ordering::Greater => red - blue,
@@ -83,7 +86,7 @@ impl<T: LightLevel + Into<UFDFraction>> RGB<T> {
             Ordering::Equal => match red.cmp(&blue) {
                 Ordering::Greater => red - blue,
                 Ordering::Less => blue - red,
-                Ordering::Equal => UFDFraction::ZERO,
+                Ordering::Equal => Prop::ZERO,
             },
         }
     }
@@ -166,8 +169,8 @@ impl<T: LightLevel> From<&[T; 3]> for RGB<T> {
     }
 }
 
-impl<T: LightLevel + From<UFDFraction>> From<[UFDFraction; 3]> for RGB<T> {
-    fn from(array: [UFDFraction; 3]) -> Self {
+impl<T: LightLevel + From<Prop>> From<[Prop; 3]> for RGB<T> {
+    fn from(array: [Prop; 3]) -> Self {
         let red: T = array[0].into();
         let green: T = array[1].into();
         let blue: T = array[2].into();
@@ -175,19 +178,19 @@ impl<T: LightLevel + From<UFDFraction>> From<[UFDFraction; 3]> for RGB<T> {
     }
 }
 
-impl<T: LightLevel + Into<UFDFraction>> From<RGB<T>> for [UFDFraction; 3] {
+impl<T: LightLevel + Into<Prop>> From<RGB<T>> for [Prop; 3] {
     fn from(rgb: RGB<T>) -> Self {
         [rgb.0[0].into(), rgb.0[1].into(), rgb.0[2].into()]
     }
 }
 
 // Arithmetic
-impl<F: Float + LightLevel + From<UFDFraction>> Mul<UFDFraction> for RGB<F> {
+impl<F: Float + LightLevel + From<Prop>> Mul<Prop> for RGB<F> {
     type Output = Self;
 
-    fn mul(self, scalar: UFDFraction) -> Self {
-        let [red, green, blue] = <[UFDFraction; 3]>::from(self);
-        let array: [UFDFraction; 3] = [red * scalar, green * scalar, blue * scalar];
+    fn mul(self, scalar: Prop) -> Self {
+        let [red, green, blue] = <[Prop; 3]>::from(self);
+        let array: [Prop; 3] = [red * scalar, green * scalar, blue * scalar];
         Self::from(array)
     }
 }

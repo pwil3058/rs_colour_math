@@ -5,11 +5,11 @@ extern crate serde_derive;
 use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 use num_traits_plus::float_plus::*;
 
-pub mod hue;
+//pub mod hue;
 pub mod proportion;
-pub mod rgb;
+//pub mod rgb;
 
-use crate::{proportion::UFDFraction, rgb::RGB};
+pub use crate::proportion::{Chroma, Prop, Sum, UFDFraction};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CCI {
@@ -26,7 +26,7 @@ pub trait Float:
 impl Float for f32 {}
 impl Float for f64 {}
 
-pub trait LightLevel: Clone + Copy + From<UFDFraction> + Into<UFDFraction> + PartialEq {
+pub trait LightLevel: Clone + Copy + From<Prop> + Into<Prop> + PartialEq {
     const ZERO: Self;
     const ONE: Self;
 }
@@ -84,7 +84,7 @@ pub trait HueAngle<T: Float> {
     fn hue_angle(&self) -> Degrees<T>;
 }
 
-pub trait ChromaOneRGB<T: LightLevel> {
-    /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
-    fn chroma_one_rgb(&self) -> RGB<T>;
-}
+// pub trait ChromaOneRGB<T: LightLevel> {
+//     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
+//     fn chroma_one_rgb(&self) -> RGB<T>;
+// }

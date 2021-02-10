@@ -9,19 +9,17 @@ use std::{
 use normalised_angles::Degrees;
 
 use crate::{
-    proportion::{Chroma, ProportionValidation, SumValidation, UFDFraction},
-    rgb::*,
-    ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, RGBConstants,
+    Chroma, ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, Prop, RGBConstants, Sum, RGB,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub struct SumRange((UFDFraction, UFDFraction, UFDFraction));
+pub struct SumRange((Sum, Sum, Sum));
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum SumOrdering {
     TooSmall,
-    Shade(UFDFraction, UFDFraction),
-    Tint(UFDFraction, UFDFraction),
+    Shade(Sum, Sum),
+    Tint(Sum, Sum),
     TooBig,
 }
 
@@ -44,7 +42,7 @@ impl SumOrdering {
 }
 
 impl SumRange {
-    pub fn compare_sum(&self, sum: UFDFraction) -> SumOrdering {
+    pub fn compare_sum(&self, sum: Sum) -> SumOrdering {
         if sum < self.0 .0 {
             SumOrdering::TooSmall
         } else if sum <= self.0 .1 {
@@ -56,48 +54,45 @@ impl SumRange {
         }
     }
 
-    pub fn min(&self) -> UFDFraction {
+    pub fn min(&self) -> Sum {
         self.0 .0
     }
 
-    pub fn shade_min(&self) -> UFDFraction {
+    pub fn shade_min(&self) -> Sum {
         self.0 .0
     }
 
-    pub fn shade_max(&self) -> UFDFraction {
+    pub fn shade_max(&self) -> Sum {
         self.0 .1
     }
 
-    pub fn crossover(&self) -> UFDFraction {
+    pub fn crossover(&self) -> Sum {
         self.0 .1
     }
 
-    pub fn tint_min(&self) -> UFDFraction {
+    pub fn tint_min(&self) -> Sum {
         self.0 .1
     }
 
-    pub fn tint_max(&self) -> UFDFraction {
+    pub fn tint_max(&self) -> Sum {
         self.0 .2
     }
 
-    pub fn max(&self) -> UFDFraction {
+    pub fn max(&self) -> Sum {
         self.0 .2
     }
 }
 
 pub trait HueIfceTmp {
-    fn sum_range_for_chroma(&self, chroma_value: UFDFraction) -> Option<SumRange>;
-    fn max_chroma_for_sum(&self, sum: UFDFraction) -> Option<Chroma>;
+    fn sum_range_for_chroma(&self, chroma_value: Prop) -> Option<SumRange>;
+    fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T>;
-    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDFraction) -> Option<RGB<T>>;
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma_value: UFDFraction) -> RGB<T>;
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma_value: UFDFraction) -> RGB<T>;
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
-        &self,
-        sum: UFDFraction,
-        chroma_value: UFDFraction,
-    ) -> Option<RGB<T>>;
+    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>>;
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma_value: Prop) -> RGB<T>;
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma_value: Prop) -> RGB<T>;
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma_value: Prop)
+        -> Option<RGB<T>>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -108,7 +103,7 @@ pub enum RGBHue {
 }
 
 impl RGBHue {
-    fn make_rgb<T: LightLevel>(&self, components: (UFDFraction, UFDFraction)) -> RGB<T> {
+    fn make_rgb<T: LightLevel>(&self, components: (Prop, Prop)) -> RGB<T> {
         use RGBHue::*;
         match self {
             Red => [components.0, components.1, components.1].into(),
@@ -140,27 +135,26 @@ impl<T: LightLevel> ChromaOneRGB<T> for RGBHue {
 }
 
 impl HueIfceTmp for RGBHue {
-    fn sum_range_for_chroma(&self, chroma: UFDFraction) -> Option<SumRange> {
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
+        if chroma == Prop::ZERO {
             None
         } else {
             Some(SumRange((
-                chroma,
-                UFDFraction::ONE,
-                (UFDFraction::THREE - UFDFraction::TWO * chroma).min(UFDFraction::THREE),
+                chroma.into(),
+                Sum::ONE,
+                (Sum::THREE - chroma * 2),
             )))
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: UFDFraction) -> Option<Chroma> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
+    fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
             None
-        } else if sum < UFDFraction::ONE {
-            Some(Chroma::Shade(sum))
-        } else if sum > UFDFraction::ONE {
-            Some(Chroma::Tint((UFDFraction::THREE - sum) / UFDFraction::TWO))
+        } else if sum < Sum::ONE {
+            Some(Chroma::Shade(sum.into()))
+        } else if sum > Sum::ONE {
+            Some(Chroma::Tint((Sum::THREE - sum) / 2))
         } else {
             Some(Chroma::ONE)
         }
@@ -174,58 +168,48 @@ impl HueIfceTmp for RGBHue {
         }
     }
 
-    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDFraction) -> Option<RGB<T>> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
+    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
             None
         } else {
-            if sum <= UFDFraction::ONE {
-                Some(self.make_rgb((sum, UFDFraction::ZERO)))
+            if sum <= Sum::ONE {
+                Some(self.make_rgb((sum.into(), Prop::ZERO)))
             } else {
-                Some(self.make_rgb((
-                    UFDFraction::ONE,
-                    ((sum - UFDFraction::ONE) / UFDFraction::TWO).min(UFDFraction::ONE),
-                )))
+                Some(self.make_rgb((Prop::ONE, ((sum - Sum::ONE) / 2))))
             }
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
         // TODO: Needs major revision taking into account Shade/Tint
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+        if chroma == Prop::ZERO {
             RGB::BLACK
-        } else if chroma == UFDFraction::ONE {
+        } else if chroma == Prop::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((chroma, UFDFraction::ZERO))
+            self.make_rgb((chroma, Prop::ZERO))
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
         // TODO: Needs major revision taking into account Shade/Tint
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+        if chroma == Prop::ZERO {
             RGB::WHITE
-        } else if chroma == UFDFraction::ONE {
+        } else if chroma == Prop::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((UFDFraction::ONE, UFDFraction::ONE - chroma))
+            self.make_rgb((Prop::ONE, Prop::ONE - chroma))
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
-        &self,
-        sum: UFDFraction,
-        chroma: UFDFraction,
-    ) -> Option<RGB<T>> {
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
         // TODO: Needs major revision taking into account Shade/Tint
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
-            let other: UFDFraction = (sum - chroma) / UFDFraction::THREE;
-            Some(self.make_rgb((other + chroma, other)))
+            let other = (sum - chroma) / 3;
+            Some(self.make_rgb(((other + chroma).into(), other)))
         } else {
             None
         }
@@ -240,7 +224,7 @@ pub enum CMYHue {
 }
 
 impl CMYHue {
-    fn make_rgb<T: LightLevel>(&self, components: (UFDFraction, UFDFraction)) -> RGB<T> {
+    fn make_rgb<T: LightLevel>(&self, components: (Prop, Prop)) -> RGB<T> {
         use CMYHue::*;
         match self {
             Cyan => [components.1, components.0, components.0].into(),
@@ -261,31 +245,22 @@ impl<T: Float> HueAngle<T> for CMYHue {
 }
 
 impl HueIfceTmp for CMYHue {
-    fn sum_range_for_chroma(&self, chroma: UFDFraction) -> Option<SumRange> {
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
+        if chroma == Prop::ZERO {
             None
         } else {
-            Some(SumRange((
-                chroma * UFDFraction::TWO,
-                UFDFraction::TWO,
-                UFDFraction::THREE - chroma,
-            )))
+            Some(SumRange((chroma * 2, Sum::TWO, Sum::THREE - chroma)))
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: UFDFraction) -> Option<Chroma> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
+    fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
             None
-        } else if sum < UFDFraction::TWO {
-            Some(Chroma::Shade(
-                (sum / UFDFraction::TWO).min(UFDFraction::ONE),
-            ))
-        } else if sum > UFDFraction::TWO {
-            Some(Chroma::Tint(
-                (UFDFraction::THREE - sum).min(UFDFraction::ONE),
-            ))
+        } else if sum < Sum::TWO {
+            Some(Chroma::Shade(sum / 2))
+        } else if sum > Sum::TWO {
+            Some(Chroma::Tint((Sum::THREE - sum).into()))
         } else {
             Some(Chroma::ONE)
         }
@@ -299,63 +274,49 @@ impl HueIfceTmp for CMYHue {
         }
     }
 
-    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDFraction) -> Option<RGB<T>> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
+    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
             None
-        } else if sum < UFDFraction::TWO {
-            Some(self.make_rgb((
-                (sum / UFDFraction::TWO).min(UFDFraction::ONE),
-                UFDFraction::ZERO,
-            )))
-        } else if sum > UFDFraction::TWO {
-            Some(self.make_rgb((
-                UFDFraction::ONE,
-                (sum - UFDFraction::TWO).min(UFDFraction::ONE),
-            )))
+        } else if sum < Sum::TWO {
+            Some(self.make_rgb(((sum / 2), Prop::ZERO)))
+        } else if sum > Sum::TWO {
+            Some(self.make_rgb((Prop::ONE, (sum - Sum::TWO).into())))
         } else {
             Some(self.max_chroma_rgb())
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
         // TODO: Needs major revision taking into account Shade/Tint
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+
+        if chroma == Prop::ZERO {
             RGB::BLACK
-        } else if chroma == UFDFraction::ONE {
+        } else if chroma == Prop::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((chroma, UFDFraction::ZERO))
+            self.make_rgb((chroma, Prop::ZERO))
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
         // TODO: Needs major revision taking into account Shade/Tint
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+
+        if chroma == Prop::ZERO {
             RGB::WHITE
-        } else if chroma == UFDFraction::ONE {
+        } else if chroma == Prop::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((UFDFraction::ONE, UFDFraction::ONE - chroma))
+            self.make_rgb((Prop::ONE, Prop::ONE - chroma))
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
-        &self,
-        sum: UFDFraction,
-        chroma: UFDFraction,
-    ) -> Option<RGB<T>> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        debug_assert!(chroma.is_vp());
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation
-            Some(self.make_rgb((
-                (sum + chroma) / UFDFraction::THREE,
-                (sum - UFDFraction::TWO * chroma) / UFDFraction::THREE,
-            )))
+            Some(self.make_rgb(((sum + chroma) / 3, (sum - chroma * 2) / 3)))
         } else {
             None
         }
@@ -373,15 +334,12 @@ pub enum Sextant {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
-pub struct SextantHue(Sextant, UFDFraction);
+pub struct SextantHue(Sextant, Prop);
 
 impl Eq for SextantHue {}
 
 impl SextantHue {
-    fn make_rgb<T: LightLevel>(
-        &self,
-        components: (UFDFraction, UFDFraction, UFDFraction),
-    ) -> RGB<T> {
+    fn make_rgb<T: LightLevel>(&self, components: (Prop, Prop, Prop)) -> RGB<T> {
         use Sextant::*;
         match self.0 {
             RedMagenta => [components.0, components.2, components.1].into(),
@@ -392,7 +350,10 @@ impl SextantHue {
             BlueMagenta => [components.1, components.2, components.0].into(),
         }
     }
+}
 
+#[cfg(test)]
+impl SextantHue {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         if self.0 == other.0 {
             self.1.approx_eq(&other.1, max_diff)
@@ -405,7 +366,7 @@ impl SextantHue {
 impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     fn from(arg: (Sextant, &RGB<T>)) -> Self {
         use Sextant::*;
-        let [red, green, blue] = <[UFDFraction; 3]>::from(*arg.1);
+        let [red, green, blue] = <[Prop; 3]>::from(*arg.1);
         match arg.0 {
             RedMagenta => Self(arg.0, (blue - green) / (red - green)),
             RedYellow => Self(arg.0, (green - blue) / (red - blue)),
@@ -417,7 +378,7 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     }
 }
 
-impl<T: Float + From<UFDFraction> + Copy> HueAngle<T> for SextantHue {
+impl<T: Float + From<Prop> + Copy> HueAngle<T> for SextantHue {
     fn hue_angle(&self) -> Degrees<T> {
         let second: T = self.1.into();
         let sin = T::SQRT_3 * second / T::TWO / (T::ONE - second + second.powi(2)).sqrt();
@@ -434,34 +395,33 @@ impl<T: Float + From<UFDFraction> + Copy> HueAngle<T> for SextantHue {
 }
 
 impl HueIfceTmp for SextantHue {
-    fn sum_range_for_chroma(&self, chroma: UFDFraction) -> Option<SumRange> {
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
+        if chroma == Prop::ZERO {
             None
         } else {
-            let max_c_sum = (UFDFraction::ONE + self.1).min(UFDFraction::TWO);
-            if chroma == UFDFraction::ONE {
+            let max_c_sum = (Prop::ONE + self.1).min(Sum::TWO);
+            if chroma == Prop::ONE {
                 Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
             } else {
                 let min = max_c_sum * chroma;
-                let max = UFDFraction::THREE - (UFDFraction::TWO - self.1) * chroma;
+                let max = Sum::THREE - (Sum::TWO - self.1) * chroma;
                 Some(SumRange((min, max_c_sum, max)))
             }
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: UFDFraction) -> Option<Chroma> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
+    fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        if sum == Sum::ZERO || sum == Sum::THREE {
             None
         } else {
-            match sum.cmp(&(UFDFraction::ONE + self.1)) {
+            match sum.cmp(&(Prop::ONE + self.1)) {
                 Ordering::Less => {
-                    let temp = sum / (UFDFraction::ONE + self.1);
+                    let temp = sum / (Prop::ONE + self.1);
                     Some(Chroma::Shade(temp))
                 }
                 Ordering::Greater => {
-                    let temp = (UFDFraction::THREE - sum) / (UFDFraction::TWO - self.1);
+                    let temp = (Sum::THREE - sum) / (Sum::TWO - self.1);
                     Some(Chroma::Tint(temp))
                 }
                 Ordering::Equal => Some(Chroma::ONE),
@@ -470,69 +430,63 @@ impl HueIfceTmp for SextantHue {
     }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
-        self.make_rgb((UFDFraction::ONE, self.1, UFDFraction::ZERO))
+        self.make_rgb((Prop::ONE, self.1, Prop::ZERO))
     }
 
-    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDFraction) -> Option<RGB<T>> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
+    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         // TODO: make hue drift an error
-        if sum == UFDFraction::ZERO || sum == UFDFraction::THREE {
+        if sum == Sum::ZERO || sum == Sum::THREE {
             None
         } else {
-            let max_chroma_sum = UFDFraction::ONE + self.1;
+            let max_chroma_sum = Sum::ONE + self.1;
             if sum == max_chroma_sum {
                 Some(self.max_chroma_rgb())
             } else {
                 let components = if sum < max_chroma_sum {
-                    let first: UFDFraction = (sum / max_chroma_sum).min(UFDFraction::ONE);
-                    (first, first * self.1, UFDFraction::ZERO)
+                    let first = sum / max_chroma_sum;
+                    (first, first * self.1, Prop::ZERO)
                 } else {
-                    let temp = sum - UFDFraction::ONE;
-                    let second = ((temp + self.1) / UFDFraction::TWO).min(UFDFraction::ONE);
-                    (UFDFraction::ONE, second, (temp - second))
+                    let temp = sum - Prop::ONE;
+                    let second = (temp + self.1) / 2;
+                    (Prop::ONE, second, (temp - second).into())
                 };
                 Some(self.make_rgb(components))
             }
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
+        if chroma == Prop::ZERO {
             RGB::BLACK
-        } else if chroma == UFDFraction::ONE {
+        } else if chroma == Prop::ONE {
             self.max_chroma_rgb()
         } else {
-            self.make_rgb((chroma, self.1 * chroma, UFDFraction::ZERO))
+            self.make_rgb((chroma, self.1 * chroma, Prop::ZERO))
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
-        debug_assert!(chroma.is_vp(), "chroma: {:?}", chroma);
-        if chroma == UFDFraction::ZERO {
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
+        if chroma == Prop::ZERO {
             RGB::WHITE
-        } else if chroma == UFDFraction::ONE {
+        } else if chroma == Prop::ONE {
             self.max_chroma_rgb()
         } else {
-            let third = UFDFraction::ONE - chroma;
-            let second: UFDFraction = chroma * self.1 + third;
-            self.make_rgb((UFDFraction::ONE, second, third))
+            let third = Prop::ONE - chroma;
+            let second = chroma * self.1 + third;
+            self.make_rgb((Prop::ONE, second.into(), third))
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
-        &self,
-        sum: UFDFraction,
-        chroma: UFDFraction,
-    ) -> Option<RGB<T>> {
-        debug_assert!(sum.is_vs(), "sum: {:?}", sum);
-        debug_assert!(chroma.is_vp());
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
+        debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
-            let delta: UFDFraction = (sum - sum_range.shade_min()) / UFDFraction::THREE;
+            let delta = (sum - sum_range.shade_min()) / 3;
             let first = chroma + delta;
             let second = chroma * self.1 + delta;
-            Some(self.make_rgb((first, second, delta)))
+            Some(self.make_rgb((first.into(), second.into(), delta)))
         } else {
             None
         }
@@ -563,7 +517,7 @@ impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
 
     fn try_from(rgb: &RGB<T>) -> Result<Self, Self::Error> {
         use Sextant::*;
-        let [red, green, blue] = <[UFDFraction; 3]>::from(*rgb);
+        let [red, green, blue] = <[Prop; 3]>::from(*rgb);
         match red.cmp(&green) {
             Ordering::Greater => match green.cmp(&blue) {
                 Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedYellow, rgb)))),
@@ -592,7 +546,7 @@ impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
     }
 }
 
-impl<T: Float + From<UFDFraction>> HueAngle<T> for Hue {
+impl<T: Float + From<Prop>> HueAngle<T> for Hue {
     fn hue_angle(&self) -> Degrees<T> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
@@ -603,7 +557,7 @@ impl<T: Float + From<UFDFraction>> HueAngle<T> for Hue {
 }
 
 impl HueIfceTmp for Hue {
-    fn sum_range_for_chroma(&self, chroma: UFDFraction) -> Option<SumRange> {
+    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
@@ -611,7 +565,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: UFDFraction) -> Option<Chroma> {
+    fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_for_sum(sum),
@@ -627,7 +581,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDFraction) -> Option<RGB<T>> {
+    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb_for_sum(sum),
@@ -635,7 +589,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.min_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.min_sum_rgb_for_chroma(chroma),
@@ -643,7 +597,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: UFDFraction) -> RGB<T> {
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.max_sum_rgb_for_chroma(chroma),
@@ -651,11 +605,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
-        &self,
-        sum: UFDFraction,
-        chroma: UFDFraction,
-    ) -> Option<RGB<T>> {
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.rgb_for_sum_and_chroma(sum, chroma),
             Self::Secondary(cmy_hue) => cmy_hue.rgb_for_sum_and_chroma(sum, chroma),
@@ -668,7 +618,10 @@ impl Hue {
     pub fn ord_index(&self) -> u8 {
         0
     }
+}
 
+#[cfg(test)]
+impl Hue {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         match self {
             Self::Primary(rgb_hue) => match other {
@@ -794,81 +747,53 @@ mod hue_ng_tests {
         }
         for (rgb, hue) in RGB::<f64>::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
             assert_eq!(Hue::try_from(rgb), Ok(*hue));
-            assert_eq!(Hue::try_from(&(*rgb * UFDFraction::from(0.5))), Ok(*hue));
+            assert_eq!(Hue::try_from(&(*rgb * Prop::from(0.5))), Ok(*hue));
         }
         for (rgb, hue) in RGB::<f64>::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
             assert_eq!(Hue::try_from(rgb), Ok(*hue));
-            assert_eq!(Hue::try_from(&(*rgb * UFDFraction::from(0.5))), Ok(*hue));
+            assert_eq!(Hue::try_from(&(*rgb * Prop::from(0.5))), Ok(*hue));
         }
         for (array, sextant, second) in &[
             (
-                [
-                    UFDFraction::ONE,
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ZERO,
-                ],
+                [Prop::ONE, Prop::from(0.5_f64), Prop::ZERO],
                 Sextant::RedYellow,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
             (
-                [
-                    UFDFraction::ZERO,
-                    UFDFraction::from(0.25_f64),
-                    UFDFraction::from(0.5_f64),
-                ],
+                [Prop::ZERO, Prop::from(0.25_f64), Prop::from(0.5_f64)],
                 Sextant::BlueCyan,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
             (
-                [
-                    UFDFraction::from(0.2_f64),
-                    UFDFraction::ZERO,
-                    UFDFraction::from(0.4_f64),
-                ],
+                [Prop::from(0.2_f64), Prop::ZERO, Prop::from(0.4_f64)],
                 Sextant::BlueMagenta,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
             (
-                [
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ZERO,
-                    UFDFraction::ONE,
-                ],
+                [Prop::from(0.5_f64), Prop::ZERO, Prop::ONE],
                 Sextant::BlueMagenta,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
             (
-                [
-                    UFDFraction::ONE,
-                    UFDFraction::ZERO,
-                    UFDFraction::from(0.5_f64),
-                ],
+                [Prop::ONE, Prop::ZERO, Prop::from(0.5_f64)],
                 Sextant::RedMagenta,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
             (
-                [
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ONE,
-                    UFDFraction::ZERO,
-                ],
+                [Prop::from(0.5_f64), Prop::ONE, Prop::ZERO],
                 Sextant::GreenYellow,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
             (
-                [
-                    UFDFraction::ZERO,
-                    UFDFraction::ONE,
-                    UFDFraction::from(0.5_f64),
-                ],
+                [Prop::ZERO, Prop::ONE, Prop::from(0.5_f64)],
                 Sextant::GreenCyan,
-                UFDFraction::from(0.5),
+                Prop::from(0.5),
             ),
         ] {
             let rgb = RGB::<f64>::from([
-                UFDFraction::from(array[0]),
-                UFDFraction::from(array[1]),
-                UFDFraction::from(array[2]),
+                Prop::from(array[0]),
+                Prop::from(array[1]),
+                Prop::from(array[2]),
             ]);
             let hue = Hue::Sextant(SextantHue(*sextant, *second));
             assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0.000_000_001);
@@ -885,58 +810,34 @@ mod hue_ng_tests {
         }
         for (array, sextant, second) in &[
             (
-                [
-                    UFDFraction::ONE,
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ZERO,
-                ],
+                [Prop::ONE, Prop::from(0.5_f64), Prop::ZERO],
                 Sextant::RedYellow,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
             ),
             (
-                [
-                    UFDFraction::ZERO,
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ONE,
-                ],
+                [Prop::ZERO, Prop::from(0.5_f64), Prop::ONE],
                 Sextant::BlueCyan,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
             ),
             (
-                [
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ZERO,
-                    UFDFraction::ONE,
-                ],
+                [Prop::from(0.5_f64), Prop::ZERO, Prop::ONE],
                 Sextant::BlueMagenta,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
             ),
             (
-                [
-                    UFDFraction::ONE,
-                    UFDFraction::ZERO,
-                    UFDFraction::from(0.5_f64),
-                ],
+                [Prop::ONE, Prop::ZERO, Prop::from(0.5_f64)],
                 Sextant::RedMagenta,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
             ),
             (
-                [
-                    UFDFraction::from(0.5_f64),
-                    UFDFraction::ONE,
-                    UFDFraction::ZERO,
-                ],
+                [Prop::from(0.5_f64), Prop::ONE, Prop::ZERO],
                 Sextant::GreenYellow,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
             ),
             (
-                [
-                    UFDFraction::ZERO,
-                    UFDFraction::ONE,
-                    UFDFraction::from(0.5_f64),
-                ],
+                [Prop::ZERO, Prop::ONE, Prop::from(0.5_f64)],
                 Sextant::GreenCyan,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
             ),
         ] {
             let rgb = RGB::<f64>::from(*array);
@@ -960,32 +861,32 @@ mod hue_ng_tests {
         for (sextant, second, angle) in &[
             (
                 Sextant::RedYellow,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 Degrees::<f64>::DEG_30,
             ),
             (
                 Sextant::BlueCyan,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 Degrees::<f64>::NEG_DEG_150,
             ),
             (
                 Sextant::BlueMagenta,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 Degrees::<f64>::NEG_DEG_90,
             ),
             (
                 Sextant::RedMagenta,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 Degrees::<f64>::NEG_DEG_30,
             ),
             (
                 Sextant::GreenYellow,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 Degrees::<f64>::DEG_90,
             ),
             (
                 Sextant::GreenCyan,
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 Degrees::<f64>::DEG_150,
             ),
         ] {
@@ -998,19 +899,13 @@ mod hue_ng_tests {
     #[test]
     fn max_chroma_and_sum_ranges() {
         for hue in &Hue::PRIMARIES {
-            assert!(hue
-                .sum_range_for_chroma(UFDFraction::from(0.0_f64))
-                .is_none());
+            assert!(hue.sum_range_for_chroma(Prop::ZERO).is_none());
             assert_eq!(
-                hue.sum_range_for_chroma(UFDFraction::from(1.0_f64)),
-                Some(SumRange((
-                    UFDFraction::from(1.0_f64),
-                    UFDFraction::from(1.0_f64),
-                    UFDFraction::from(1.0_f64)
-                )))
+                hue.sum_range_for_chroma(Prop::ONE),
+                Some(SumRange((Sum::ONE, Sum::ONE, Sum::ONE)))
             );
             for item in NON_ZERO_CHROMAS.iter() {
-                let chroma = UFDFraction::from(*item);
+                let chroma = Prop::from(*item);
                 let range = hue.sum_range_for_chroma(chroma).unwrap();
                 let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
                 assert_approx_eq!(max_chroma.proportion(), chroma);
@@ -1019,19 +914,13 @@ mod hue_ng_tests {
             }
         }
         for hue in &Hue::SECONDARIES {
-            assert!(hue
-                .sum_range_for_chroma(UFDFraction::from(0.0_f64))
-                .is_none());
+            assert!(hue.sum_range_for_chroma(Prop::ZERO).is_none());
             assert_eq!(
-                hue.sum_range_for_chroma(UFDFraction::from(1.0_f64)),
-                Some(SumRange((
-                    UFDFraction::TWO,
-                    UFDFraction::TWO,
-                    UFDFraction::TWO
-                )))
+                hue.sum_range_for_chroma(Prop::ONE),
+                Some(SumRange((Sum::TWO, Sum::TWO, Sum::TWO)))
             );
             for item in NON_ZERO_CHROMAS.iter() {
-                let chroma = UFDFraction::from(*item);
+                let chroma = Prop::from(*item);
                 let range = hue.sum_range_for_chroma(chroma).unwrap();
                 let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
                 assert_approx_eq!(max_chroma.proportion(), chroma);
@@ -1049,17 +938,15 @@ mod hue_ng_tests {
             BlueMagenta,
         ] {
             for item in SECOND_VALUES.iter() {
-                let other = UFDFraction::from(*item);
+                let other = Prop::from(*item);
                 let hue = Hue::Sextant(SextantHue(*sextant, other));
-                assert!(hue
-                    .sum_range_for_chroma(UFDFraction::from(0.0_f64))
-                    .is_none());
+                assert!(hue.sum_range_for_chroma(Prop::ZERO).is_none());
                 assert_eq!(
-                    hue.sum_range_for_chroma(UFDFraction::from(1.0_f64)),
+                    hue.sum_range_for_chroma(Prop::ONE),
                     Some(SumRange((
-                        UFDFraction::from(1.0_f64) + other,
-                        UFDFraction::from(1.0_f64) + other,
-                        UFDFraction::from(1.0_f64) + other
+                        Sum::ONE + other,
+                        Sum::ONE + other,
+                        Sum::ONE + other
                     )))
                 );
             }
@@ -1069,45 +956,35 @@ mod hue_ng_tests {
     #[test]
     fn primary_max_chroma_rgbs() {
         for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<f64>::PRIMARIES.iter()) {
-            assert_eq!(
-                hue.max_chroma_rgb_for_sum(UFDFraction::from(1.0_f64))
-                    .unwrap(),
-                *expected_rgb
-            );
-            assert!(hue
-                .max_chroma_rgb_for_sum::<f64>(UFDFraction::from(0.0_f64))
-                .is_none());
-            assert!(hue
-                .max_chroma_rgb_for_sum::<f64>(UFDFraction::from(3.0_f64))
-                .is_none());
+            assert_eq!(hue.max_chroma_rgb_for_sum(Sum::ONE).unwrap(), *expected_rgb);
+            assert!(hue.max_chroma_rgb_for_sum::<f64>(Sum::ZERO).is_none());
+            assert!(hue.max_chroma_rgb_for_sum::<f64>(Sum::THREE).is_none());
             for sum in [
-                UFDFraction::from(0.0001_f64),
-                UFDFraction::from(0.25_f64),
-                UFDFraction::from(0.5_f64),
-                UFDFraction::from(0.75_f64),
-                UFDFraction::from(0.9999_f64),
+                Sum::from(0.0001_f64),
+                Sum::from(0.25_f64),
+                Sum::from(0.5_f64),
+                Sum::from(0.75_f64),
+                Sum::from(0.9999_f64),
             ]
             .iter()
             {
-                let mut array = [UFDFraction::ZERO, UFDFraction::ZERO, UFDFraction::ZERO];
+                let mut array = [Prop::ZERO, Prop::ZERO, Prop::ZERO];
                 array[hue.indices().0 as usize] = (*sum).into();
                 let expected: RGB<f64> = array.into();
                 assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
             }
             for sum in [
-                UFDFraction::from(2.0001_f64),
-                UFDFraction::from(2.25_f64),
-                UFDFraction::from(2.5_f64),
-                UFDFraction::from(2.75_f64),
-                UFDFraction::from(2.9999_f64),
+                Sum::from(2.0001_f64),
+                Sum::from(2.25_f64),
+                Sum::from(2.5_f64),
+                Sum::from(2.75_f64),
+                Sum::from(2.9999_f64),
             ]
             .iter()
             {
-                let mut array = [UFDFraction::ONE, UFDFraction::ONE, UFDFraction::ONE];
-                array[hue.indices().1 as usize] =
-                    ((*sum - UFDFraction::from(1.0_f64)) / UFDFraction::from(2.0_f64)).into();
-                array[hue.indices().2 as usize] =
-                    ((*sum - UFDFraction::from(1.0_f64)) / UFDFraction::from(2.0_f64)).into();
+                let mut array = [Prop::ONE, Prop::ONE, Prop::ONE];
+                array[hue.indices().1 as usize] = ((*sum - Sum::ONE) / 2).into();
+                array[hue.indices().2 as usize] = ((*sum - Sum::ONE) / 2).into();
                 let expected: RGB<f64> = array.into();
                 assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
             }
@@ -1117,47 +994,43 @@ mod hue_ng_tests {
     #[test]
     fn secondary_max_chroma_rgbs() {
         for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
-            assert_eq!(
-                hue.max_chroma_rgb_for_sum::<f64>(UFDFraction::from(2.0_f64))
+            assert_approx_eq!(
+                hue.max_chroma_rgb_for_sum::<f64>(Sum::from(2.0_f64))
                     .unwrap(),
                 *expected_rgb
             );
-            assert!(hue
-                .max_chroma_rgb_for_sum::<f64>(UFDFraction::from(0.0_f64))
-                .is_none());
-            assert!(hue
-                .max_chroma_rgb_for_sum::<f64>(UFDFraction::from(3.0_f64))
-                .is_none());
+            assert!(hue.max_chroma_rgb_for_sum::<f64>(Sum::ZERO).is_none());
+            assert!(hue.max_chroma_rgb_for_sum::<f64>(Sum::THREE).is_none());
             for sum in [
-                UFDFraction::from(0.0001_f64),
-                UFDFraction::from(0.25_f64),
-                UFDFraction::from(0.5_f64),
-                UFDFraction::from(0.75_f64),
-                UFDFraction::from(1.0_f64),
-                UFDFraction::from(1.5_f64),
-                UFDFraction::from(1.9999_f64),
+                Sum::from(0.0001_f64),
+                Sum::from(0.25_f64),
+                Sum::from(0.5_f64),
+                Sum::from(0.75_f64),
+                Sum::ONE,
+                Sum::from(1.5_f64),
+                Sum::from(1.9999_f64),
             ]
             .iter()
             {
-                let mut array = [UFDFraction::ZERO, UFDFraction::ZERO, UFDFraction::ZERO];
-                array[hue.indices().0 as usize] = (*sum / UFDFraction::from(2.0_f64)).into();
-                array[hue.indices().1 as usize] = (*sum / UFDFraction::from(2.0_f64)).into();
+                let mut array = [Prop::ZERO, Prop::ZERO, Prop::ZERO];
+                array[hue.indices().0 as usize] = (*sum / 2).into();
+                array[hue.indices().1 as usize] = (*sum / 2).into();
                 let expected: RGB<f64> = array.into();
                 assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
             }
             for sum in [
-                UFDFraction::from(2.0001_f64),
-                UFDFraction::from(2.25_f64),
-                UFDFraction::from(2.5_f64),
-                UFDFraction::from(2.75_f64),
-                UFDFraction::from(2.9999_f64),
+                Sum::from(2.0001_f64),
+                Sum::from(2.25_f64),
+                Sum::from(2.5_f64),
+                Sum::from(2.75_f64),
+                Sum::from(2.9999_f64),
             ]
             .iter()
             {
-                let mut array = [UFDFraction::ONE, UFDFraction::ONE, UFDFraction::ONE];
-                array[hue.indices().2 as usize] = (*sum - UFDFraction::from(2.0_f64)).into();
+                let mut array = [Prop::ONE, Prop::ONE, Prop::ONE];
+                array[hue.indices().2 as usize] = (*sum - Sum::from(2.0_f64)).into();
                 let expected: RGB<f64> = array.into();
-                assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
+                assert_approx_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
             }
         }
     }
@@ -1174,30 +1047,28 @@ mod hue_ng_tests {
             BlueMagenta,
         ] {
             for item in SECOND_VALUES.iter() {
-                let second = UFDFraction::from(*item);
+                let second = Prop::from(*item);
                 let sextant_hue = SextantHue(*sextant, second);
                 let hue = Hue::Sextant(sextant_hue);
-                assert!(hue
-                    .max_chroma_rgb_for_sum::<f64>(UFDFraction::from(0.0_f64))
-                    .is_none());
-                assert!(hue
-                    .max_chroma_rgb_for_sum::<f64>(UFDFraction::from(3.0_f64))
-                    .is_none());
-                println!(
-                    "hue: {:?} MAX_CHROMA_RGB: {:?}",
-                    hue,
-                    hue.max_chroma_rgb::<f64>()
-                );
+                assert!(hue.max_chroma_rgb_for_sum::<f64>(Sum::ZERO).is_none());
+                assert!(hue.max_chroma_rgb_for_sum::<f64>(Sum::THREE).is_none());
                 for item in VALID_OTHER_SUMS.iter() {
-                    let sum = UFDFraction::from(*item);
+                    println!(
+                        "hue: {:?} MAX_CHROMA_RGB: {:?} sum: {:?} second: {:?}",
+                        hue,
+                        hue.max_chroma_rgb::<f64>(),
+                        item,
+                        f64::from(second)
+                    );
+                    let sum = Sum::from(*item);
                     let rgb = hue.max_chroma_rgb_for_sum::<f64>(sum).unwrap();
                     //assert_approx_eq!(rgb.sum(), *sum);
-                    if sum < UFDFraction::THREE - second {
+                    if sum < Sum::THREE - second {
                         if let Ok(Hue::Sextant(sextant_hue_out)) = Hue::try_from(&rgb) {
                             assert_eq!(sextant_hue.0, sextant_hue_out.0);
                         //assert_approx_eq!(sextant_hue.1, sextant_hue_out.1, 0.000000000001);
                         } else {
-                            panic!("\"Sextant\"  Hue variant expected");
+                            assert!(rgb.is_grey());
                         }
                     } else {
                         // sum is too big for this hue so drifting towards nearest secondary
@@ -1221,52 +1092,32 @@ mod hue_ng_tests {
     fn min_max_sum_rgb_for_chroma() {
         for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<f64>::PRIMARIES.iter()) {
             println!("{:?} : {:?}", hue, expected_rgb);
-            assert_eq!(
-                hue.min_sum_rgb_for_chroma::<f64>(UFDFraction::from(1.0_f64)),
-                *expected_rgb
-            );
-            assert_eq!(
-                hue.max_sum_rgb_for_chroma::<f64>(UFDFraction::from(1.0_f64)),
-                *expected_rgb
-            );
-            let shade = hue.min_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
-            let tint = hue.max_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
+            assert_eq!(hue.min_sum_rgb_for_chroma::<f64>(Prop::ONE), *expected_rgb);
+            assert_eq!(hue.max_sum_rgb_for_chroma::<f64>(Prop::ONE), *expected_rgb);
+            let shade = hue.min_sum_rgb_for_chroma(Prop::from(0.5_f64));
+            let tint = hue.max_sum_rgb_for_chroma(Prop::from(0.5_f64));
             assert!(shade.value() < tint.value());
             assert_approx_eq!(
                 shade.chroma_proportion(),
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 0.00000000001
             );
-            assert_approx_eq!(
-                tint.chroma_proportion(),
-                UFDFraction::from(0.5_f64),
-                0.00000000001
-            );
+            assert_approx_eq!(tint.chroma_proportion(), Prop::from(0.5_f64), 0.00000000001);
             assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
         }
         for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
             println!("{:?} : {:?}", hue, expected_rgb);
-            assert_eq!(
-                hue.min_sum_rgb_for_chroma(UFDFraction::from(1.0_f64)),
-                *expected_rgb
-            );
-            assert_eq!(
-                hue.max_sum_rgb_for_chroma(UFDFraction::from(1.0_f64)),
-                *expected_rgb
-            );
-            let shade = hue.min_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
-            let tint = hue.max_sum_rgb_for_chroma(UFDFraction::from(0.5_f64));
+            assert_eq!(hue.min_sum_rgb_for_chroma(Prop::ONE), *expected_rgb);
+            assert_eq!(hue.max_sum_rgb_for_chroma(Prop::ONE), *expected_rgb);
+            let shade = hue.min_sum_rgb_for_chroma(Prop::from(0.5_f64));
+            let tint = hue.max_sum_rgb_for_chroma(Prop::from(0.5_f64));
             assert!(shade.value() < tint.value());
             assert_approx_eq!(
                 shade.chroma_proportion(),
-                UFDFraction::from(0.5_f64),
+                Prop::from(0.5_f64),
                 0.00000000001
             );
-            assert_approx_eq!(
-                tint.chroma_proportion(),
-                UFDFraction::from(0.5_f64),
-                0.00000000001
-            );
+            assert_approx_eq!(tint.chroma_proportion(), Prop::from(0.5_f64), 0.00000000001);
             assert_approx_eq!(shade.max_chroma_rgb(), tint.max_chroma_rgb(), 0.0000001);
         }
         use Sextant::*;
@@ -1279,17 +1130,11 @@ mod hue_ng_tests {
             BlueMagenta,
         ] {
             for item in SECOND_VALUES.iter() {
-                let second = UFDFraction::from(*item);
+                let second = Prop::from(*item);
                 let hue = Hue::Sextant(SextantHue(*sextant, second));
-                assert_eq!(
-                    hue.min_sum_rgb_for_chroma::<f64>(UFDFraction::from(0.0_f64)),
-                    RGB::BLACK
-                );
-                assert_eq!(
-                    hue.max_sum_rgb_for_chroma::<f64>(UFDFraction::from(0.0_f64)),
-                    RGB::WHITE
-                );
-                for chroma in NON_ZERO_CHROMAS.iter().map(|a| UFDFraction::from(*a)) {
+                assert_eq!(hue.min_sum_rgb_for_chroma::<f64>(Prop::ZERO), RGB::BLACK);
+                assert_eq!(hue.max_sum_rgb_for_chroma::<f64>(Prop::ZERO), RGB::WHITE);
+                for chroma in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
                     let shade = hue.min_sum_rgb_for_chroma(chroma);
                     let tint = hue.max_sum_rgb_for_chroma(chroma);
                     assert!(shade.sum() <= tint.sum());
@@ -1305,21 +1150,21 @@ mod hue_ng_tests {
     fn primary_rgb_for_sum_and_chroma() {
         for hue in &Hue::PRIMARIES {
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(1.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::ZERO, Prop::ONE)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(1.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::THREE, Prop::ONE)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(0.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::ZERO, Prop::ZERO)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(0.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::THREE, Prop::ZERO)
                 .is_none());
             for item in &NON_ZERO_CHROMAS {
-                let chroma = UFDFraction::from(*item);
+                let chroma = Prop::from(*item);
                 for item in &VALID_OTHER_SUMS {
-                    let sum = UFDFraction::from(*item);
+                    let sum = Sum::from(*item);
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<f64>(sum, chroma) {
                         //assert_approx_eq!(rgb.sum(), *sum, 0.000_000_000_1);
                         //assert_approx_eq!(rgb.chroma(), *chroma, 0.000_000_000_1);
@@ -1338,21 +1183,21 @@ mod hue_ng_tests {
     fn secondary_rgb_for_sum_and_chroma() {
         for hue in &Hue::SECONDARIES {
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(1.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::ZERO, Prop::ONE)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(1.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::THREE, Prop::ONE)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(0.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::ZERO, Prop::ZERO)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(0.0_f64))
+                .rgb_for_sum_and_chroma::<f64>(Sum::THREE, Prop::ZERO)
                 .is_none());
             for item in &NON_ZERO_CHROMAS {
-                let chroma = UFDFraction::from(*item);
+                let chroma = Prop::from(*item);
                 for item in &VALID_OTHER_SUMS {
-                    let sum = UFDFraction::from(*item);
+                    let sum = Sum::from(*item);
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<f64>(sum, chroma) {
                         assert_approx_eq!(rgb.sum(), sum, 0.000_000_1);
                         assert_approx_eq!(rgb.chroma_proportion(), chroma, 0.000_000_1);
@@ -1377,24 +1222,24 @@ mod hue_ng_tests {
             BlueCyan,
             BlueMagenta,
         ] {
-            for second in SECOND_VALUES.iter().map(|a| UFDFraction::from(*a)) {
+            for second in SECOND_VALUES.iter().map(|a| Prop::from(*a)) {
                 let sextant_hue = SextantHue(*sextant, second);
                 let hue = Hue::Sextant(sextant_hue);
                 assert!(hue
-                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(1.0_f64))
+                    .rgb_for_sum_and_chroma::<f64>(Sum::ZERO, Prop::ONE)
                     .is_none());
                 assert!(hue
-                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(1.0_f64))
+                    .rgb_for_sum_and_chroma::<f64>(Sum::THREE, Prop::ONE)
                     .is_none());
                 assert!(hue
-                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::ZERO, UFDFraction::from(0.0_f64))
+                    .rgb_for_sum_and_chroma::<f64>(Sum::ZERO, Prop::ZERO)
                     .is_none());
                 assert!(hue
-                    .rgb_for_sum_and_chroma::<f64>(UFDFraction::THREE, UFDFraction::from(0.0_f64))
+                    .rgb_for_sum_and_chroma::<f64>(Sum::THREE, Prop::ZERO)
                     .is_none());
-                for chroma in NON_ZERO_CHROMAS.iter().map(|a| UFDFraction::from(*a)) {
+                for chroma in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
                     let sum_range = hue.sum_range_for_chroma(chroma).unwrap();
-                    for sum in VALID_OTHER_SUMS.iter().map(|a| UFDFraction::from(*a)) {
+                    for sum in VALID_OTHER_SUMS.iter().map(|a| Sum::from(*a)) {
                         println!(
                             "{:?}, {:?}, {:?} :: {:?}",
                             hue,

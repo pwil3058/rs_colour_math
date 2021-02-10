@@ -149,47 +149,45 @@ impl_unsigned_to_from!(u16);
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma {
-    Shade(UFDFraction),
-    Tint(UFDFraction),
+    Shade(Prop),
+    Tint(Prop),
+    Either(Prop),
 }
 
 impl Chroma {
-    pub const ZERO: Self = Self::Shade(UFDFraction::ZERO);
-    pub const ONE: Self = Self::Tint(UFDFraction::ONE);
+    pub const ZERO: Self = Self::Either(Prop::ZERO);
+    pub const ONE: Self = Self::Either(Prop::ONE);
 
     pub fn is_zero(&self) -> bool {
-        match self {
-            Chroma::Shade(proportion) => *proportion == UFDFraction::ZERO,
-            Chroma::Tint(proportion) => *proportion == UFDFraction::ZERO,
-        }
+        self.proportion() == Prop::ZERO
     }
 
-    pub fn proportion(&self) -> UFDFraction {
+    pub fn proportion(&self) -> Prop {
+        use Chroma::*;
         match self {
-            Chroma::Shade(proportion) => *proportion,
-            Chroma::Tint(proportion) => *proportion,
+            Shade(proportion) | Tint(proportion) | Either(proportion) => *proportion,
         }
     }
+}
 
+#[cfg(test)]
+impl Chroma {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+        use Chroma::*;
         match self {
-            Chroma::Shade(proportion) => match other {
-                Chroma::Shade(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
+            Shade(proportion) => match other {
+                Chroma::Shade(other_proportion) | Either(other_proportion) => {
+                    proportion.approx_eq(other_proportion, max_diff)
+                }
                 Chroma::Tint(_) => false,
             },
             Chroma::Tint(proportion) => match other {
                 Chroma::Shade(_) => false,
-                Chroma::Tint(other_proportion) => proportion.approx_eq(other_proportion, max_diff),
+                Chroma::Tint(other_proportion) | Either(other_proportion) => {
+                    proportion.approx_eq(other_proportion, max_diff)
+                }
             },
-        }
-    }
-}
-
-impl ProportionValidation for Chroma {
-    fn is_vp(self) -> bool {
-        match self {
-            Chroma::Shade(proportion) => proportion.is_vp(),
-            Chroma::Tint(proportion) => proportion.is_vp(),
+            Either(proportion) => proportion.approx_eq(&other.proportion(), max_diff),
         }
     }
 }
@@ -200,8 +198,10 @@ pub struct Prop(pub(crate) u64);
 impl Prop {
     pub const ZERO: Self = Self(0);
     pub const ONE: Self = Self(u64::MAX);
+}
 
-    #[cfg(test)]
+#[cfg(test)]
+impl Prop {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         let me = f64::from(*self);
         let other = f64::from(*other);
@@ -227,10 +227,15 @@ impl From<Prop> for f32 {
 
 impl From<f64> for Prop {
     fn from(arg: f64) -> Self {
-        debug_assert!(arg <= 1.0);
+        debug_assert!(0.0 <= arg && arg <= 1.0);
         let one = f64::from_u64(u64::MAX).unwrap();
-        let val = u64::from_f64(arg * one).unwrap();
-        Self(val)
+        let prod = arg * one;
+        // NB: watch out for floating point not being proper reals
+        if prod >= one {
+            Self(u64::MAX)
+        } else {
+            Self(u64::from_f64(arg * one).unwrap())
+        }
     }
 }
 
@@ -238,6 +243,13 @@ impl From<Prop> for f64 {
     fn from(arg: Prop) -> Self {
         let one = f64::from_u64(u64::MAX).unwrap();
         f64::from_u64(arg.0).unwrap() / one
+    }
+}
+
+impl From<Sum> for Prop {
+    fn from(arg: Sum) -> Self {
+        debug_assert!(arg.0 <= u64::MAX as u128);
+        Self(arg.0 as u64)
     }
 }
 
@@ -271,6 +283,14 @@ impl Mul for Prop {
     }
 }
 
+impl Mul<u8> for Prop {
+    type Output = Sum;
+
+    fn mul(self, rhs: u8) -> Sum {
+        Sum(self.0 as u128 * rhs as u128)
+    }
+}
+
 impl Div for Prop {
     type Output = Self;
 
@@ -289,6 +309,15 @@ impl Add for Prop {
     }
 }
 
+impl Sub for Prop {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        debug_assert!(self.0 >= rhs.0);
+        Self(self.0 - rhs.0)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Sum(pub(crate) u128);
 
@@ -301,8 +330,10 @@ impl Sum {
     pub fn is_valid(self) -> bool {
         self <= Self::THREE
     }
+}
 
-    #[cfg(test)]
+#[cfg(test)]
+impl Sum {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         let me = f64::from(*self);
         let other = f64::from(*other);
@@ -310,22 +341,7 @@ impl Sum {
     }
 }
 
-// impl From<f32> for Sum {
-//     fn from(arg: f32) -> Self {
-//         debug_assert!(arg <= 3.0);
-//         let one = f32::from_u128(u64::MAX as u128).unwrap();
-//         let val = u128::from_f32(arg * one).unwrap();
-//         Self(val)
-//     }
-// }
-//
-// impl From<Sum> for f32 {
-//     fn from(arg: Sum) -> Self {
-//         let one = f32::from_u128(u64::MAX as u128).unwrap();
-//         f32::from_u128(arg.0).unwrap() / one
-//     }
-// }
-
+#[cfg(test)]
 impl From<f64> for Sum {
     fn from(arg: f64) -> Self {
         debug_assert!(arg <= 3.0);
@@ -335,9 +351,96 @@ impl From<f64> for Sum {
     }
 }
 
+#[cfg(test)]
 impl From<Sum> for f64 {
     fn from(arg: Sum) -> Self {
         let one = f64::from_u128(u64::MAX as u128).unwrap();
         f64::from_u128(arg.0).unwrap() / one
+    }
+}
+
+impl From<Prop> for Sum {
+    fn from(arg: Prop) -> Self {
+        Self(arg.0 as u128)
+    }
+}
+
+impl Add for Sum {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Sum {
+        Sum(self.0 + rhs.0)
+    }
+}
+
+impl Sub for Sum {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        debug_assert!(self.0 >= rhs.0);
+        Self(self.0 - rhs.0)
+    }
+}
+
+impl Div for Sum {
+    type Output = Prop;
+
+    fn div(self, rhs: Self) -> Prop {
+        let result = if self.0 >= u64::MAX as u128 {
+            // Over flow territory
+            let ddiv = ((self.0 / u64::MAX as u128) * u64::MAX as u128) / rhs.0;
+            let rdiv = ((self.0 % u64::MAX as u128) * u64::MAX as u128) / rhs.0;
+            ddiv + rdiv
+        } else {
+            (self.0 * u64::MAX as u128) / rhs.0
+        };
+        debug_assert!(result <= u64::MAX as u128);
+        Prop(result as u64)
+    }
+}
+
+impl Div<u8> for Sum {
+    type Output = Prop;
+
+    fn div(self, rhs: u8) -> Prop {
+        let result = self.0 as u128 / rhs as u128;
+        debug_assert!(result <= u64::MAX as u128);
+        Prop(result as u64)
+    }
+}
+
+impl Add<Prop> for Sum {
+    type Output = Self;
+
+    fn add(self, rhs: Prop) -> Sum {
+        Sum(self.0 + rhs.0 as u128)
+    }
+}
+
+impl Sub<Prop> for Sum {
+    type Output = Self;
+
+    fn sub(self, rhs: Prop) -> Self {
+        debug_assert!(self.0 >= rhs.0 as u128);
+        Self(self.0 - rhs.0 as u128)
+    }
+}
+
+impl Mul<Prop> for Sum {
+    type Output = Self;
+
+    fn mul(self, rhs: Prop) -> Self {
+        if rhs.0 == u64::MAX {
+            self
+        } else if self.0 >= u64::MAX as u128 {
+            // NB: this means there's a danger of overflow so we'll break the operation into parts
+            let quotient = self.0 / u64::MAX as u128;
+            let remainder = self.0 % u64::MAX as u128;
+            let qprod = quotient * rhs.0 as u128;
+            let rprod = (remainder * rhs.0 as u128) / u64::MAX as u128;
+            Self(qprod + rprod)
+        } else {
+            Self(((self.0 * rhs.0 as u128) / u64::MAX as u128) as u128)
+        }
     }
 }
