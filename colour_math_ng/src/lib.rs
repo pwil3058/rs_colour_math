@@ -2,6 +2,8 @@
 #[macro_use]
 extern crate serde_derive;
 
+use std::fmt::Debug;
+
 use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 use num_traits_plus::float_plus::*;
 
@@ -26,7 +28,7 @@ pub trait Float:
 impl Float for f32 {}
 impl Float for f64 {}
 
-pub trait LightLevel: Clone + Copy + From<Prop> + Into<Prop> + PartialEq {
+pub trait LightLevel: Clone + Copy + From<Prop> + Into<Prop> + PartialEq + Debug {
     const ZERO: Self;
     const ONE: Self;
 }
