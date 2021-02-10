@@ -388,9 +388,11 @@ impl Div for Sum {
     fn div(self, rhs: Self) -> Prop {
         let result = if self.0 >= u64::MAX as u128 {
             // Over flow territory
-            let ddiv = ((self.0 / u64::MAX as u128) * u64::MAX as u128) / rhs.0;
-            let rdiv = ((self.0 % u64::MAX as u128) * u64::MAX as u128) / rhs.0;
-            ddiv + rdiv
+            let a = self.0 - u64::MAX as u128;
+            let b = self.0 - a;
+            let adiv = (a * u64::MAX as u128) / rhs.0;
+            let bdiv = (b * u64::MAX as u128) / rhs.0;
+            adiv + bdiv
         } else {
             (self.0 * u64::MAX as u128) / rhs.0
         };
@@ -434,11 +436,16 @@ impl Mul<Prop> for Sum {
             self
         } else if self.0 >= u64::MAX as u128 {
             // NB: this means there's a danger of overflow so we'll break the operation into parts
-            let quotient = self.0 / u64::MAX as u128;
-            let remainder = self.0 % u64::MAX as u128;
-            let qprod = quotient * rhs.0 as u128;
-            let rprod = (remainder * rhs.0 as u128) / u64::MAX as u128;
-            Self(qprod + rprod)
+            let a = self.0 - u64::MAX as u128;
+            let b = self.0 - a;
+            let adiv = (a * rhs.0 as u128) / u64::MAX as u128;
+            let bdiv = (b * rhs.0 as u128) / u64::MAX as u128;
+            // adiv + bdiv
+            // let quotient = self.0 / u64::MAX as u128;
+            // let remainder = self.0 % u64::MAX as u128;
+            // let qprod = quotient * rhs.0 as u128;
+            // let rprod = (remainder * rhs.0 as u128) / u64::MAX as u128;
+            Self(adiv + bdiv)
         } else {
             Self(((self.0 * rhs.0 as u128) / u64::MAX as u128) as u128)
         }
