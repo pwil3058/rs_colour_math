@@ -435,25 +435,8 @@ impl HueIfceTmp for SextantHue {
 
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
-        // TODO: make hue drift an error
-        if sum == Sum::ZERO || sum == Sum::THREE {
-            None
-        } else {
-            let max_chroma_sum = Sum::ONE + self.1;
-            if sum == max_chroma_sum {
-                Some(self.max_chroma_rgb())
-            } else {
-                let components = if sum < max_chroma_sum {
-                    let first = sum / max_chroma_sum;
-                    (first, first * self.1, Prop::ZERO)
-                } else {
-                    let temp = sum - Prop::ONE;
-                    let second = (temp + self.1) / 2;
-                    (Prop::ONE, second, (temp - second).into())
-                };
-                Some(self.make_rgb(components))
-            }
-        }
+        let chroma = self.max_chroma_for_sum(sum)?;
+        Some(self.rgb_for_sum_and_chroma(sum, chroma.prop())?)
     }
 
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {

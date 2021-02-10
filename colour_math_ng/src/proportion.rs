@@ -159,10 +159,10 @@ impl Chroma {
     pub const ONE: Self = Self::Either(Prop::ONE);
 
     pub fn is_zero(&self) -> bool {
-        self.proportion() == Prop::ZERO
+        self.prop() == Prop::ZERO
     }
 
-    pub fn proportion(&self) -> Prop {
+    pub fn prop(&self) -> Prop {
         use Chroma::*;
         match self {
             Shade(proportion) | Tint(proportion) | Either(proportion) => *proportion,
@@ -187,7 +187,7 @@ impl Chroma {
                     proportion.approx_eq(other_proportion, max_diff)
                 }
             },
-            Either(proportion) => proportion.approx_eq(&other.proportion(), max_diff),
+            Either(proportion) => proportion.approx_eq(&other.prop(), max_diff),
         }
     }
 }

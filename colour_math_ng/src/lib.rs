@@ -7,11 +7,14 @@ use std::fmt::Debug;
 use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 use num_traits_plus::float_plus::*;
 
-//pub mod hue;
+pub mod hue;
 pub mod proportion;
-//pub mod rgb;
+pub mod rgb;
 
-pub use crate::proportion::{Chroma, Prop, Sum, UFDFraction};
+pub use crate::{
+    proportion::{Chroma, Prop, Sum, UFDFraction},
+    rgb::RGB,
+};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CCI {
@@ -86,7 +89,7 @@ pub trait HueAngle<T: Float> {
     fn hue_angle(&self) -> Degrees<T>;
 }
 
-// pub trait ChromaOneRGB<T: LightLevel> {
-//     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
-//     fn chroma_one_rgb(&self) -> RGB<T>;
-// }
+pub trait ChromaOneRGB<T: LightLevel> {
+    /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
+    fn chroma_one_rgb(&self) -> RGB<T>;
+}

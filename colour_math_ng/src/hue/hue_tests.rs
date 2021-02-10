@@ -251,9 +251,9 @@ fn max_chroma_and_sum_ranges() {
             let chroma = Prop::from(*item);
             let range = hue.sum_range_for_chroma(chroma).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
-            assert_approx_eq!(max_chroma.proportion(), chroma);
+            assert_approx_eq!(max_chroma.prop(), chroma);
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
-            assert_approx_eq!(max_chroma.proportion(), chroma, 0.000_000_000_000_001);
+            assert_approx_eq!(max_chroma.prop(), chroma, 0.000_000_000_000_001);
         }
     }
     for hue in &Hue::SECONDARIES {
@@ -266,9 +266,9 @@ fn max_chroma_and_sum_ranges() {
             let chroma = Prop::from(*item);
             let range = hue.sum_range_for_chroma(chroma).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
-            assert_approx_eq!(max_chroma.proportion(), chroma);
+            assert_approx_eq!(max_chroma.prop(), chroma);
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
-            assert_approx_eq!(max_chroma.proportion(), chroma, 0.000000000000001);
+            assert_approx_eq!(max_chroma.prop(), chroma, 0.000000000000001);
         }
     }
     use Sextant::*;
@@ -398,18 +398,11 @@ fn other_max_chroma_rgbs() {
             for item in VALID_OTHER_SUMS.iter() {
                 let sum = Sum::from(*item);
                 let rgb = hue.max_chroma_rgb_for_sum::<f64>(sum).unwrap();
-                println!(
-                    "sextant: {:?} second: {:?} MAX_CHROMA_RGB: {:?} sum: {:?} rgb: {:?}",
-                    sextant,
-                    f64::from(second),
-                    hue.max_chroma_rgb::<f64>(),
-                    item,
-                    rgb
-                );
+                assert_approx_eq!(sum, rgb.sum());
                 match Hue::try_from(&rgb).unwrap() {
                     Hue::Sextant(SextantHue(sextant_out, second_out)) => {
                         assert_eq!(sextant_hue.0, sextant_out);
-                        //assert_approx_eq!(sextant_hue.1, second_out, 0.000_000_1);
+                        assert_approx_eq!(sextant_hue.1, second_out, 0.000_000_1);
                     }
                     _ => panic!("it's gone pure"),
                 }
