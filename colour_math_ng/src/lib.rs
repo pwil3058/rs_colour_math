@@ -12,7 +12,8 @@ pub mod proportion;
 pub mod rgb;
 
 pub use crate::{
-    proportion::{Chroma, Prop, Sum, UFDFraction},
+    hue::Hue,
+    proportion::{Chroma, Prop, Sum},
     rgb::RGB,
 };
 
