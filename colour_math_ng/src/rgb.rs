@@ -6,8 +6,8 @@ use std::{
     ops::Mul,
 };
 
-use crate::hue::HueIfceTmp;
-use crate::{hue::Hue, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI};
+use crate::hue::HueIfce;
+use crate::{hue::Hue, Chroma, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<T: LightLevel>(pub(crate) [T; 3]);
@@ -62,31 +62,31 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
         }
     }
 
-    pub fn chroma_proportion(&self) -> Prop {
+    pub fn chroma(&self) -> Chroma {
         let [red, green, blue] = <[Prop; 3]>::from(*self);
         match red.cmp(&green) {
             Ordering::Greater => match green.cmp(&blue) {
-                Ordering::Greater => red - blue,
+                Ordering::Greater => Chroma::Either(red - blue),
                 Ordering::Less => match red.cmp(&blue) {
-                    Ordering::Greater => red - green,
-                    Ordering::Less => blue - green,
-                    Ordering::Equal => blue - green,
+                    Ordering::Greater => Chroma::Either(red - green),
+                    Ordering::Less => Chroma::Either(blue - green),
+                    Ordering::Equal => Chroma::Either(blue - green),
                 },
-                Ordering::Equal => red - blue,
+                Ordering::Equal => Chroma::Either(red - blue),
             },
             Ordering::Less => match red.cmp(&blue) {
-                Ordering::Greater => green - blue,
+                Ordering::Greater => Chroma::Either(green - blue),
                 Ordering::Less => match green.cmp(&blue) {
-                    Ordering::Greater => green - red,
-                    Ordering::Less => blue - red,
-                    Ordering::Equal => blue - red,
+                    Ordering::Greater => Chroma::Either(green - red),
+                    Ordering::Less => Chroma::Either(blue - red),
+                    Ordering::Equal => Chroma::Either(blue - red),
                 },
-                Ordering::Equal => green - blue,
+                Ordering::Equal => Chroma::Either(green - blue),
             },
             Ordering::Equal => match red.cmp(&blue) {
-                Ordering::Greater => red - blue,
-                Ordering::Less => blue - red,
-                Ordering::Equal => Prop::ZERO,
+                Ordering::Greater => Chroma::Either(red - blue),
+                Ordering::Less => Chroma::Either(blue - red),
+                Ordering::Equal => Chroma::ZERO,
             },
         }
     }
@@ -116,12 +116,10 @@ where
             if let Ok(other_hue) = Hue::try_from(other) {
                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
                 match hue.cmp(&other_hue) {
-                    Ordering::Equal => {
-                        match self.chroma_proportion().cmp(&other.chroma_proportion()) {
-                            Ordering::Equal => Some(self.sum().cmp(&self.sum())),
-                            order => Some(order),
-                        }
-                    }
+                    Ordering::Equal => match self.chroma().cmp(&other.chroma()) {
+                        Ordering::Equal => Some(self.sum().cmp(&self.sum())),
+                        order => Some(order),
+                    },
                     order => Some(order),
                 }
             } else {

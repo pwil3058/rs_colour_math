@@ -83,7 +83,7 @@ impl SumRange {
     }
 }
 
-pub trait HueIfceTmp {
+pub trait HueIfce {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange>;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
 
@@ -133,7 +133,7 @@ impl<T: LightLevel> ChromaOneRGB<T> for RGBHue {
     }
 }
 
-impl HueIfceTmp for RGBHue {
+impl HueIfce for RGBHue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
         if chroma.prop() == Prop::ZERO {
             None
@@ -236,7 +236,7 @@ impl<T: Float> HueAngle<T> for CMYHue {
     }
 }
 
-impl HueIfceTmp for CMYHue {
+impl HueIfce for CMYHue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
         if chroma.prop() == Prop::ZERO {
             None
@@ -384,7 +384,7 @@ impl<T: Float + From<Prop> + Copy> HueAngle<T> for SextantHue {
     }
 }
 
-impl HueIfceTmp for SextantHue {
+impl HueIfce for SextantHue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
         if chroma.prop() == Prop::ZERO {
             None
@@ -526,7 +526,7 @@ impl<T: Float + From<Prop>> HueAngle<T> for Hue {
     }
 }
 
-impl HueIfceTmp for Hue {
+impl HueIfce for Hue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),

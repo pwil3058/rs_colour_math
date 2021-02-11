@@ -2,7 +2,7 @@
 use std::convert::TryFrom;
 
 use crate::{
-    hue::{CMYHue, HueIfceTmp, RGBHue},
+    hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
     Chroma, Hue, HueConstants, LightLevel, Prop, RGBConstants, Sum,
 };
@@ -69,7 +69,7 @@ impl RGBConstants for HCV {
 impl<L: LightLevel> From<&RGB<L>> for HCV {
     fn from(rgb: &RGB<L>) -> Self {
         if let Ok(hue) = Hue::try_from(rgb) {
-            let prop = rgb.chroma_proportion();
+            let prop = rgb.chroma().prop();
             let sum = rgb.sum();
             let sum_range = hue
                 .sum_range_for_chroma(Chroma::Either(prop))
@@ -101,11 +101,29 @@ impl<L: LightLevel> From<&HCV> for RGB<L> {
 }
 
 pub trait ColourIfce {
-    fn rgb<L: LightLevel>(&self) -> RGB<L>;
+    fn hue(&self) -> Option<Hue>;
+    fn chroma(&self) -> Chroma;
     fn value(&self) -> Prop;
+
+    fn rgb<L: LightLevel>(&self) -> RGB<L>;
 }
 
 impl ColourIfce for HCV {
+    fn hue(&self) -> Option<Hue> {
+        if let Some(hue) = self.hue {
+            Some(hue)
+        } else {
+            None
+        }
+    }
+    fn chroma(&self) -> Chroma {
+        self.chroma
+    }
+
+    fn value(&self) -> Prop {
+        self.sum / 3
+    }
+
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
         if let Some(hue) = self.hue {
             if let Some(rgb) = hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma) {
@@ -122,10 +140,6 @@ impl ColourIfce for HCV {
         } else {
             RGB::new_grey(self.value())
         }
-    }
-
-    fn value(&self) -> Prop {
-        self.sum / 3
     }
 }
 
