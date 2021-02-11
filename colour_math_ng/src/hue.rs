@@ -355,14 +355,16 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     fn from(arg: (Sextant, &RGB<T>)) -> Self {
         use Sextant::*;
         let [red, green, blue] = <[Prop; 3]>::from(*arg.1);
-        match arg.0 {
-            RedMagenta => Self(arg.0, (blue - green) / (red - green)),
-            RedYellow => Self(arg.0, (green - blue) / (red - blue)),
-            GreenYellow => Self(arg.0, (red - blue) / (green - blue)),
-            GreenCyan => Self(arg.0, (blue - red) / (green - red)),
-            BlueCyan => Self(arg.0, (green - red) / (blue - red)),
-            BlueMagenta => Self(arg.0, (red - green) / (blue - green)),
-        }
+        let other = match arg.0 {
+            RedMagenta => (blue - green) / (red - green),
+            RedYellow => (green - blue) / (red - blue),
+            GreenYellow => (red - blue) / (green - blue),
+            GreenCyan => (blue - red) / (green - red),
+            BlueCyan => (green - red) / (blue - red),
+            BlueMagenta => (red - green) / (blue - green),
+        };
+        debug_assert!(other > Prop::ZERO && other < Prop::ONE);
+        Self(arg.0, other)
     }
 }
 
