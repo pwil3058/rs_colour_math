@@ -7,6 +7,7 @@ use std::fmt::Debug;
 use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 use num_traits_plus::float_plus::*;
 
+pub mod hcv;
 pub mod hue;
 pub mod proportion;
 pub mod rgb;

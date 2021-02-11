@@ -4,6 +4,7 @@
 mod proportion_tests;
 
 use std::{
+    cmp::Ordering,
     fmt::{self, Debug, Formatter},
     ops::{Add, Div, Mul, Sub},
 };
@@ -12,7 +13,7 @@ use num_traits::FromPrimitive;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, Eq)]
 pub enum Chroma {
     Shade(Prop),
     Tint(Prop),
@@ -35,20 +36,74 @@ impl Chroma {
     }
 }
 
+impl Default for Chroma {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl PartialEq for Chroma {
+    fn eq(&self, rhs: &Self) -> bool {
+        use Chroma::*;
+        match self {
+            Shade(proportion) => match rhs {
+                Shade(other_proportion) | Either(other_proportion) => {
+                    proportion.eq(&other_proportion)
+                }
+                Tint(_) => false,
+            },
+            Tint(proportion) => match rhs {
+                Shade(_) => false,
+                Tint(other_proportion) | Either(other_proportion) => {
+                    proportion.eq(&other_proportion)
+                }
+            },
+            Either(proportion) => proportion.eq(&rhs.prop()),
+        }
+    }
+}
+
+impl PartialOrd for Chroma {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        use Chroma::*;
+        match self {
+            Shade(proportion) => match rhs {
+                Shade(other_proportion) | Either(other_proportion) => {
+                    proportion.partial_cmp(&other_proportion)
+                }
+                Tint(_) => Some(Ordering::Less),
+            },
+            Tint(proportion) => match rhs {
+                Shade(_) => Some(Ordering::Greater),
+                Tint(other_proportion) | Either(other_proportion) => {
+                    proportion.partial_cmp(&other_proportion)
+                }
+            },
+            Either(proportion) => proportion.partial_cmp(&rhs.prop()),
+        }
+    }
+}
+
+impl Ord for Chroma {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.partial_cmp(rhs).unwrap()
+    }
+}
+
 #[cfg(test)]
 impl Chroma {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
         use Chroma::*;
         match self {
             Shade(proportion) => match other {
-                Chroma::Shade(other_proportion) | Either(other_proportion) => {
+                Shade(other_proportion) | Either(other_proportion) => {
                     proportion.approx_eq(other_proportion, max_diff)
                 }
-                Chroma::Tint(_) => false,
+                Tint(_) => false,
             },
-            Chroma::Tint(proportion) => match other {
-                Chroma::Shade(_) => false,
-                Chroma::Tint(other_proportion) | Either(other_proportion) => {
+            Tint(proportion) => match other {
+                Shade(_) => false,
+                Tint(other_proportion) | Either(other_proportion) => {
                     proportion.approx_eq(other_proportion, max_diff)
                 }
             },
@@ -57,7 +112,7 @@ impl Chroma {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Prop(pub(crate) u64);
 
 impl Prop {
@@ -189,7 +244,7 @@ impl Sub for Prop {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Sum(pub(crate) u128);
 
 impl Sum {
