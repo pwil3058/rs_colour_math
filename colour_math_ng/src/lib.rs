@@ -57,6 +57,16 @@ impl LightLevel for u16 {
     const ONE: Self = u16::MAX;
 }
 
+impl LightLevel for u32 {
+    const ZERO: Self = 0;
+    const ONE: Self = u32::MAX;
+}
+
+impl LightLevel for u64 {
+    const ZERO: Self = 0;
+    const ONE: Self = u64::MAX;
+}
+
 pub trait HueConstants: Sized + Copy {
     const RED: Self;
     const GREEN: Self;

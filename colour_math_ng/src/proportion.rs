@@ -200,6 +200,7 @@ macro_rules! impl_unsigned_to_from_prop {
 impl_unsigned_to_from_prop!(u8);
 impl_unsigned_to_from_prop!(u16);
 impl_unsigned_to_from_prop!(u32);
+impl_unsigned_to_from_prop!(u64);
 
 impl Mul for Prop {
     type Output = Self;
