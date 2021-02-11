@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use crate::{
     hue::{CMYHue, HueIfceTmp, RGBHue},
     rgb::RGB,
-    Chroma, Hue, HueConstants, LightLevel, RGBConstants, Sum,
+    Chroma, Hue, HueConstants, LightLevel, Prop, RGBConstants, Sum,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
@@ -91,6 +91,41 @@ impl<L: LightLevel> From<&RGB<L>> for HCV {
                 sum: rgb.sum(),
             }
         }
+    }
+}
+
+impl<L: LightLevel> From<&HCV> for RGB<L> {
+    fn from(hcv: &HCV) -> Self {
+        hcv.rgb::<L>()
+    }
+}
+
+pub trait ColourIfce {
+    fn rgb<L: LightLevel>(&self) -> RGB<L>;
+    fn value(&self) -> Prop;
+}
+
+impl ColourIfce for HCV {
+    fn rgb<L: LightLevel>(&self) -> RGB<L> {
+        if let Some(hue) = self.hue {
+            if let Some(rgb) = hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma) {
+                rgb
+            } else {
+                // This can possibly be due floating point arithmetic's inability to properly
+                // represent reals resulting in the HCV having a sum value slightly higher/lower
+                // than that which is possible for the hue and chroma.
+                match self.chroma {
+                    Chroma::Shade(_) => hue.min_sum_rgb_for_chroma(self.chroma),
+                    _ => hue.max_sum_rgb_for_chroma(self.chroma),
+                }
+            }
+        } else {
+            RGB::new_grey(self.value())
+        }
+    }
+
+    fn value(&self) -> Prop {
+        self.sum / 3
     }
 }
 
