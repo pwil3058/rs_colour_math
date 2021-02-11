@@ -116,12 +116,12 @@ where
             if let Ok(other_hue) = Hue::try_from(other) {
                 // This orders via hue from CYAN to CYAN via GREEN, RED, BLUE in that order
                 match hue.cmp(&other_hue) {
-                    Ordering::Equal => match self.sum().cmp(&other.sum()) {
-                        Ordering::Equal => {
-                            Some(self.chroma_proportion().cmp(&self.chroma_proportion()))
+                    Ordering::Equal => {
+                        match self.chroma_proportion().cmp(&other.chroma_proportion()) {
+                            Ordering::Equal => Some(self.sum().cmp(&self.sum())),
+                            order => Some(order),
                         }
-                        order => Some(order),
-                    },
+                    }
                     order => Some(order),
                 }
             } else {
