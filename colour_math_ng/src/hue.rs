@@ -84,15 +84,14 @@ impl SumRange {
 }
 
 pub trait HueIfceTmp {
-    fn sum_range_for_chroma(&self, chroma_value: Prop) -> Option<SumRange>;
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange>;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T>;
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>>;
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma_value: Prop) -> RGB<T>;
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma_value: Prop) -> RGB<T>;
-    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma_value: Prop)
-        -> Option<RGB<T>>;
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -135,14 +134,14 @@ impl<T: LightLevel> ChromaOneRGB<T> for RGBHue {
 }
 
 impl HueIfceTmp for RGBHue {
-    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
-        if chroma == Prop::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
+        if chroma.prop() == Prop::ZERO {
             None
         } else {
             Some(SumRange((
-                chroma.into(),
+                chroma.prop().into(),
                 Sum::ONE,
-                (Sum::THREE - chroma * 2),
+                (Sum::THREE - chroma.prop() * 2),
             )))
         }
     }
@@ -181,35 +180,28 @@ impl HueIfceTmp for RGBHue {
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
-        // TODO: Needs major revision taking into account Shade/Tint
-        if chroma == Prop::ZERO {
-            RGB::BLACK
-        } else if chroma == Prop::ONE {
-            self.max_chroma_rgb()
-        } else {
-            self.make_rgb((chroma, Prop::ZERO))
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
+        match chroma.prop() {
+            Prop::ZERO => RGB::<T>::BLACK,
+            Prop::ONE => self.max_chroma_rgb(),
+            prop => self.make_rgb((prop, Prop::ZERO)),
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
-        // TODO: Needs major revision taking into account Shade/Tint
-        if chroma == Prop::ZERO {
-            RGB::WHITE
-        } else if chroma == Prop::ONE {
-            self.max_chroma_rgb()
-        } else {
-            self.make_rgb((Prop::ONE, Prop::ONE - chroma))
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
+        match chroma.prop() {
+            Prop::ZERO => RGB::<T>::WHITE,
+            Prop::ONE => self.max_chroma_rgb(),
+            prop => self.make_rgb((Prop::ONE, Prop::ONE - prop)),
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
-        // TODO: Needs major revision taking into account Shade/Tint
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
-            let other = (sum - chroma) / 3;
-            Some(self.make_rgb(((other + chroma).into(), other)))
+            let other = (sum - chroma.prop()) / 3;
+            Some(self.make_rgb(((other + chroma.prop()).into(), other)))
         } else {
             None
         }
@@ -245,11 +237,15 @@ impl<T: Float> HueAngle<T> for CMYHue {
 }
 
 impl HueIfceTmp for CMYHue {
-    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
-        if chroma == Prop::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
+        if chroma.prop() == Prop::ZERO {
             None
         } else {
-            Some(SumRange((chroma * 2, Sum::TWO, Sum::THREE - chroma)))
+            Some(SumRange((
+                chroma.prop() * 2,
+                Sum::TWO,
+                Sum::THREE - chroma.prop(),
+            )))
         }
     }
 
@@ -287,36 +283,28 @@ impl HueIfceTmp for CMYHue {
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
-        // TODO: Needs major revision taking into account Shade/Tint
-
-        if chroma == Prop::ZERO {
-            RGB::BLACK
-        } else if chroma == Prop::ONE {
-            self.max_chroma_rgb()
-        } else {
-            self.make_rgb((chroma, Prop::ZERO))
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
+        match chroma.prop() {
+            Prop::ZERO => RGB::<T>::BLACK,
+            Prop::ONE => self.max_chroma_rgb(),
+            prop => self.make_rgb((prop, Prop::ZERO)),
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
-        // TODO: Needs major revision taking into account Shade/Tint
-
-        if chroma == Prop::ZERO {
-            RGB::WHITE
-        } else if chroma == Prop::ONE {
-            self.max_chroma_rgb()
-        } else {
-            self.make_rgb((Prop::ONE, Prop::ONE - chroma))
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
+        match chroma.prop() {
+            Prop::ZERO => RGB::<T>::WHITE,
+            Prop::ONE => self.max_chroma_rgb(),
+            prop => self.make_rgb((Prop::ONE, Prop::ONE - prop)),
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation
-            Some(self.make_rgb(((sum + chroma) / 3, (sum - chroma * 2) / 3)))
+            Some(self.make_rgb(((sum + chroma.prop()) / 3, (sum - chroma.prop() * 2) / 3)))
         } else {
             None
         }
@@ -395,16 +383,16 @@ impl<T: Float + From<Prop> + Copy> HueAngle<T> for SextantHue {
 }
 
 impl HueIfceTmp for SextantHue {
-    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
-        if chroma == Prop::ZERO {
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
+        if chroma.prop() == Prop::ZERO {
             None
         } else {
-            let max_c_sum = (Prop::ONE + self.1).min(Sum::TWO);
-            if chroma == Prop::ONE {
+            let max_c_sum = Prop::ONE + self.1;
+            if chroma.prop() == Prop::ONE {
                 Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
             } else {
-                let min = max_c_sum * chroma;
-                let max = Sum::THREE - (Sum::TWO - self.1) * chroma;
+                let min = max_c_sum * chroma.prop();
+                let max = Sum::THREE - (Sum::TWO - self.1) * chroma.prop();
                 Some(SumRange((min, max_c_sum, max)))
             }
         }
@@ -436,39 +424,36 @@ impl HueIfceTmp for SextantHue {
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         let chroma = self.max_chroma_for_sum(sum)?;
-        Some(self.rgb_for_sum_and_chroma(sum, chroma.prop())?)
+        Some(self.rgb_for_sum_and_chroma(sum, chroma)?)
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
-        if chroma == Prop::ZERO {
-            RGB::BLACK
-        } else if chroma == Prop::ONE {
-            self.max_chroma_rgb()
-        } else {
-            self.make_rgb((chroma, self.1 * chroma, Prop::ZERO))
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
+        match chroma.prop() {
+            Prop::ZERO => RGB::<T>::BLACK,
+            Prop::ONE => self.max_chroma_rgb(),
+            c_prop => self.make_rgb((c_prop, self.1 * c_prop, Prop::ZERO)),
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
-        if chroma == Prop::ZERO {
-            RGB::WHITE
-        } else if chroma == Prop::ONE {
-            self.max_chroma_rgb()
-        } else {
-            let third = Prop::ONE - chroma;
-            let second = chroma * self.1 + third;
-            self.make_rgb((Prop::ONE, second.into(), third))
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
+        match chroma.prop() {
+            Prop::ZERO => RGB::<T>::WHITE,
+            Prop::ONE => self.max_chroma_rgb(),
+            c_prop => {
+                let third = Prop::ONE - c_prop;
+                let second = c_prop * self.1 + third;
+                self.make_rgb((Prop::ONE, second.into(), third))
+            }
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
-
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             let delta = (sum - sum_range.shade_min()) / 3;
-            let first = chroma + delta;
-            let second = chroma * self.1 + delta;
+            let first = chroma.prop() + delta;
+            let second = chroma.prop() * self.1 + delta;
             Some(self.make_rgb((first.into(), second.into(), delta)))
         } else {
             None
@@ -540,7 +525,7 @@ impl<T: Float + From<Prop>> HueAngle<T> for Hue {
 }
 
 impl HueIfceTmp for Hue {
-    fn sum_range_for_chroma(&self, chroma: Prop) -> Option<SumRange> {
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
@@ -572,7 +557,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
+    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.min_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.min_sum_rgb_for_chroma(chroma),
@@ -580,7 +565,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Prop) -> RGB<T> {
+    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_sum_rgb_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.max_sum_rgb_for_chroma(chroma),
@@ -588,7 +573,7 @@ impl HueIfceTmp for Hue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Prop) -> Option<RGB<T>> {
+    fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.rgb_for_sum_and_chroma(sum, chroma),
             Self::Secondary(cmy_hue) => cmy_hue.rgb_for_sum_and_chroma(sum, chroma),
