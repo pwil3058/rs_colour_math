@@ -9,10 +9,12 @@ use num_traits_plus::float_plus::*;
 
 pub mod hcv;
 pub mod hue;
+pub mod manipulator;
 pub mod proportion;
 pub mod rgb;
 
 pub use crate::{
+    hcv::HCV,
     hue::Hue,
     proportion::{Chroma, Prop, Sum},
     rgb::RGB,
