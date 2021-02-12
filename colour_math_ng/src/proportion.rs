@@ -180,6 +180,19 @@ impl From<Sum> for Prop {
 }
 
 macro_rules! impl_unsigned_to_from_prop {
+    (u64) => {
+        impl From<u64> for Prop {
+            fn from(arg: u64) -> Self {
+                Self(arg as u64)
+            }
+        }
+
+        impl From<Prop> for u64 {
+            fn from(arg: Prop) -> Self {
+                arg.0 as u64
+            }
+        }
+    };
     ($unsigned:ty) => {
         impl From<$unsigned> for Prop {
             fn from(arg: $unsigned) -> Self {
