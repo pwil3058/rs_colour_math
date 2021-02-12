@@ -155,17 +155,46 @@ impl<T: LightLevel + Float> RGB<T> {
     }
 }
 
-impl<T: LightLevel> From<[T; 3]> for RGB<T> {
-    fn from(array: [T; 3]) -> Self {
-        Self(array)
-    }
+macro_rules! impl_from_unsigned_array {
+    ($unsigned:ty) => {
+        impl From<[$unsigned; 3]> for RGB<$unsigned> {
+            fn from(array: [$unsigned; 3]) -> Self {
+                Self(array)
+            }
+        }
+
+        impl From<RGB<$unsigned>> for [$unsigned; 3] {
+            fn from(rgb: RGB<$unsigned>) -> Self {
+                rgb.0
+            }
+        }
+    };
 }
 
-impl<T: LightLevel> From<&[T; 3]> for RGB<T> {
-    fn from(array: &[T; 3]) -> Self {
-        Self(*array)
-    }
+impl_from_unsigned_array!(u8);
+impl_from_unsigned_array!(u16);
+impl_from_unsigned_array!(u32);
+impl_from_unsigned_array!(u64);
+
+macro_rules! impl_from_float_array {
+    ($float:ty) => {
+        impl From<[$float; 3]> for RGB<$float> {
+            fn from(array: [$float; 3]) -> Self {
+                debug_assert!(array.iter().all(|a| *a >= 0.0 && *a <= 1.0));
+                Self(array)
+            }
+        }
+
+        impl From<RGB<$float>> for [$float; 3] {
+            fn from(rgb: RGB<$float>) -> Self {
+                rgb.0
+            }
+        }
+    };
 }
+
+impl_from_float_array!(f32);
+impl_from_float_array!(f64);
 
 impl<T: LightLevel + From<Prop>> From<[Prop; 3]> for RGB<T> {
     fn from(array: [Prop; 3]) -> Self {
