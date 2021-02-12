@@ -17,17 +17,17 @@ pub struct SumRange((Sum, Sum, Sum));
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum SumOrdering {
-    TooSmall,
+    TooSmall(Sum),
     Shade(Sum, Sum),
     Tint(Sum, Sum),
-    TooBig,
+    TooBig(Sum),
 }
 
 impl SumOrdering {
     pub fn is_failure(&self) -> bool {
         use SumOrdering::*;
         match self {
-            TooSmall | TooBig => true,
+            TooSmall(_) | TooBig(_) => true,
             _ => false,
         }
     }
@@ -35,7 +35,7 @@ impl SumOrdering {
     pub fn is_success(&self) -> bool {
         use SumOrdering::*;
         match self {
-            TooSmall | TooBig => false,
+            TooSmall(_) | TooBig(_) => false,
             _ => true,
         }
     }
@@ -44,13 +44,13 @@ impl SumOrdering {
 impl SumRange {
     pub fn compare_sum(&self, sum: Sum) -> SumOrdering {
         if sum < self.0 .0 {
-            SumOrdering::TooSmall
+            SumOrdering::TooSmall(self.0 .0 - sum)
         } else if sum <= self.0 .1 {
             SumOrdering::Shade(self.0 .0, self.0 .1)
-        } else if sum < self.0 .2 {
+        } else if sum <= self.0 .2 {
             SumOrdering::Tint(self.0 .1, self.0 .2)
         } else {
-            SumOrdering::TooBig
+            SumOrdering::TooBig(sum - self.0 .2)
         }
     }
 
@@ -386,18 +386,36 @@ impl<T: Float + From<Prop> + Copy> HueAngle<T> for SextantHue {
 
 impl HueIfce for SextantHue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
-        if chroma.prop() == Prop::ZERO {
-            None
-        } else {
-            let max_c_sum = Prop::ONE + self.1;
-            if chroma.prop() == Prop::ONE {
+        match chroma.prop() {
+            Prop::ZERO => None,
+            Prop::ONE => {
+                let max_c_sum = Prop::ONE + self.1;
                 Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
-            } else {
-                let min = max_c_sum * chroma.prop();
-                let max = Sum::THREE - (Sum::TWO - self.1) * chroma.prop();
-                Some(SumRange((min, max_c_sum, max)))
+            }
+            chroma_p => {
+                let ck = self.1 * chroma_p;
+                // let min = Sum::ONE + ck;
+                // let crossover = Sum::ONE + self.1;
+                // let max = Sum::THREE - chroma_p * 2 + ck;
+                Some(SumRange((
+                    chroma_p + ck,
+                    Sum::ONE + self.1,
+                    Sum::THREE - chroma_p * 2 + ck,
+                )))
             }
         }
+        // if chroma.prop() == Prop::ZERO {
+        //     None
+        // } else {
+        //     let max_c_sum = Prop::ONE + self.1;
+        //     if chroma.prop() == Prop::ONE {
+        //         Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
+        //     } else {
+        //         let min = max_c_sum * chroma.prop();
+        //         let max = Sum::THREE - chroma.prop() * 2 + self.1 * chroma.prop();
+        //         Some(SumRange((min, max_c_sum, max)))
+        //     }
+        // }
     }
 
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
