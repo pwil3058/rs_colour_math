@@ -105,6 +105,7 @@ pub trait ColourIfce {
     fn hue(&self) -> Option<Hue>;
     fn chroma(&self) -> Chroma;
     fn value(&self) -> Prop;
+    fn warmth(&self) -> Prop;
 
     fn rgb<L: LightLevel>(&self) -> RGB<L>;
 }
@@ -123,6 +124,14 @@ impl ColourIfce for HCV {
 
     fn value(&self) -> Prop {
         self.sum / 3
+    }
+
+    fn warmth(&self) -> Prop {
+        if let Some(hue) = self.hue {
+            hue.warmth_for_chroma(self.chroma)
+        } else {
+            (Sum::THREE - self.sum) / 6
+        }
     }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {

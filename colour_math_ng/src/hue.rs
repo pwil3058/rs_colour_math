@@ -86,6 +86,7 @@ impl SumRange {
 pub trait HueIfce {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange>;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T>;
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>>;
@@ -151,6 +152,14 @@ impl HueIfce for RGBHue {
             Some(Chroma::Tint((Sum::THREE - sum) / 2))
         } else {
             Some(Chroma::ONE)
+        }
+    }
+
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+        match self {
+            // TODO: take tint and shade into account
+            RGBHue::Red => (Sum::ONE + chroma.prop()) / 2,
+            RGBHue::Green | RGBHue::Blue => (Sum::TWO - chroma.prop()) / 4,
         }
     }
 
@@ -254,6 +263,14 @@ impl HueIfce for CMYHue {
             Some(Chroma::Tint((Sum::THREE - sum).into()))
         } else {
             Some(Chroma::ONE)
+        }
+    }
+
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+        match self {
+            // TODO: take tint and shade into account
+            CMYHue::Cyan => (Sum::ONE - chroma.prop()) / 2,
+            CMYHue::Magenta | CMYHue::Yellow => (Sum::TWO + chroma.prop()) / 4,
         }
     }
 
@@ -389,9 +406,6 @@ impl HueIfce for SextantHue {
             }
             chroma_p => {
                 let ck = self.1 * chroma_p;
-                // let min = Sum::ONE + ck;
-                // let crossover = Sum::ONE + self.1;
-                // let max = Sum::THREE - chroma_p * 2 + ck;
                 Some(SumRange((
                     chroma_p + ck,
                     Sum::ONE + self.1,
@@ -399,18 +413,6 @@ impl HueIfce for SextantHue {
                 )))
             }
         }
-        // if chroma.prop() == Prop::ZERO {
-        //     None
-        // } else {
-        //     let max_c_sum = Prop::ONE + self.1;
-        //     if chroma.prop() == Prop::ONE {
-        //         Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
-        //     } else {
-        //         let min = max_c_sum * chroma.prop();
-        //         let max = Sum::THREE - chroma.prop() * 2 + self.1 * chroma.prop();
-        //         Some(SumRange((min, max_c_sum, max)))
-        //     }
-        // }
     }
 
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
@@ -429,6 +431,16 @@ impl HueIfce for SextantHue {
                 }
                 Ordering::Equal => Some(Chroma::ONE),
             }
+        }
+    }
+
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+        let kc = chroma.prop() * self.1;
+        match self.0 {
+            // TODO: take tint and shade into account
+            Sextant::RedYellow | Sextant::RedMagenta => (Sum::TWO + chroma.prop() * 2 - kc) / 4,
+            Sextant::GreenYellow | Sextant::BlueMagenta => (Sum::TWO + kc * 2 - chroma.prop()) / 4,
+            Sextant::GreenCyan | Sextant::BlueCyan => (Sum::TWO - kc - chroma.prop()) / 4,
         }
     }
 
@@ -553,6 +565,14 @@ impl HueIfce for Hue {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_for_sum(sum),
             Self::Sextant(sextant_hue) => sextant_hue.max_chroma_for_sum(sum),
+        }
+    }
+
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.warmth_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.warmth_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.warmth_for_chroma(chroma),
         }
     }
 

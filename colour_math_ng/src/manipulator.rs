@@ -1,5 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use crate::hcv::ColourIfce;
 use crate::{Hue, HueConstants, LightLevel, HCV, RGB};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -14,6 +15,12 @@ pub struct ColourManipulator {
     clamped: bool,
     rotation_policy: RotationPolicy,
     saved_hue: Hue,
+}
+
+impl ColourManipulator {
+    pub fn rgb<L: LightLevel>(&self) -> RGB<L> {
+        self.hcv.rgb()
+    }
 }
 
 #[derive(Debug)]
