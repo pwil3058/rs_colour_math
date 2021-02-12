@@ -135,14 +135,9 @@ impl<T: LightLevel> ChromaOneRGB<T> for RGBHue {
 
 impl HueIfce for RGBHue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
-        if chroma.prop() == Prop::ZERO {
-            None
-        } else {
-            Some(SumRange((
-                chroma.prop().into(),
-                Sum::ONE,
-                (Sum::THREE - chroma.prop() * 2),
-            )))
+        match chroma.prop() {
+            Prop::ZERO => None,
+            prop => Some(SumRange((prop.into(), Sum::ONE, (Sum::THREE - prop * 2)))),
         }
     }
 

@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::convert::TryFrom;
 
+use crate::hue::SumOrdering;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
@@ -129,12 +130,28 @@ impl ColourIfce for HCV {
             if let Some(rgb) = hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma) {
                 rgb
             } else {
-                // This can possibly be due floating point arithmetic's inability to properly
-                // represent reals resulting in the HCV having a sum value slightly higher/lower
-                // than that which is possible for the hue and chroma.
-                match self.chroma {
-                    Chroma::Shade(_) => hue.min_sum_rgb_for_chroma(self.chroma),
-                    _ => hue.max_sum_rgb_for_chroma(self.chroma),
+                // This can possibly be due rounding errors resulting in the HCV having a sum value
+                // slightly higher/lower than that which is possible for the hue and chroma.
+                // So test the hypothesis and act accordingly.
+                let range = hue
+                    .sum_range_for_chroma(self.chroma)
+                    .expect("Illegal HCV. How did it get built?");
+                match range.compare_sum(self.sum) {
+                    SumOrdering::TooSmall(margin) => {
+                        if margin.0 < 3 {
+                            hue.min_sum_rgb_for_chroma(self.chroma)
+                        } else {
+                            panic!("TooSmall margin is too big")
+                        }
+                    }
+                    SumOrdering::TooBig(margin) => {
+                        if margin.0 < 3 {
+                            hue.max_sum_rgb_for_chroma(self.chroma)
+                        } else {
+                            panic!("TooSBig margin is too big")
+                        }
+                    }
+                    _ => panic!("Why did rgb_for_sum_and_chroma() fail, then?"),
                 }
             }
         } else {
