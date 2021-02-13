@@ -202,12 +202,27 @@ impl HueIfce for RGBHue {
 
     fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
-        let sum_range = self.sum_range_for_chroma(chroma)?;
-        if sum_range.compare_sum(sum).is_success() {
-            let other = (sum - chroma.prop()) / 3;
-            Some(self.make_rgb(((other + chroma.prop()).into(), other)))
-        } else {
-            None
+        match chroma.prop() {
+            Prop::ZERO => None,
+            c_prop => match sum.cmp(&c_prop.into()) {
+                Ordering::Less => None,
+                Ordering::Equal => Some(self.make_rgb::<T>((c_prop, Prop::ZERO))),
+                Ordering::Greater => {
+                    // NB: adjusting for rounding errors is proving elusive so we take the easiest
+                    // option of having accurate chroma and up to 2 least significant errors in
+                    // sum for the generated RGB (but we can adjust the Sum test to avoid unnecessary
+                    // None returns.
+                    let three_first = sum + c_prop * 2;
+                    // NB: Need to check that Sum wasn't too big
+                    // TODO: implement Sum % u8 so this code can look neater
+                    if three_first <= Sum::THREE + Sum(three_first.0 % 3) {
+                        let first = three_first / 3;
+                        Some(self.make_rgb::<T>((first, first - c_prop)))
+                    } else {
+                        None
+                    }
+                }
+            },
         }
     }
 }
