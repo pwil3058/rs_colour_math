@@ -136,32 +136,8 @@ impl ColourIfce for HCV {
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
         if let Some(hue) = self.hue {
-            if let Some(rgb) = hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma) {
-                rgb
-            } else {
-                // This can possibly be due rounding errors calculating the limits used in
-                // rgb_for_sum_and_chroma().
-                let range = hue
-                    .sum_range_for_chroma(self.chroma)
-                    .expect("Illegal HCV. How did it get built?");
-                match range.compare_sum(self.sum) {
-                    SumOrdering::TooSmall(margin) => {
-                        if margin.0 < 3 {
-                            hue.min_sum_rgb_for_chroma(self.chroma)
-                        } else {
-                            panic!("TooSmall margin is too big")
-                        }
-                    }
-                    SumOrdering::TooBig(margin) => {
-                        if margin.0 < 3 {
-                            hue.max_sum_rgb_for_chroma(self.chroma)
-                        } else {
-                            panic!("TooSBig margin is too big")
-                        }
-                    }
-                    _ => panic!("Why did rgb_for_sum_and_chroma() fail, then?"),
-                }
-            }
+            hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma)
+                .expect("We came from an RGB so there should be a way back")
         } else {
             RGB::new_grey(self.value())
         }
