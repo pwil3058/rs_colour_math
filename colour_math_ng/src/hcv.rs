@@ -1,7 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::convert::TryFrom;
 
-use crate::hue::SumOrdering;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,

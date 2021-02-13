@@ -387,6 +387,14 @@ impl SextantHue {
             false
         }
     }
+
+    pub fn eq_within_re(&self, other: &Self, alternatea_limit: Option<u64>) -> bool {
+        if self.0 == other.0 {
+            self.1.eq_within_re(&other.1, alternatea_limit)
+        } else {
+            false
+        }
+    }
 }
 
 impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
@@ -684,6 +692,25 @@ impl Hue {
             Self::Sextant(sextant_hue) => match other {
                 Self::Sextant(other_sextant_hue) => {
                     sextant_hue.approx_eq(other_sextant_hue, significant_digits)
+                }
+                _ => false,
+            },
+        }
+    }
+
+    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
+        match self {
+            Self::Primary(rgb_hue) => match other {
+                Self::Primary(other_rgb_hue) => rgb_hue == other_rgb_hue,
+                _ => false,
+            },
+            Self::Secondary(cmy_hue) => match other {
+                Self::Secondary(other_cmy_hue) => cmy_hue == other_cmy_hue,
+                _ => false,
+            },
+            Self::Sextant(sextant_hue) => match other {
+                Self::Sextant(other_sextant_hue) => {
+                    sextant_hue.eq_within_re(other_sextant_hue, alternate_limit)
                 }
                 _ => false,
             },

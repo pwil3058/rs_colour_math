@@ -2,7 +2,7 @@
 use super::*;
 use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
-use crate::{proportion::*, rgb::RGB, CCI};
+use crate::{assert_eq_within_re, proportion::*, rgb::RGB, CCI};
 
 const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
 const VALID_OTHER_SUMS: [f64; 20] = [
@@ -251,7 +251,7 @@ fn max_chroma_and_sum_ranges() {
             let prop = Prop::from(*item);
             let range = hue.sum_range_for_chroma(Chroma::Either(prop)).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
-            assert_approx_eq!(max_chroma, Chroma::Shade(prop));
+            assert_eq_within_re!(max_chroma, Chroma::Shade(prop));
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
             assert_approx_eq!(max_chroma, Chroma::Tint(prop), 10);
         }

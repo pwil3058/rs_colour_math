@@ -1,5 +1,41 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
+#[macro_export]
+macro_rules! assert_eq_within_re {
+    ($left:expr, $right:expr) => {{
+        match (&$left, &$right) {
+            (left_val, right_val) => {
+                if !(*left_val).eq_within_re(&*right_val, None) {
+                    panic!(
+                        "assertion failed: `left.eq_within_re(right)` \
+                         (left: `{:?}`, right: `{:?}`)",
+                        &*left_val, &*right_val
+                    )
+                }
+            }
+        }
+    }};
+    ($left:expr, $right:expr,) => {{
+        $crate::assert_eq_within_re!($left, $right)
+    }};
+    ($left:expr, $right:expr, $max_diff:expr) => {{
+        match (&$left, &$right) {
+            (left_val, right_val) => {
+                if !(*left_val).eq_within_re(&*right_val, Some($max_diff)) {
+                    panic!(
+                        "assertion failed: `left.eq_within_re(right)` \
+                         (left: `{:?}`, right: `{:?}`)",
+                        &*left_val, &*right_val
+                    )
+                }
+            }
+        }
+    }};
+    ($left:expr, $right:expr, $max_diff:expr,) => {{
+        $crate::assert_eq_within_re!($left, $right, $max_diff)
+    }};
+}
+
 #[cfg(test)]
 mod proportion_tests;
 
@@ -110,6 +146,25 @@ impl Chroma {
             Either(proportion) => proportion.approx_eq(&other.prop(), significant_digits),
         }
     }
+
+    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
+        use Chroma::*;
+        match self {
+            Shade(proportion) => match other {
+                Shade(other_proportion) | Either(other_proportion) => {
+                    proportion.eq_within_re(other_proportion, alternate_limit)
+                }
+                Tint(_) => false,
+            },
+            Tint(proportion) => match other {
+                Shade(_) => false,
+                Tint(other_proportion) | Either(other_proportion) => {
+                    proportion.eq_within_re(other_proportion, alternate_limit)
+                }
+            },
+            Either(proportion) => proportion.eq_within_re(&other.prop(), alternate_limit),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -134,6 +189,19 @@ impl Prop {
         match self.cmp(other) {
             Ordering::Greater => (*self - *other) < limit,
             Ordering::Less => (*other - *self) < limit,
+            Ordering::Equal => true,
+        }
+    }
+
+    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
+        let limit = if let Some(alternate_limit) = alternate_limit {
+            alternate_limit
+        } else {
+            3
+        };
+        match self.cmp(other) {
+            Ordering::Greater => (self.0 - other.0) < limit,
+            Ordering::Less => (other.0 - self.0) < limit,
             Ordering::Equal => true,
         }
     }
@@ -281,6 +349,10 @@ impl Sum {
     pub fn is_valid(self) -> bool {
         self <= Self::THREE
     }
+
+    pub fn is_hue_valid(self) -> bool {
+        self > Self::ZERO && self < Self::THREE
+    }
 }
 
 impl Debug for Sum {
@@ -310,6 +382,19 @@ impl Sum {
         match self.cmp(other) {
             Ordering::Greater => (*self - *other) < limit,
             Ordering::Less => (*other - *self) < limit,
+            Ordering::Equal => true,
+        }
+    }
+
+    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
+        let limit = if let Some(alternate_limit) = alternate_limit {
+            alternate_limit as u128
+        } else {
+            3
+        };
+        match self.cmp(other) {
+            Ordering::Greater => (self.0 - other.0) < limit,
+            Ordering::Less => (other.0 - self.0) < limit,
             Ordering::Equal => true,
         }
     }
