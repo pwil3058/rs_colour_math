@@ -350,13 +350,24 @@ impl SextantHue {
             BlueMagenta => [components.1, components.2, components.0].into(),
         }
     }
+
+    fn make_rgb_sum<T: LightLevel>(&self, components: (Sum, Sum, Sum)) -> RGB<T> {
+        debug_assert!(
+            components.0 <= Sum::ONE && components.1 <= Sum::ONE && components.2 <= Sum::ONE
+        );
+        self.make_rgb((
+            components.0.into(),
+            components.1.into(),
+            components.2.into(),
+        ))
+    }
 }
 
 #[cfg(test)]
 impl SextantHue {
-    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
         if self.0 == other.0 {
-            self.1.approx_eq(&other.1, max_diff)
+            self.1.approx_eq(&other.1, significant_digits)
         } else {
             false
         }
@@ -476,14 +487,34 @@ impl HueIfce for SextantHue {
 
     fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
-        let sum_range = self.sum_range_for_chroma(chroma)?;
-        if sum_range.compare_sum(sum).is_success() {
-            let delta = (sum - sum_range.shade_min()) / 3;
-            let first = chroma.prop() + delta;
-            let second = chroma.prop() * self.1 + delta;
-            Some(self.make_rgb((first.into(), second.into(), delta)))
-        } else {
-            None
+        match chroma.prop() {
+            Prop::ZERO => None,
+            c_prop => {
+                let ck = self.1 * c_prop;
+                let ck_plus_c = ck + c_prop;
+                match sum.cmp(&ck_plus_c) {
+                    Ordering::Less => None,
+                    Ordering::Equal => Some(self.make_rgb((c_prop, ck, Prop::ZERO))),
+                    Ordering::Greater => {
+                        let three_delta = sum - ck_plus_c;
+                        let delta = three_delta / 3;
+                        let components = match three_delta.0 % 3 {
+                            // NB: allocation os spare light levels is done so as to preserve
+                            // both the requested chroma and sum
+                            1 => ((c_prop + delta), (ck + delta + Prop(1)), delta.into()),
+                            2 => ((c_prop + delta + Prop(1)), (ck + delta), (delta + Prop(1))),
+                            _ => ((c_prop + delta), (ck + delta), delta.into()),
+                        };
+                        debug_assert_eq!(components.0 + components.1 + components.2, sum);
+                        debug_assert_eq!(components.0 - components.2, c_prop.into());
+                        if components.0 <= Sum::ONE {
+                            Some(self.make_rgb_sum::<T>(components))
+                        } else {
+                            None
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -625,7 +656,7 @@ impl Hue {
 
 #[cfg(test)]
 impl Hue {
-    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
         match self {
             Self::Primary(rgb_hue) => match other {
                 Self::Primary(other_rgb_hue) => rgb_hue == other_rgb_hue,
@@ -637,7 +668,7 @@ impl Hue {
             },
             Self::Sextant(sextant_hue) => match other {
                 Self::Sextant(other_sextant_hue) => {
-                    sextant_hue.approx_eq(other_sextant_hue, max_diff)
+                    sextant_hue.approx_eq(other_sextant_hue, significant_digits)
                 }
                 _ => false,
             },

@@ -139,9 +139,8 @@ impl ColourIfce for HCV {
             if let Some(rgb) = hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma) {
                 rgb
             } else {
-                // This can possibly be due rounding errors resulting in the HCV having a sum value
-                // slightly higher/lower than that which is possible for the hue and chroma.
-                // So test the hypothesis and act accordingly.
+                // This can possibly be due rounding errors calculating the limits used in
+                // rgb_for_sum_and_chroma().
                 let range = hue
                     .sum_range_for_chroma(self.chroma)
                     .expect("Illegal HCV. How did it get built?");

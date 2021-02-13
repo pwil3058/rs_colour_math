@@ -8,7 +8,7 @@ fn prop_mul() {
         let expected = Prop::from(a * b);
         println!("{:?} * {:?} = {:?} : {:?}", a, b, a * b, expected);
         let result = Prop::from(*a) * Prop::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a * b), 0.000_000_01);
     }
 }
@@ -19,7 +19,7 @@ fn prop_mul_u8() {
         let expected = Sum::from(*a * *b as f64);
         println!("{:?} * {:?} = {:?} : {:?}", a, b, a * *b as f64, expected);
         let result = Prop::from(*a) * *b;
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a * *b as f64), 0.000_000_01);
     }
 }
@@ -30,7 +30,7 @@ fn prop_div() {
         let expected = Prop::from(a / b);
         println!("{:?} / {:?} = {:?} {:?}", a, b, a / b, expected);
         let result = Prop::from(*a) / Prop::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a / b), 0.000_000_01);
     }
 }
@@ -41,7 +41,7 @@ fn prop_add() {
         let expected = Sum::from(a + b);
         println!("{:?} + {:?} = {:?} {:?}", a, b, a + b, expected);
         let result = Prop::from(*a) + Prop::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a + b), 0.000_000_01);
     }
 }
@@ -52,7 +52,7 @@ fn prop_sub() {
         let expected = Prop::from(a - b);
         println!("{:?} - {:?} = {:?} {:?}", a, b, a - b, expected);
         let result = Prop::from(*a) - Prop::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a - b), 0.000_000_01);
     }
 }
@@ -67,9 +67,9 @@ fn sum_add() {
         [1.5, 0.6],
     ] {
         let expected = Sum::from(a + b);
-        println!("{:?} + {:?} = {:?} {:?}", a, b, a + b, expected);
+        println!("{:?} + {:?} = {:?} {:?}", a, b, Sum::from(a + b), expected);
         let result = Sum::from(*a) + Sum::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a + b), 0.000_000_01);
     }
 }
@@ -86,7 +86,7 @@ fn sum_sub() {
         let expected = Sum::from(a - b);
         println!("{:?} - {:?} = {:?} {:?}", a, b, a - b, expected);
         let result = Sum::from(*a) - Sum::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a - b), 0.000_000_01);
     }
 }
@@ -97,7 +97,7 @@ fn sum_div() {
         let expected = Prop::from(a / b);
         println!("{:?} / {:?} = {:?} {:?}", a, b, a / b, expected);
         let result = Sum::from(*a) / Sum::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a / b), 0.000_000_01);
     }
 }
@@ -108,7 +108,7 @@ fn sum_div_u8() {
         let expected = Prop::from(*a / *b as f64);
         println!("{:?} / {:?} = {:?} : {:?}", a, b, a / *b as f64, expected);
         let result = Sum::from(*a) / *b;
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a / *b as f64), 0.000_000_01);
     }
 }
@@ -119,7 +119,7 @@ fn sum_mul_prop() {
         let expected = Sum::from(a * b);
         println!("{:?} * {:?} = {:?} : {:?}", a, b, a * b, expected);
         let result = Sum::from(*a) * Prop::from(*b);
-        assert_approx_eq!(result, expected, 0.000_000_001);
+        assert_approx_eq!(result, expected, 10);
         assert_approx_eq!(f64::from(result), &(a * b), 0.000_000_01);
     }
 }

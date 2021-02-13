@@ -92,22 +92,22 @@ impl Ord for Chroma {
 
 #[cfg(test)]
 impl Chroma {
-    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
         use Chroma::*;
         match self {
             Shade(proportion) => match other {
                 Shade(other_proportion) | Either(other_proportion) => {
-                    proportion.approx_eq(other_proportion, max_diff)
+                    proportion.approx_eq(other_proportion, significant_digits)
                 }
                 Tint(_) => false,
             },
             Tint(proportion) => match other {
                 Shade(_) => false,
                 Tint(other_proportion) | Either(other_proportion) => {
-                    proportion.approx_eq(other_proportion, max_diff)
+                    proportion.approx_eq(other_proportion, significant_digits)
                 }
             },
-            Either(proportion) => proportion.approx_eq(&other.prop(), max_diff),
+            Either(proportion) => proportion.approx_eq(&other.prop(), significant_digits),
         }
     }
 }
@@ -122,15 +122,26 @@ impl Prop {
 
 #[cfg(test)]
 impl Prop {
-    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
-        let me = f64::from(*self);
-        let other = f64::from(*other);
-        me.approx_eq(&other, max_diff)
+    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
+        // let me = f64::from(*self);
+        // let other = f64::from(*other);
+        // me.approx_eq(&other, max_diff)
+        let limit = if let Some(significant_digits) = significant_digits {
+            Prop(1_64 << (64 - significant_digits))
+        } else {
+            Prop(1_u64 << 54)
+        };
+        match self.cmp(other) {
+            Ordering::Greater => (*self - *other) < limit,
+            Ordering::Less => (*other - *self) < limit,
+            Ordering::Equal => true,
+        }
     }
 }
 
 impl Debug for Prop {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        //formatter.write_fmt(format_args!("Prop(0.{:08X})", self.0))
         formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
     }
 }
@@ -274,16 +285,33 @@ impl Sum {
 
 impl Debug for Sum {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        // let a = if self.0 > u64::MAX as u128 {
+        //     self.0 - u64::MAX as u128
+        // } else {
+        //     0
+        // };
+        // let b = self.0 - a;
+        //formatter.write_fmt(format_args!("Sum({:X}.{:08X})", a as u64, b as u64))
         formatter.write_fmt(format_args!("Sum({:?})", f64::from(*self)))
     }
 }
 
 #[cfg(test)]
 impl Sum {
-    pub fn approx_eq(&self, other: &Self, max_diff: Option<f64>) -> bool {
-        let me = f64::from(*self);
-        let other = f64::from(*other);
-        me.approx_eq(&other, max_diff)
+    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
+        // let me = f64::from(*self);
+        // let other = f64::from(*other);
+        // me.approx_eq(&other, max_diff)
+        let limit = if let Some(significant_digits) = significant_digits {
+            Sum(1_u128 << (128 - significant_digits))
+        } else {
+            Sum(1_u128 << 118)
+        };
+        match self.cmp(other) {
+            Ordering::Greater => (*self - *other) < limit,
+            Ordering::Less => (*other - *self) < limit,
+            Ordering::Equal => true,
+        }
     }
 }
 
