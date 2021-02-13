@@ -41,7 +41,7 @@ fn build_manipulator() {
     assert_eq!(manipualor.saved_hue, Hue::YELLOW);
 }
 
-//#[test]
+#[test]
 fn set_get_parameters() {
     let mut manipualor = ColourManipulatorBuilder::new().build();
     let ll_list = [
@@ -65,5 +65,22 @@ fn set_get_parameters() {
                 assert_eq!(rgb, manipualor.rgb());
             }
         }
+    }
+    for clamped in &[true, true, false, false, true, false, true, true] {
+        manipualor.set_clamped(*clamped);
+        assert_eq!(*clamped, manipualor.clamped());
+    }
+    for rotation_policy in &[
+        RotationPolicy::FavourValue,
+        RotationPolicy::FavourValue,
+        RotationPolicy::FavourChroma,
+        RotationPolicy::FavourChroma,
+        RotationPolicy::FavourValue,
+        RotationPolicy::FavourChroma,
+        RotationPolicy::FavourValue,
+        RotationPolicy::FavourValue,
+    ] {
+        manipualor.set_rotation_policy(*rotation_policy);
+        assert_eq!(*rotation_policy, manipualor.rotation_policy());
     }
 }
