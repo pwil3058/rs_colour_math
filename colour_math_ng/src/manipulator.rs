@@ -21,6 +21,30 @@ impl ColourManipulator {
     pub fn rgb<L: LightLevel>(&self) -> RGB<L> {
         self.hcv.rgb()
     }
+
+    pub fn hcv(&self) -> HCV {
+        self.hcv
+    }
+
+    pub fn set_colour<L: LightLevel>(&mut self, rgb: &RGB<L>) {
+        self.hcv = rgb.into()
+    }
+
+    pub fn clamped(&self) -> bool {
+        self.clamped
+    }
+
+    pub fn set_clamped(&mut self, clamped: bool) {
+        self.clamped = clamped
+    }
+
+    pub fn rotation_policy(&self) -> RotationPolicy {
+        self.rotation_policy
+    }
+
+    pub fn set_rotation_policy(&mut self, rotation_policy: RotationPolicy) {
+        self.rotation_policy = rotation_policy
+    }
 }
 
 #[derive(Debug)]
