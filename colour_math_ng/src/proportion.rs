@@ -35,6 +35,10 @@ impl Chroma {
             Shade(proportion) | Tint(proportion) | Either(proportion) => *proportion,
         }
     }
+
+    pub fn abs_diff(&self, other: &Self) -> Prop {
+        self.prop().abs_diff(&other.prop())
+    }
 }
 
 impl Default for Chroma {
@@ -93,10 +97,6 @@ impl Ord for Chroma {
 
 #[cfg(test)]
 impl Chroma {
-    pub fn abs_diff(&self, other: &Self) -> Prop {
-        self.prop().abs_diff(&other.prop())
-    }
-
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         use Chroma::*;
         match self {
@@ -123,10 +123,7 @@ pub struct Prop(pub(crate) u64);
 impl Prop {
     pub const ZERO: Self = Self(0);
     pub const ONE: Self = Self(u64::MAX);
-}
 
-#[cfg(test)]
-impl Prop {
     pub fn abs_diff(&self, other: &Self) -> Prop {
         match self.cmp(other) {
             Ordering::Greater => Prop(self.0 - other.0),
@@ -134,7 +131,10 @@ impl Prop {
             Ordering::Equal => Prop(0),
         }
     }
+}
 
+#[cfg(test)]
+impl Prop {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if let Some(acceptable_rounding_error) = acceptable_rounding_error {
             self.abs_diff(other) < Prop(acceptable_rounding_error)
@@ -290,6 +290,14 @@ impl Sum {
     pub fn is_hue_valid(self) -> bool {
         self > Self::ZERO && self < Self::THREE
     }
+
+    pub fn abs_diff(&self, other: &Self) -> Sum {
+        match self.cmp(other) {
+            Ordering::Greater => Sum(self.0 - other.0),
+            Ordering::Less => Sum(other.0 - self.0),
+            Ordering::Equal => Sum(0),
+        }
+    }
 }
 
 impl Debug for Sum {
@@ -307,14 +315,6 @@ impl Debug for Sum {
 
 #[cfg(test)]
 impl Sum {
-    pub fn abs_diff(&self, other: &Self) -> Sum {
-        match self.cmp(other) {
-            Ordering::Greater => Sum(self.0 - other.0),
-            Ordering::Less => Sum(other.0 - self.0),
-            Ordering::Equal => Sum(0),
-        }
-    }
-
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if let Some(acceptable_rounding_error) = acceptable_rounding_error {
             self.abs_diff(other) < Sum(acceptable_rounding_error as u128)

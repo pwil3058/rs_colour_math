@@ -212,12 +212,13 @@ impl HueIfce for RGBHue {
                     // option of having accurate chroma and up to 2 least significant errors in
                     // sum for the generated RGB (but we can adjust the Sum test to avoid unnecessary
                     // None returns.
-                    let three_first = sum + c_prop * 2;
+                    let other = (sum - c_prop) / 3;
+                    let first = other + c_prop;
                     // NB: Need to check that Sum wasn't too big
-                    // TODO: implement Sum % u8 so this code can look neater
-                    if three_first <= Sum::THREE + Sum(three_first.0 % 3) {
-                        let first = three_first / 3;
-                        Some(self.make_rgb::<T>((first, first - c_prop)))
+                    if first <= Sum::ONE {
+                        assert_eq!(first.0 as u64 - other.0, c_prop.0);
+                        assert!(sum.abs_diff(&(first + other * 2)) < Sum(3));
+                        Some(self.make_rgb::<T>((first.into(), other)))
                     } else {
                         None
                     }
@@ -376,10 +377,7 @@ impl SextantHue {
             components.2.into(),
         ))
     }
-}
 
-#[cfg(test)]
-impl SextantHue {
     pub fn abs_diff(&self, other: &Self) -> Prop {
         if self.0 == other.0 {
             self.1.abs_diff(&other.1)
@@ -387,7 +385,10 @@ impl SextantHue {
             Prop::ONE
         }
     }
+}
 
+#[cfg(test)]
+impl SextantHue {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if self.0 == other.0 {
             self.1.approx_eq(&other.1, acceptable_rounding_error)
@@ -675,10 +676,7 @@ impl Hue {
     pub fn ord_index(&self) -> u8 {
         0
     }
-}
 
-#[cfg(test)]
-impl Hue {
     pub fn abs_diff(&self, other: &Self) -> Prop {
         match self {
             Self::Primary(rgb_hue) => match other {
@@ -707,7 +705,10 @@ impl Hue {
             },
         }
     }
+}
 
+#[cfg(test)]
+impl Hue {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         match self {
             Self::Primary(rgb_hue) => match other {
