@@ -65,9 +65,7 @@ fn from_to_rgb_f64() {
         for green in values.iter().map(|l| Prop::from(*l)) {
             for blue in values.iter().map(|l| Prop::from(*l)) {
                 let rgb_in: RGB<f64> = [red, green, blue].into();
-                println!("[{:?}, {:?}, {:?}] -> {:?}", red, green, blue, rgb_in);
                 let hcv = HCV::from(&rgb_in);
-                println!("{:?}", hcv);
                 let rgb_out = RGB::<f64>::from(&hcv);
                 assert_eq!(rgb_in, rgb_out);
             }

@@ -546,6 +546,32 @@ impl HueIfce for SextantHue {
                     Ordering::Less => None,
                     Ordering::Equal => Some(self.make_rgb((c_prop, ck, Prop::ZERO))),
                     Ordering::Greater => {
+                        let three_first = sum + c_prop * 2 - ck;
+                        if three_first <= Sum::ONE {
+                            let first = three_first / 3;
+                            let three_second = sum + ck * 2 - c_prop;
+                            let second = three_second / 3;
+                            if three_second > three_first * self.1 {
+                                let three_third: Sum = ((three_second - three_first * self.1)
+                                    / (Sum::ONE - self.1))
+                                    .into();
+                                let third = three_third / 3;
+                                let c_out = first - third;
+                                let sum_out = first + second + third;
+                                let k_out: Prop = ((second - third) / (first - third)).into();
+                                println!(
+                                "ALT: Hue diff: {:#X} {:?} {:?} Chroma diff: {:#X} Sum diff: {:#X}",
+                                self.1.abs_diff(&k_out).0,
+                                k_out > self.1,
+                                k_out < self.1,
+                                c_out.abs_diff(&c_prop).0,
+                                sum_out.abs_diff(&sum).0
+                            );
+                                //debug_assert_eq!(c_out, c_prop,);
+                                //debug_assert_eq!(sum_out, sum,);
+                                //debug_assert_eq!(k_out, self.1,);
+                            }
+                        };
                         let three_delta = sum - ck_plus_c;
                         let delta = three_delta / 3;
                         let components = match three_delta.0 % 3 {
@@ -557,6 +583,17 @@ impl HueIfce for SextantHue {
                         };
                         debug_assert_eq!(components.0 + components.1 + components.2, sum);
                         debug_assert_eq!(components.0 - components.2, c_prop.into());
+                        let k_out = (components.1 - components.2) / (components.0 - components.2);
+                        println!(
+                            "ABS DIFF: {:#X} {:?}",
+                            self.1.abs_diff(&k_out).0,
+                            k_out > self.1
+                        );
+                        // debug_assert!(
+                        //     self.1.abs_diff(
+                        //         &((components.1 - components.2) / (components.0 - components.2))
+                        //     ) < Prop(0x2F)
+                        // );
                         if components.0 <= Sum::ONE {
                             Some(self.make_rgb_sum::<T>(components))
                         } else {
