@@ -1,40 +1,5 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
-#[macro_export]
-macro_rules! assert_eq_within_re {
-    ($left:expr, $right:expr) => {{
-        match (&$left, &$right) {
-            (left_val, right_val) => {
-                if !(*left_val).eq_within_re(&*right_val, None) {
-                    panic!(
-                        "assertion failed: `left.eq_within_re(right)` \
-                         (left: `{:?}`, right: `{:?}`)",
-                        &*left_val, &*right_val
-                    )
-                }
-            }
-        }
-    }};
-    ($left:expr, $right:expr,) => {{
-        $crate::assert_eq_within_re!($left, $right)
-    }};
-    ($left:expr, $right:expr, $max_diff:expr) => {{
-        match (&$left, &$right) {
-            (left_val, right_val) => {
-                if !(*left_val).eq_within_re(&*right_val, Some($max_diff)) {
-                    panic!(
-                        "assertion failed: `left.eq_within_re(right)` \
-                         (left: `{:?}`, right: `{:?}`)",
-                        &*left_val, &*right_val
-                    )
-                }
-            }
-        }
-    }};
-    ($left:expr, $right:expr, $max_diff:expr,) => {{
-        $crate::assert_eq_within_re!($left, $right, $max_diff)
-    }};
-}
 
 #[cfg(test)]
 mod proportion_tests;
@@ -128,41 +93,26 @@ impl Ord for Chroma {
 
 #[cfg(test)]
 impl Chroma {
-    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
-        use Chroma::*;
-        match self {
-            Shade(proportion) => match other {
-                Shade(other_proportion) | Either(other_proportion) => {
-                    proportion.approx_eq(other_proportion, significant_digits)
-                }
-                Tint(_) => false,
-            },
-            Tint(proportion) => match other {
-                Shade(_) => false,
-                Tint(other_proportion) | Either(other_proportion) => {
-                    proportion.approx_eq(other_proportion, significant_digits)
-                }
-            },
-            Either(proportion) => proportion.approx_eq(&other.prop(), significant_digits),
-        }
+    pub fn abs_diff(&self, other: &Self) -> Prop {
+        self.prop().abs_diff(&other.prop())
     }
 
-    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         use Chroma::*;
         match self {
             Shade(proportion) => match other {
                 Shade(other_proportion) | Either(other_proportion) => {
-                    proportion.eq_within_re(other_proportion, alternate_limit)
+                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
                 }
                 Tint(_) => false,
             },
             Tint(proportion) => match other {
                 Shade(_) => false,
                 Tint(other_proportion) | Either(other_proportion) => {
-                    proportion.eq_within_re(other_proportion, alternate_limit)
+                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
                 }
             },
-            Either(proportion) => proportion.eq_within_re(&other.prop(), alternate_limit),
+            Either(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
         }
     }
 }
@@ -177,32 +127,19 @@ impl Prop {
 
 #[cfg(test)]
 impl Prop {
-    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
-        // let me = f64::from(*self);
-        // let other = f64::from(*other);
-        // me.approx_eq(&other, max_diff)
-        let limit = if let Some(significant_digits) = significant_digits {
-            Prop(1_64 << (64 - significant_digits))
-        } else {
-            Prop(1_u64 << 54)
-        };
+    pub fn abs_diff(&self, other: &Self) -> Prop {
         match self.cmp(other) {
-            Ordering::Greater => (*self - *other) < limit,
-            Ordering::Less => (*other - *self) < limit,
-            Ordering::Equal => true,
+            Ordering::Greater => Prop(self.0 - other.0),
+            Ordering::Less => Prop(other.0 - self.0),
+            Ordering::Equal => Prop(0),
         }
     }
 
-    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
-        let limit = if let Some(alternate_limit) = alternate_limit {
-            alternate_limit
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
+            self.abs_diff(other) < Prop(acceptable_rounding_error)
         } else {
-            3
-        };
-        match self.cmp(other) {
-            Ordering::Greater => (self.0 - other.0) < limit,
-            Ordering::Less => (other.0 - self.0) < limit,
-            Ordering::Equal => true,
+            self.0 < 3
         }
     }
 }
@@ -370,32 +307,19 @@ impl Debug for Sum {
 
 #[cfg(test)]
 impl Sum {
-    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
-        // let me = f64::from(*self);
-        // let other = f64::from(*other);
-        // me.approx_eq(&other, max_diff)
-        let limit = if let Some(significant_digits) = significant_digits {
-            Sum(1_u128 << (128 - significant_digits))
-        } else {
-            Sum(1_u128 << 118)
-        };
+    pub fn abs_diff(&self, other: &Self) -> Sum {
         match self.cmp(other) {
-            Ordering::Greater => (*self - *other) < limit,
-            Ordering::Less => (*other - *self) < limit,
-            Ordering::Equal => true,
+            Ordering::Greater => Sum(self.0 - other.0),
+            Ordering::Less => Sum(other.0 - self.0),
+            Ordering::Equal => Sum(0),
         }
     }
 
-    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
-        let limit = if let Some(alternate_limit) = alternate_limit {
-            alternate_limit as u128
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
+            self.abs_diff(other) < Sum(acceptable_rounding_error as u128)
         } else {
-            3
-        };
-        match self.cmp(other) {
-            Ordering::Greater => (self.0 - other.0) < limit,
-            Ordering::Less => (other.0 - self.0) < limit,
-            Ordering::Equal => true,
+            self.0 < 3
         }
     }
 }

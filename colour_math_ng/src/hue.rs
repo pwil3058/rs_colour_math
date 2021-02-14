@@ -380,17 +380,17 @@ impl SextantHue {
 
 #[cfg(test)]
 impl SextantHue {
-    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
+    pub fn abs_diff(&self, other: &Self) -> Prop {
         if self.0 == other.0 {
-            self.1.approx_eq(&other.1, significant_digits)
+            self.1.abs_diff(&other.1)
         } else {
-            false
+            Prop::ONE
         }
     }
 
-    pub fn eq_within_re(&self, other: &Self, alternatea_limit: Option<u64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if self.0 == other.0 {
-            self.1.eq_within_re(&other.1, alternatea_limit)
+            self.1.approx_eq(&other.1, acceptable_rounding_error)
         } else {
             false
         }
@@ -679,26 +679,36 @@ impl Hue {
 
 #[cfg(test)]
 impl Hue {
-    pub fn approx_eq(&self, other: &Self, significant_digits: Option<u8>) -> bool {
+    pub fn abs_diff(&self, other: &Self) -> Prop {
         match self {
             Self::Primary(rgb_hue) => match other {
-                Self::Primary(other_rgb_hue) => rgb_hue == other_rgb_hue,
-                _ => false,
+                Self::Primary(other_rgb_hue) => {
+                    if rgb_hue == other_rgb_hue {
+                        Prop::ZERO
+                    } else {
+                        Prop::ONE
+                    }
+                }
+                _ => Prop::ONE,
             },
             Self::Secondary(cmy_hue) => match other {
-                Self::Secondary(other_cmy_hue) => cmy_hue == other_cmy_hue,
-                _ => false,
+                Self::Secondary(other_cmy_hue) => {
+                    if cmy_hue == other_cmy_hue {
+                        Prop::ZERO
+                    } else {
+                        Prop::ONE
+                    }
+                }
+                _ => Prop::ONE,
             },
             Self::Sextant(sextant_hue) => match other {
-                Self::Sextant(other_sextant_hue) => {
-                    sextant_hue.approx_eq(other_sextant_hue, significant_digits)
-                }
-                _ => false,
+                Self::Sextant(other_sextant_hue) => sextant_hue.1.abs_diff(&other_sextant_hue.1),
+                _ => Prop::ONE,
             },
         }
     }
 
-    pub fn eq_within_re(&self, other: &Self, alternate_limit: Option<u64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         match self {
             Self::Primary(rgb_hue) => match other {
                 Self::Primary(other_rgb_hue) => rgb_hue == other_rgb_hue,
@@ -710,7 +720,7 @@ impl Hue {
             },
             Self::Sextant(sextant_hue) => match other {
                 Self::Sextant(other_sextant_hue) => {
-                    sextant_hue.eq_within_re(other_sextant_hue, alternate_limit)
+                    sextant_hue.approx_eq(other_sextant_hue, acceptable_rounding_error)
                 }
                 _ => false,
             },
