@@ -570,13 +570,13 @@ fn general_rgb_for_sum_and_chroma() {
                         use SumOrdering::*;
                         match sum_range.compare_sum(sum) {
                             Shade(_, _) => {
-                                assert_approx_eq!(rgb.sum(), sum, 20);
-                                assert_approx_eq!(rgb.chroma(), chroma, 0xF);
+                                assert_eq!(rgb.sum(), sum);
+                                assert_eq!(rgb.chroma(), chroma);
                                 assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0x100);
                             }
                             Tint(_, _) => {
-                                assert_approx_eq!(rgb.sum(), sum, 0xF);
-                                assert_approx_eq!(rgb.chroma(), chroma, 0xF);
+                                assert_eq!(rgb.sum(), sum);
+                                assert_eq!(rgb.chroma(), chroma);
                                 assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0x100);
                             }
                             _ => (),

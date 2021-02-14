@@ -550,13 +550,24 @@ impl HueIfce for SextantHue {
                         let delta = three_delta / 3;
                         let components = match three_delta.0 % 3 {
                             // NB: allocation os spare light levels is done so as to preserve
-                            // both the requested chroma and sum
+                            // both the requested chroma and sum. Attempts to ensure hue does
+                            // not drift have failed to rounding errors involved with division
                             1 => ((c_prop + delta), (ck + delta + Prop(1)), delta.into()),
                             2 => ((c_prop + delta + Prop(1)), (ck + delta), (delta + Prop(1))),
                             _ => ((c_prop + delta), (ck + delta), delta.into()),
                         };
                         debug_assert_eq!(components.0 + components.1 + components.2, sum);
                         debug_assert_eq!(components.0 - components.2, c_prop.into());
+                        debug_assert!(
+                            self.1
+                                .abs_diff(
+                                    (&((components.1 - components.2)
+                                        / (components.0 - components.2)))
+                                        .into()
+                                )
+                                .0
+                                < 0x200
+                        );
                         if components.0 <= Sum::ONE {
                             Some(self.make_rgb_sum::<T>(components))
                         } else {
