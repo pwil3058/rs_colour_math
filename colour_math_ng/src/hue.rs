@@ -329,6 +329,32 @@ impl HueIfce for CMYHue {
 
     fn rgb_for_sum_and_chroma<T: LightLevel>(&self, sum: Sum, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
+        let _dummy = match chroma.prop() {
+            Prop::ZERO => None,
+            c_prop => {
+                let two_c = c_prop * 2;
+                match sum.cmp(&two_c) {
+                    Ordering::Less => None,
+                    Ordering::Equal => Some(self.make_rgb::<T>((c_prop, Prop::ZERO))),
+                    Ordering::Greater => {
+                        // NB: adjusting for rounding errors is proving elusive so we take the easiest
+                        // option of having accurate chroma and up to 2 least significant digit
+                        // errors in sum for the generated RGB (but we can adjust the Sum test to
+                        // avoid unnecessary None returns.
+                        let other = (sum - two_c) / 3;
+                        let primary = other + c_prop;
+                        // NB: Need to check that Sum wasn't too big
+                        if primary <= Sum::ONE {
+                            assert_eq!(primary.0 as u64 - other.0, c_prop.0);
+                            assert!(sum.abs_diff(&(primary + primary + other)) < Sum(3));
+                            Some(self.make_rgb::<T>((primary.into(), other)))
+                        } else {
+                            None
+                        }
+                    }
+                }
+            }
+        };
         let sum_range = self.sum_range_for_chroma(chroma)?;
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation

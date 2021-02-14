@@ -524,9 +524,9 @@ fn secondary_rgb_for_sum_and_chroma() {
             let chroma = Chroma::Either(prop);
             for sum in VALID_OTHER_SUMS.iter().map(|item| Sum::from(*item)) {
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
-                    assert_approx_eq!(rgb.sum(), sum, 0x801);
-                    assert_approx_eq!(rgb.chroma(), chroma, 0x401);
-                    assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue);
+                    assert_approx_eq!(rgb.sum(), sum, 0x3);
+                    assert_eq!(rgb.chroma(), chroma);
+                    assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
                     let range = hue.sum_range_for_chroma(chroma).unwrap();
                     assert!(range.compare_sum(sum).is_failure());
