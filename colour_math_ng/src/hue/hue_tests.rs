@@ -1,7 +1,10 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::convert::From;
+
 use super::*;
 use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
+use crate::proportion::Chroma;
 use crate::{proportion::*, rgb::RGB, CCI};
 
 const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
@@ -488,12 +491,24 @@ fn primary_rgb_for_sum_and_chroma() {
             .rgb_for_sum_and_chroma::<u64>(Sum::THREE, Chroma::ZERO)
             .is_none());
         for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
-            let chroma = Chroma::Neither(prop);
             for sum in VALID_OTHER_SUMS.iter().map(|item| Sum::from(*item)) {
+                let chroma = Chroma::from((prop, *hue, sum));
+                println!(
+                    "Chroma: {:?} sum: {:?} hue: {:?} {:?}",
+                    chroma,
+                    sum,
+                    hue,
+                    hue.sum_for_max_chroma()
+                );
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     // NB: expect rounding error due to divide by 3 in the maths
                     assert_approx_eq!(rgb.sum(), sum, 0x3);
-                    assert_eq!(rgb.chroma(), chroma);
+                    // NB: near the swapover point sum errors can cause a shift in Chroma variant
+                    if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                        assert_eq!(rgb.chroma().prop(), chroma.prop());
+                    } else {
+                        assert_eq!(rgb.chroma(), chroma);
+                    }
                     assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
                     let range = hue.sum_range_for_chroma(chroma).unwrap();
@@ -521,11 +536,12 @@ fn secondary_rgb_for_sum_and_chroma() {
             .rgb_for_sum_and_chroma::<u64>(Sum::THREE, Chroma::ZERO)
             .is_none());
         for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
-            let chroma = Chroma::Neither(prop);
             for sum in VALID_OTHER_SUMS.iter().map(|item| Sum::from(*item)) {
+                let chroma = Chroma::from((prop, *hue, sum));
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     assert_approx_eq!(rgb.sum(), sum, 0x3);
-                    assert_eq!(rgb.chroma(), chroma);
+                    assert_approx_eq!(rgb.chroma().prop(), chroma.prop(), 0x100);
+                    assert_approx_eq!(rgb.chroma(), chroma, 0x100);
                     assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
                     let range = hue.sum_range_for_chroma(chroma).unwrap();
@@ -571,12 +587,12 @@ fn general_rgb_for_sum_and_chroma() {
                         match sum_range.compare_sum(sum) {
                             Shade(_, _) => {
                                 assert_eq!(rgb.sum(), sum);
-                                assert_eq!(rgb.chroma(), chroma);
+                                assert_eq!(rgb.chroma(), Chroma::Shade(prop));
                                 assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0x100);
                             }
                             Tint(_, _) => {
                                 assert_eq!(rgb.sum(), sum);
-                                assert_eq!(rgb.chroma(), chroma);
+                                assert_eq!(rgb.chroma(), Chroma::Tint(prop));
                                 assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0x100);
                             }
                             _ => (),
