@@ -1,6 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+//use num_traits_plus::assert_approx_eq;
+
 use crate::manipulator::{ColourManipulatorBuilder, RotationPolicy};
-use crate::{hcv::*, Hue, HueConstants, RGB};
+use crate::{hcv::*, Chroma, Hue, HueConstants, Prop, RGBConstants, Sum, RGB};
 
 #[test]
 fn build_manipulator() {
@@ -82,5 +84,33 @@ fn set_get_parameters() {
     ] {
         manipualor.set_rotation_policy(*rotation_policy);
         assert_eq!(*rotation_policy, manipualor.rotation_policy());
+    }
+}
+
+#[test]
+fn decr_chroma() {
+    // clamping should make no difference to chroma decrementing
+    for clamped in &[true, false] {
+        let mut manipulator = ColourManipulatorBuilder::new().clamped(*clamped).build();
+        assert_eq!(manipulator.hcv, HCV::BLACK);
+        assert!(!manipulator.decr_chroma(0.1_f64.into()));
+        manipulator.set_colour(&RGB::<u64>::YELLOW);
+        assert_eq!(manipulator.hcv.chroma, Chroma::ONE);
+        let saved_hue = manipulator.hcv.hue;
+        let decr = Prop::from(0.1);
+        let mut expected = manipulator.hcv.chroma - decr;
+        while manipulator.decr_chroma(decr) {
+            assert_eq!(manipulator.hcv.chroma, expected);
+            expected = manipulator.hcv.chroma - decr;
+            assert_eq!(manipulator.hcv.sum, Sum::TWO);
+            if manipulator.hcv.chroma > Chroma::ZERO {
+                assert_eq!(manipulator.hcv.hue, saved_hue);
+            }
+        }
+        assert!(manipulator.hcv.is_grey());
+        assert_eq!(manipulator.hcv.chroma, Chroma::ZERO);
+        assert_eq!(manipulator.hcv.sum, Sum::TWO);
+        assert_eq!(manipulator.hcv.hue, None);
+        assert_eq!(manipulator.saved_hue, saved_hue.unwrap());
     }
 }

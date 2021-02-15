@@ -10,6 +10,8 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
+use crate::hue::HueIfce;
+use crate::Hue;
 use num_traits::FromPrimitive;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
@@ -44,6 +46,20 @@ impl Chroma {
 impl Default for Chroma {
     fn default() -> Self {
         Self::ZERO
+    }
+}
+
+impl From<(Prop, Hue, Sum)> for Chroma {
+    fn from((prop, hue, sum): (Prop, Hue, Sum)) -> Self {
+        match prop {
+            Prop::ZERO => Chroma::ZERO,
+            Prop::ONE => Chroma::ONE,
+            prop => match sum.cmp(&hue.sum_for_max_chroma()) {
+                Ordering::Greater => Self::Tint(prop),
+                Ordering::Less => Self::Shade(prop),
+                Ordering::Equal => Self::Either(prop),
+            },
+        }
     }
 }
 
@@ -113,6 +129,53 @@ impl Chroma {
                 }
             },
             Either(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
+        }
+    }
+}
+
+impl Add<Prop> for Chroma {
+    type Output = Chroma;
+
+    fn add(self, rhs: Prop) -> Chroma {
+        match self.prop() {
+            Prop::ONE => Chroma::ONE,
+            Prop::ZERO => Chroma::Either(rhs),
+            cur_prop => {
+                let available_space = Prop::ONE - cur_prop;
+                if available_space > rhs {
+                    let new_prop: Prop = (cur_prop + rhs).into();
+                    match self {
+                        Chroma::Shade(_) => Chroma::Shade(new_prop),
+                        Chroma::Tint(_) => Chroma::Tint(new_prop),
+                        Chroma::Either(_) => Chroma::Either(new_prop),
+                    }
+                } else {
+                    Chroma::ONE
+                }
+            }
+        }
+    }
+}
+
+impl Sub<Prop> for Chroma {
+    type Output = Chroma;
+
+    fn sub(self, rhs: Prop) -> Chroma {
+        match self.prop() {
+            Prop::ONE => Chroma::Either(Prop::ONE - rhs),
+            Prop::ZERO => Chroma::ZERO,
+            cur_prop => {
+                if cur_prop > rhs {
+                    let new_prop: Prop = cur_prop - rhs;
+                    match self {
+                        Chroma::Shade(_) => Chroma::Shade(new_prop),
+                        Chroma::Tint(_) => Chroma::Tint(new_prop),
+                        Chroma::Either(_) => Chroma::Either(new_prop),
+                    }
+                } else {
+                    Chroma::ZERO
+                }
+            }
         }
     }
 }

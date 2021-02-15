@@ -6,7 +6,7 @@ use std::{
     ops::Mul,
 };
 
-use crate::hue::HueIfce;
+use crate::hue::{CMYHue, HueIfce, RGBHue, Sextant};
 use crate::{hue::Hue, Chroma, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -63,31 +63,27 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
     }
 
     pub fn chroma(&self) -> Chroma {
-        let [red, green, blue] = <[Prop; 3]>::from(*self);
-        match red.cmp(&green) {
-            Ordering::Greater => match green.cmp(&blue) {
-                Ordering::Greater => Chroma::Either(red - blue),
-                Ordering::Less => match red.cmp(&blue) {
-                    Ordering::Greater => Chroma::Either(red - green),
-                    Ordering::Less => Chroma::Either(blue - green),
-                    Ordering::Equal => Chroma::Either(blue - green),
+        if let Ok(hue) = Hue::try_from(self) {
+            let [red, green, blue] = <[Prop; 3]>::from(*self);
+            let sum = self.sum();
+            match hue {
+                Hue::Primary(RGBHue::Red) => Chroma::from((red - blue, hue, sum)),
+                Hue::Primary(RGBHue::Green) => Chroma::from((green - red, hue, sum)),
+                Hue::Primary(RGBHue::Blue) => Chroma::from((blue - green, hue, sum)),
+                Hue::Secondary(CMYHue::Cyan) => Chroma::from((blue - red, hue, sum)),
+                Hue::Secondary(CMYHue::Magenta) => Chroma::from((red - green, hue, sum)),
+                Hue::Secondary(CMYHue::Yellow) => Chroma::from((green - blue, hue, sum)),
+                Hue::Sextant(sextant_hue) => match sextant_hue.sextant() {
+                    Sextant::RedYellow => Chroma::from((red - blue, hue, sum)),
+                    Sextant::RedMagenta => Chroma::from((red - green, hue, sum)),
+                    Sextant::GreenYellow => Chroma::from((green - blue, hue, sum)),
+                    Sextant::GreenCyan => Chroma::from((green - red, hue, sum)),
+                    Sextant::BlueCyan => Chroma::from((blue - red, hue, sum)),
+                    Sextant::BlueMagenta => Chroma::from((blue - green, hue, sum)),
                 },
-                Ordering::Equal => Chroma::Either(red - blue),
-            },
-            Ordering::Less => match red.cmp(&blue) {
-                Ordering::Greater => Chroma::Either(green - blue),
-                Ordering::Less => match green.cmp(&blue) {
-                    Ordering::Greater => Chroma::Either(green - red),
-                    Ordering::Less => Chroma::Either(blue - red),
-                    Ordering::Equal => Chroma::Either(blue - red),
-                },
-                Ordering::Equal => Chroma::Either(green - blue),
-            },
-            Ordering::Equal => match red.cmp(&blue) {
-                Ordering::Greater => Chroma::Either(red - blue),
-                Ordering::Less => Chroma::Either(blue - red),
-                Ordering::Equal => Chroma::ZERO,
-            },
+            }
+        } else {
+            Chroma::ZERO
         }
     }
 }

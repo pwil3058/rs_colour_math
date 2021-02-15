@@ -1,7 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use crate::hcv::ColourIfce;
-use crate::{Hue, HueConstants, LightLevel, HCV, RGB};
+use crate::{hcv::ColourIfce, Chroma, Hue, HueConstants, LightLevel, Prop, HCV, RGB};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RotationPolicy {
@@ -44,6 +43,24 @@ impl ColourManipulator {
 
     pub fn set_rotation_policy(&mut self, rotation_policy: RotationPolicy) {
         self.rotation_policy = rotation_policy
+    }
+
+    pub fn decr_chroma(&mut self, delta: Prop) -> bool {
+        if let Some(hue) = self.hcv.hue {
+            match self.hcv.chroma - delta {
+                Chroma::Either(prop) => match prop {
+                    Prop::ZERO => {
+                        self.saved_hue = self.hcv.hue.expect("chroma is non zero");
+                        self.hcv = HCV::new_grey(self.hcv.sum);
+                    }
+                    _ => self.hcv.chroma = Chroma::from((prop, hue, self.hcv.sum)),
+                },
+                new_chroma => self.hcv.chroma = new_chroma,
+            };
+            true
+        } else {
+            false
+        }
     }
 }
 

@@ -14,6 +14,20 @@ pub struct HCV {
     pub(crate) sum: Sum,
 }
 
+impl HCV {
+    pub(crate) fn new_grey(sum: Sum) -> Self {
+        Self {
+            hue: None,
+            chroma: Chroma::ZERO,
+            sum,
+        }
+    }
+
+    pub fn is_grey(&self) -> bool {
+        self.hue.is_none()
+    }
+}
+
 impl HueConstants for HCV {
     const RED: Self = Self {
         hue: Some(Hue::Primary(RGBHue::Red)),
@@ -69,20 +83,10 @@ impl RGBConstants for HCV {
 impl<L: LightLevel> From<&RGB<L>> for HCV {
     fn from(rgb: &RGB<L>) -> Self {
         if let Ok(hue) = Hue::try_from(rgb) {
-            let prop = rgb.chroma().prop();
-            let sum = rgb.sum();
-            let sum_range = hue
-                .sum_range_for_chroma(Chroma::Either(prop))
-                .expect("RGB exists");
-            let chroma = if sum >= sum_range.crossover() {
-                Chroma::Tint(prop)
-            } else {
-                Chroma::Shade(prop)
-            };
             Self {
                 hue: Some(hue),
-                chroma,
-                sum,
+                chroma: rgb.chroma(),
+                sum: rgb.sum(),
             }
         } else {
             Self {

@@ -85,6 +85,7 @@ impl SumRange {
 
 pub trait HueIfce {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange>;
+    fn sum_for_max_chroma(&self) -> Sum;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
     fn warmth_for_chroma(&self, chroma: Chroma) -> Prop;
 
@@ -140,6 +141,10 @@ impl HueIfce for RGBHue {
             Prop::ZERO => None,
             prop => Some(SumRange((prop.into(), Sum::ONE, (Sum::THREE - prop * 2)))),
         }
+    }
+
+    fn sum_for_max_chroma(&self) -> Sum {
+        Sum::ONE
     }
 
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
@@ -267,6 +272,10 @@ impl HueIfce for CMYHue {
                 Sum::THREE - chroma.prop(),
             )))
         }
+    }
+
+    fn sum_for_max_chroma(&self) -> Sum {
+        Sum::TWO
     }
 
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
@@ -411,6 +420,14 @@ impl SextantHue {
             Prop::ONE
         }
     }
+
+    pub fn sextant(&self) -> Sextant {
+        self.0
+    }
+
+    pub fn prop(&self) -> Prop {
+        self.1
+    }
 }
 
 #[cfg(test)]
@@ -474,6 +491,10 @@ impl HueIfce for SextantHue {
                 )))
             }
         }
+    }
+
+    fn sum_for_max_chroma(&self) -> Sum {
+        Sum::ONE + self.1
     }
 
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma> {
@@ -649,6 +670,14 @@ impl HueIfce for Hue {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
             Self::Sextant(sextant_hue) => sextant_hue.sum_range_for_chroma(chroma),
+        }
+    }
+
+    fn sum_for_max_chroma(&self) -> Sum {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.sum_for_max_chroma(),
+            Self::Secondary(cmy_hue) => cmy_hue.sum_for_max_chroma(),
+            Self::Sextant(sextant_hue) => sextant_hue.sum_for_max_chroma(),
         }
     }
 
