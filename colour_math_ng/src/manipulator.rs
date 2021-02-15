@@ -48,15 +48,12 @@ impl ColourManipulator {
     pub fn decr_chroma(&mut self, delta: Prop) -> bool {
         if let Some(hue) = self.hcv.hue {
             match self.hcv.chroma - delta {
-                Chroma::Neither(prop) => match prop {
-                    Prop::ZERO => {
-                        self.saved_hue = self.hcv.hue.expect("chroma is non zero");
-                        self.hcv = HCV::new_grey(self.hcv.sum);
-                    }
-                    _ => self.hcv.chroma = Chroma::from((prop, hue, self.hcv.sum)),
-                },
+                Chroma::ZERO => {
+                    self.saved_hue = hue;
+                    self.hcv = HCV::new_grey(self.hcv.sum);
+                }
                 new_chroma => self.hcv.chroma = new_chroma,
-            };
+            }
             true
         } else {
             false
