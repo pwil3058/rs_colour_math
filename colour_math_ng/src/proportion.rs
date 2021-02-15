@@ -15,6 +15,7 @@ use crate::Hue;
 use num_traits::FromPrimitive;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
+use std::ops::Rem;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma {
@@ -439,6 +440,14 @@ impl Div<u8> for Sum {
         // this requirement enforces decisions made about when this operation should be used
         debug_assert!(result <= u64::MAX as u128);
         Prop(result as u64)
+    }
+}
+
+impl Rem<u128> for Sum {
+    type Output = u128;
+
+    fn rem(self, rhs: u128) -> u128 {
+        self.0 % rhs
     }
 }
 

@@ -569,7 +569,7 @@ impl HueIfce for SextantHue {
                     Ordering::Greater => {
                         let three_delta = sum - ck_plus_c;
                         let delta = three_delta / 3;
-                        let components = match three_delta.0 % 3 {
+                        let components = match three_delta % 3 {
                             // NB: allocation os spare light levels is done so as to preserve
                             // both the requested chroma and sum. Attempts to ensure hue does
                             // not drift have failed to rounding errors involved with division
