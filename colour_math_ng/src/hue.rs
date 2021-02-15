@@ -13,7 +13,23 @@ use crate::{
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub struct SumRange((Sum, Sum, Sum));
+pub struct SumRange {
+    pub min: Sum,
+    pub max_chroma_sum: Sum,
+    pub max: Sum,
+}
+
+impl From<(Sum, Sum, Sum)> for SumRange {
+    fn from(tuple: (Sum, Sum, Sum)) -> Self {
+        debug_assert!(tuple.0.is_hue_valid() && tuple.1.is_hue_valid() && tuple.2.is_hue_valid());
+        debug_assert!(tuple.0 <= tuple.1 && tuple.1 <= tuple.2);
+        Self {
+            min: tuple.0,
+            max_chroma_sum: tuple.1,
+            max: tuple.2,
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum SumOrdering {
@@ -43,43 +59,43 @@ impl SumOrdering {
 
 impl SumRange {
     pub fn compare_sum(&self, sum: Sum) -> SumOrdering {
-        if sum < self.0 .0 {
-            SumOrdering::TooSmall(self.0 .0 - sum)
-        } else if sum <= self.0 .1 {
-            SumOrdering::Shade(self.0 .0, self.0 .1)
-        } else if sum <= self.0 .2 {
-            SumOrdering::Tint(self.0 .1, self.0 .2)
+        if sum < self.min {
+            SumOrdering::TooSmall(self.min - sum)
+        } else if sum <= self.max_chroma_sum {
+            SumOrdering::Shade(self.min, self.max_chroma_sum)
+        } else if sum <= self.max {
+            SumOrdering::Tint(self.max_chroma_sum, self.max)
         } else {
-            SumOrdering::TooBig(sum - self.0 .2)
+            SumOrdering::TooBig(sum - self.max)
         }
     }
 
     pub fn min(&self) -> Sum {
-        self.0 .0
+        self.min
     }
 
     pub fn shade_min(&self) -> Sum {
-        self.0 .0
+        self.min
     }
 
     pub fn shade_max(&self) -> Sum {
-        self.0 .1
+        self.max_chroma_sum
     }
 
     pub fn crossover(&self) -> Sum {
-        self.0 .1
+        self.max_chroma_sum
     }
 
     pub fn tint_min(&self) -> Sum {
-        self.0 .1
+        self.max_chroma_sum
     }
 
     pub fn tint_max(&self) -> Sum {
-        self.0 .2
+        self.max
     }
 
     pub fn max(&self) -> Sum {
-        self.0 .2
+        self.max
     }
 }
 
@@ -139,7 +155,11 @@ impl HueIfce for RGBHue {
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
         match chroma.prop() {
             Prop::ZERO => None,
-            prop => Some(SumRange((prop.into(), Sum::ONE, (Sum::THREE - prop * 2)))),
+            prop => Some(SumRange::from((
+                prop.into(),
+                Sum::ONE,
+                (Sum::THREE - prop * 2),
+            ))),
         }
     }
 
@@ -266,7 +286,7 @@ impl HueIfce for CMYHue {
         if chroma.prop() == Prop::ZERO {
             None
         } else {
-            Some(SumRange((
+            Some(SumRange::from((
                 chroma.prop() * 2,
                 Sum::TWO,
                 Sum::THREE - chroma.prop(),
@@ -480,11 +500,11 @@ impl HueIfce for SextantHue {
             Prop::ZERO => None,
             Prop::ONE => {
                 let max_c_sum = Prop::ONE + self.1;
-                Some(SumRange((max_c_sum, max_c_sum, max_c_sum)))
+                Some(SumRange::from((max_c_sum, max_c_sum, max_c_sum)))
             }
             chroma_p => {
                 let ck = self.1 * chroma_p;
-                Some(SumRange((
+                Some(SumRange::from((
                     chroma_p + ck,
                     Sum::ONE + self.1,
                     Sum::THREE - chroma_p * 2 + ck,

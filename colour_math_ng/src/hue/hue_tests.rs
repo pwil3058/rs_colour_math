@@ -248,7 +248,7 @@ fn max_chroma_and_sum_ranges() {
         assert!(hue.sum_range_for_chroma(Chroma::ZERO).is_none());
         assert_eq!(
             hue.sum_range_for_chroma(Chroma::ONE),
-            Some(SumRange((Sum::ONE, Sum::ONE, Sum::ONE)))
+            Some(SumRange::from((Sum::ONE, Sum::ONE, Sum::ONE)))
         );
         for item in NON_ZERO_CHROMAS.iter() {
             let prop = Prop::from(*item);
@@ -263,7 +263,7 @@ fn max_chroma_and_sum_ranges() {
         assert!(hue.sum_range_for_chroma(Chroma::ZERO).is_none());
         assert_eq!(
             hue.sum_range_for_chroma(Chroma::ONE),
-            Some(SumRange((Sum::TWO, Sum::TWO, Sum::TWO)))
+            Some(SumRange::from((Sum::TWO, Sum::TWO, Sum::TWO)))
         );
         for item in NON_ZERO_CHROMAS.iter() {
             let prop = Prop::from(*item);
@@ -289,7 +289,7 @@ fn max_chroma_and_sum_ranges() {
             assert!(hue.sum_range_for_chroma(Chroma::ZERO).is_none());
             assert_eq!(
                 hue.sum_range_for_chroma(Chroma::ONE),
-                Some(SumRange((
+                Some(SumRange::from((
                     Sum::ONE + other,
                     Sum::ONE + other,
                     Sum::ONE + other
