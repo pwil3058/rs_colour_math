@@ -249,7 +249,7 @@ fn max_chroma_and_sum_ranges() {
         );
         for item in NON_ZERO_CHROMAS.iter() {
             let prop = Prop::from(*item);
-            let range = hue.sum_range_for_chroma(Chroma::Either(prop)).unwrap();
+            let range = hue.sum_range_for_chroma(Chroma::Neither(prop)).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
             assert_approx_eq!(max_chroma, Chroma::Shade(prop), 0xF);
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
@@ -264,7 +264,7 @@ fn max_chroma_and_sum_ranges() {
         );
         for item in NON_ZERO_CHROMAS.iter() {
             let prop = Prop::from(*item);
-            let range = hue.sum_range_for_chroma(Chroma::Either(prop)).unwrap();
+            let range = hue.sum_range_for_chroma(Chroma::Neither(prop)).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
             assert_approx_eq!(max_chroma, Chroma::Shade(prop), 0xF);
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
@@ -424,7 +424,7 @@ fn min_max_sum_rgb_for_chroma() {
             *expected_rgb
         );
         let prop = Prop::from(0.5_f64);
-        let chroma = Chroma::Either(prop);
+        let chroma = Chroma::Neither(prop);
         let shade = hue.min_sum_rgb_for_chroma(chroma);
         let tint = hue.max_sum_rgb_for_chroma(chroma);
         assert!(shade.value() < tint.value());
@@ -434,7 +434,7 @@ fn min_max_sum_rgb_for_chroma() {
     }
     for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
         let prop = Prop::from(0.5_f64);
-        let chroma = Chroma::Either(prop);
+        let chroma = Chroma::Neither(prop);
         println!("{:?} : {:?}", hue, expected_rgb);
         assert_eq!(hue.min_sum_rgb_for_chroma(Chroma::ONE), *expected_rgb);
         assert_eq!(hue.max_sum_rgb_for_chroma(Chroma::ONE), *expected_rgb);
@@ -460,7 +460,7 @@ fn min_max_sum_rgb_for_chroma() {
             assert_eq!(hue.min_sum_rgb_for_chroma::<f64>(Chroma::ZERO), RGB::BLACK);
             assert_eq!(hue.max_sum_rgb_for_chroma::<f64>(Chroma::ZERO), RGB::WHITE);
             for prop in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
-                let chroma = Chroma::Either(prop);
+                let chroma = Chroma::Neither(prop);
                 let shade = hue.min_sum_rgb_for_chroma(chroma);
                 let tint = hue.max_sum_rgb_for_chroma(chroma);
                 assert!(shade.sum() <= tint.sum());
@@ -488,7 +488,7 @@ fn primary_rgb_for_sum_and_chroma() {
             .rgb_for_sum_and_chroma::<u64>(Sum::THREE, Chroma::ZERO)
             .is_none());
         for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
-            let chroma = Chroma::Either(prop);
+            let chroma = Chroma::Neither(prop);
             for sum in VALID_OTHER_SUMS.iter().map(|item| Sum::from(*item)) {
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     // NB: expect rounding error due to divide by 3 in the maths
@@ -521,7 +521,7 @@ fn secondary_rgb_for_sum_and_chroma() {
             .rgb_for_sum_and_chroma::<u64>(Sum::THREE, Chroma::ZERO)
             .is_none());
         for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
-            let chroma = Chroma::Either(prop);
+            let chroma = Chroma::Neither(prop);
             for sum in VALID_OTHER_SUMS.iter().map(|item| Sum::from(*item)) {
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     assert_approx_eq!(rgb.sum(), sum, 0x3);
@@ -563,7 +563,7 @@ fn general_rgb_for_sum_and_chroma() {
                 .rgb_for_sum_and_chroma::<u64>(Sum::THREE, Chroma::ZERO)
                 .is_none());
             for prop in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
-                let chroma = Chroma::Either(prop);
+                let chroma = Chroma::Neither(prop);
                 let sum_range = hue.sum_range_for_chroma(chroma).unwrap();
                 for sum in VALID_OTHER_SUMS.iter().map(|a| Sum::from(*a)) {
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {

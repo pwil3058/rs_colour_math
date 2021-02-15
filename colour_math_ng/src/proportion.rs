@@ -16,16 +16,16 @@ use num_traits::FromPrimitive;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma {
     Shade(Prop),
     Tint(Prop),
-    Either(Prop),
+    Neither(Prop),
 }
 
 impl Chroma {
-    pub const ZERO: Self = Self::Either(Prop::ZERO);
-    pub const ONE: Self = Self::Either(Prop::ONE);
+    pub const ZERO: Self = Self::Neither(Prop::ZERO);
+    pub const ONE: Self = Self::Neither(Prop::ONE);
 
     pub fn is_zero(&self) -> bool {
         self.prop() == Prop::ZERO
@@ -34,7 +34,7 @@ impl Chroma {
     pub fn prop(&self) -> Prop {
         use Chroma::*;
         match self {
-            Shade(proportion) | Tint(proportion) | Either(proportion) => *proportion,
+            Shade(proportion) | Tint(proportion) | Neither(proportion) => *proportion,
         }
     }
 
@@ -57,29 +57,8 @@ impl From<(Prop, Hue, Sum)> for Chroma {
             prop => match sum.cmp(&hue.sum_for_max_chroma()) {
                 Ordering::Greater => Self::Tint(prop),
                 Ordering::Less => Self::Shade(prop),
-                Ordering::Equal => Self::Either(prop),
+                Ordering::Equal => Self::Neither(prop),
             },
-        }
-    }
-}
-
-impl PartialEq for Chroma {
-    fn eq(&self, rhs: &Self) -> bool {
-        use Chroma::*;
-        match self {
-            Shade(proportion) => match rhs {
-                Shade(other_proportion) | Either(other_proportion) => {
-                    proportion.eq(&other_proportion)
-                }
-                Tint(_) => false,
-            },
-            Tint(proportion) => match rhs {
-                Shade(_) => false,
-                Tint(other_proportion) | Either(other_proportion) => {
-                    proportion.eq(&other_proportion)
-                }
-            },
-            Either(proportion) => proportion.eq(&rhs.prop()),
         }
     }
 }
@@ -89,18 +68,18 @@ impl PartialOrd for Chroma {
         use Chroma::*;
         match self {
             Shade(proportion) => match rhs {
-                Shade(other_proportion) | Either(other_proportion) => {
-                    proportion.partial_cmp(&other_proportion)
-                }
-                Tint(_) => Some(Ordering::Less),
+                Shade(other_proportion) => proportion.partial_cmp(&other_proportion),
+                _ => Some(Ordering::Less),
             },
             Tint(proportion) => match rhs {
+                Tint(other_proportion) => proportion.partial_cmp(&other_proportion),
                 Shade(_) => Some(Ordering::Greater),
-                Tint(other_proportion) | Either(other_proportion) => {
-                    proportion.partial_cmp(&other_proportion)
-                }
+                Neither(_) => Some(Ordering::Less),
             },
-            Either(proportion) => proportion.partial_cmp(&rhs.prop()),
+            Neither(proportion) => match rhs {
+                Neither(other_proportion) => proportion.partial_cmp(&other_proportion),
+                _ => Some(Ordering::Greater),
+            },
         }
     }
 }
@@ -117,18 +96,18 @@ impl Chroma {
         use Chroma::*;
         match self {
             Shade(proportion) => match other {
-                Shade(other_proportion) | Either(other_proportion) => {
+                Shade(other_proportion) | Neither(other_proportion) => {
                     proportion.approx_eq(other_proportion, acceptable_rounding_error)
                 }
                 Tint(_) => false,
             },
             Tint(proportion) => match other {
                 Shade(_) => false,
-                Tint(other_proportion) | Either(other_proportion) => {
+                Tint(other_proportion) | Neither(other_proportion) => {
                     proportion.approx_eq(other_proportion, acceptable_rounding_error)
                 }
             },
-            Either(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
+            Neither(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
         }
     }
 }
@@ -139,7 +118,7 @@ impl Add<Prop> for Chroma {
     fn add(self, rhs: Prop) -> Chroma {
         match self.prop() {
             Prop::ONE => Chroma::ONE,
-            Prop::ZERO => Chroma::Either(rhs),
+            Prop::ZERO => Chroma::Neither(rhs),
             cur_prop => {
                 let available_space = Prop::ONE - cur_prop;
                 if available_space > rhs {
@@ -147,7 +126,7 @@ impl Add<Prop> for Chroma {
                     match self {
                         Chroma::Shade(_) => Chroma::Shade(new_prop),
                         Chroma::Tint(_) => Chroma::Tint(new_prop),
-                        Chroma::Either(_) => Chroma::Either(new_prop),
+                        Chroma::Neither(_) => Chroma::Neither(new_prop),
                     }
                 } else {
                     Chroma::ONE
@@ -162,7 +141,7 @@ impl Sub<Prop> for Chroma {
 
     fn sub(self, rhs: Prop) -> Chroma {
         match self.prop() {
-            Prop::ONE => Chroma::Either(Prop::ONE - rhs),
+            Prop::ONE => Chroma::Neither(Prop::ONE - rhs),
             Prop::ZERO => Chroma::ZERO,
             cur_prop => {
                 if cur_prop > rhs {
@@ -170,7 +149,7 @@ impl Sub<Prop> for Chroma {
                     match self {
                         Chroma::Shade(_) => Chroma::Shade(new_prop),
                         Chroma::Tint(_) => Chroma::Tint(new_prop),
-                        Chroma::Either(_) => Chroma::Either(new_prop),
+                        Chroma::Neither(_) => Chroma::Neither(new_prop),
                     }
                 } else {
                     Chroma::ZERO
