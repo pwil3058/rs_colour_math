@@ -379,11 +379,10 @@ impl HueIfce for CMYHue {
             }
         };
         let sum_range = self.sum_range_for_chroma_prop(chroma.prop())?;
-        if sum_range.compare_sum(sum).is_success() {
-            // TODO: reassess this calculation
-            Some(self.make_rgb(((sum + chroma.prop()) / 3, (sum - chroma.prop() * 2) / 3)))
-        } else {
-            None
+        match sum_range.compare_sum(sum) {
+            SumOrdering::TooSmall(_) | SumOrdering::TooBig(_) => None,
+            SumOrdering::Neither(sum) => Some(self.make_rgb((sum * chroma.prop() / 2, Prop::ZERO))),
+            _ => Some(self.make_rgb(((sum + chroma.prop()) / 3, (sum - chroma.prop() * 2) / 3))),
         }
     }
 }
