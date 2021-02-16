@@ -51,18 +51,18 @@ impl HCV {
         self.chroma == Chroma::ZERO
     }
 
-    // pub(crate) fn is_valid(&self) -> bool {
-    //     match self.chroma.prop() {
-    //         Prop::ZERO => self.sum <= Sum::THREE,
-    //         prop => {
-    //             let range = self
-    //                 .hue
-    //                 .sum_range_for_chroma_prop(prop)
-    //                 .expect("chroma != 0");
-    //             range.compare_sum(self.sum).is_success()
-    //         }
-    //     }
-    // }
+    pub(crate) fn is_valid(&self) -> bool {
+        match self.chroma.prop() {
+            Prop::ZERO => self.sum <= Sum::THREE,
+            prop => {
+                if let Some(range) = self.hue.sum_range_for_chroma_prop(prop) {
+                    range.compare_sum(self.sum).is_success()
+                } else {
+                    false
+                }
+            }
+        }
+    }
 
     pub fn set_hue(&mut self, hue: Hue, policy: SetHue) {
         if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
@@ -272,6 +272,7 @@ impl ColourIfce for HCV {
     }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
+        debug_assert!(self.is_valid());
         match self.chroma {
             Chroma::ZERO => RGB::new_grey(self.value()),
             chroma => self

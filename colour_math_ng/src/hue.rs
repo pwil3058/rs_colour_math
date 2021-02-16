@@ -495,14 +495,11 @@ impl HueIfce for SextantHue {
                 let max_c_sum = Prop::ONE + self.1;
                 Some(SumRange::from((max_c_sum, max_c_sum, max_c_sum)))
             }
-            prop => {
-                let ck = self.1 * prop;
-                Some(SumRange::from((
-                    prop + ck,
-                    Sum::ONE + self.1,
-                    Sum::THREE - prop * 2 + ck,
-                )))
-            }
+            prop => Some(SumRange::from((
+                (Sum::ONE + self.1) * prop,
+                Sum::ONE + self.1,
+                Sum::THREE - (Sum::TWO - self.1) * prop,
+            ))),
         }
     }
 
