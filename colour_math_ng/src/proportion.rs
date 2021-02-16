@@ -113,53 +113,6 @@ impl Chroma {
     }
 }
 
-impl Add<Prop> for Chroma {
-    type Output = Chroma;
-
-    fn add(self, rhs: Prop) -> Chroma {
-        match self.prop() {
-            Prop::ONE => Chroma::ONE,
-            Prop::ZERO => Chroma::Neither(rhs),
-            cur_prop => {
-                let available_space = Prop::ONE - cur_prop;
-                if available_space > rhs {
-                    let new_prop: Prop = (cur_prop + rhs).into();
-                    match self {
-                        Chroma::Shade(_) => Chroma::Shade(new_prop),
-                        Chroma::Tint(_) => Chroma::Tint(new_prop),
-                        Chroma::Neither(_) => Chroma::Neither(new_prop),
-                    }
-                } else {
-                    Chroma::ONE
-                }
-            }
-        }
-    }
-}
-
-impl Sub<Prop> for Chroma {
-    type Output = Chroma;
-
-    fn sub(self, rhs: Prop) -> Chroma {
-        match self.prop() {
-            Prop::ONE => Chroma::Neither(Prop::ONE - rhs),
-            Prop::ZERO => Chroma::ZERO,
-            cur_prop => {
-                if cur_prop > rhs {
-                    let new_prop: Prop = cur_prop - rhs;
-                    match self {
-                        Chroma::Shade(_) => Chroma::Shade(new_prop),
-                        Chroma::Tint(_) => Chroma::Tint(new_prop),
-                        Chroma::Neither(_) => Chroma::Neither(new_prop),
-                    }
-                } else {
-                    Chroma::ZERO
-                }
-            }
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Prop(pub(crate) u64);
 

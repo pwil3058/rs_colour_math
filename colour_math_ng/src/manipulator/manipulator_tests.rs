@@ -96,21 +96,25 @@ fn decr_chroma() {
         assert!(!manipulator.decr_chroma(0.1_f64.into()));
         manipulator.set_colour(&RGB::<u64>::YELLOW);
         assert_eq!(manipulator.hcv.chroma, Chroma::ONE);
-        let saved_hue = manipulator.hcv.hue;
+        let saved_hue = manipulator.hcv.hue();
         let decr = Prop::from(0.1);
-        let mut expected = manipulator.hcv.chroma - decr;
+        let mut expected = manipulator.hcv.chroma.prop() - decr;
         while manipulator.decr_chroma(decr) {
-            assert_eq!(manipulator.hcv.chroma, expected);
-            expected = manipulator.hcv.chroma - decr;
+            assert_eq!(manipulator.hcv.chroma.prop(), expected);
+            expected = if manipulator.hcv.chroma.prop() > decr {
+                manipulator.hcv.chroma.prop() - decr
+            } else {
+                Prop::ZERO
+            };
             assert_eq!(manipulator.hcv.sum, Sum::TWO);
             if manipulator.hcv.chroma > Chroma::ZERO {
-                assert_eq!(manipulator.hcv.hue, saved_hue);
+                assert_eq!(manipulator.hcv.hue(), saved_hue);
             }
         }
         assert!(manipulator.hcv.is_grey());
         assert_eq!(manipulator.hcv.chroma, Chroma::ZERO);
         assert_eq!(manipulator.hcv.sum, Sum::TWO);
-        assert_eq!(manipulator.hcv.hue, None);
+        assert_eq!(manipulator.hcv.hue(), None);
         assert_eq!(manipulator.saved_hue, saved_hue.unwrap());
     }
 }

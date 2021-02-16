@@ -245,14 +245,14 @@ fn hue_angle() {
 #[test]
 fn max_chroma_and_sum_ranges() {
     for hue in &Hue::PRIMARIES {
-        assert!(hue.sum_range_for_chroma(Chroma::ZERO).is_none());
+        assert!(hue.sum_range_for_chroma_prop(Prop::ZERO).is_none());
         assert_eq!(
-            hue.sum_range_for_chroma(Chroma::ONE),
+            hue.sum_range_for_chroma_prop(Prop::ONE),
             Some(SumRange::from((Sum::ONE, Sum::ONE, Sum::ONE)))
         );
         for item in NON_ZERO_CHROMAS.iter() {
             let prop = Prop::from(*item);
-            let range = hue.sum_range_for_chroma(Chroma::Neither(prop)).unwrap();
+            let range = hue.sum_range_for_chroma_prop(prop).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
             assert_approx_eq!(max_chroma, Chroma::Shade(prop), 0xF);
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
@@ -260,14 +260,14 @@ fn max_chroma_and_sum_ranges() {
         }
     }
     for hue in &Hue::SECONDARIES {
-        assert!(hue.sum_range_for_chroma(Chroma::ZERO).is_none());
+        assert!(hue.sum_range_for_chroma_prop(Prop::ZERO).is_none());
         assert_eq!(
-            hue.sum_range_for_chroma(Chroma::ONE),
+            hue.sum_range_for_chroma_prop(Prop::ONE),
             Some(SumRange::from((Sum::TWO, Sum::TWO, Sum::TWO)))
         );
         for item in NON_ZERO_CHROMAS.iter() {
             let prop = Prop::from(*item);
-            let range = hue.sum_range_for_chroma(Chroma::Neither(prop)).unwrap();
+            let range = hue.sum_range_for_chroma_prop(prop).unwrap();
             let max_chroma = hue.max_chroma_for_sum(range.shade_min()).unwrap();
             assert_approx_eq!(max_chroma, Chroma::Shade(prop), 0xF);
             let max_chroma = hue.max_chroma_for_sum(range.tint_max()).unwrap();
@@ -286,9 +286,9 @@ fn max_chroma_and_sum_ranges() {
         for item in SECOND_VALUES.iter() {
             let other = Prop::from(*item);
             let hue = Hue::Sextant(SextantHue(*sextant, other));
-            assert!(hue.sum_range_for_chroma(Chroma::ZERO).is_none());
+            assert!(hue.sum_range_for_chroma_prop(Prop::ZERO).is_none());
             assert_eq!(
-                hue.sum_range_for_chroma(Chroma::ONE),
+                hue.sum_range_for_chroma_prop(Prop::ONE),
                 Some(SumRange::from((
                     Sum::ONE + other,
                     Sum::ONE + other,
@@ -511,7 +511,7 @@ fn primary_rgb_for_sum_and_chroma() {
                     }
                     assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
-                    let range = hue.sum_range_for_chroma(chroma).unwrap();
+                    let range = hue.sum_range_for_chroma_prop(chroma.prop()).unwrap();
                     println!("{:?}, {:?}, {:?} : {:?}", *hue, sum, chroma, range);
                     assert!(range.compare_sum(sum).is_failure());
                 }
@@ -544,7 +544,7 @@ fn secondary_rgb_for_sum_and_chroma() {
                     assert_approx_eq!(rgb.chroma(), chroma, 0x100);
                     assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
-                    let range = hue.sum_range_for_chroma(chroma).unwrap();
+                    let range = hue.sum_range_for_chroma_prop(chroma.prop()).unwrap();
                     assert!(range.compare_sum(sum).is_failure());
                 }
             }
@@ -580,7 +580,7 @@ fn general_rgb_for_sum_and_chroma() {
                 .is_none());
             for prop in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
                 let chroma = Chroma::Neither(prop);
-                let sum_range = hue.sum_range_for_chroma(chroma).unwrap();
+                let sum_range = hue.sum_range_for_chroma_prop(chroma.prop()).unwrap();
                 for sum in VALID_OTHER_SUMS.iter().map(|a| Sum::from(*a)) {
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                         use SumOrdering::*;
@@ -598,7 +598,7 @@ fn general_rgb_for_sum_and_chroma() {
                             _ => (),
                         }
                     } else {
-                        let range = hue.sum_range_for_chroma(chroma).unwrap();
+                        let range = hue.sum_range_for_chroma_prop(chroma.prop()).unwrap();
                         assert!(range.compare_sum(sum).is_failure());
                     }
                 }

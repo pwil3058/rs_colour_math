@@ -1,5 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use crate::hcv::{Outcome, SetPolicy};
 use crate::{hcv::ColourIfce, Chroma, Hue, HueConstants, LightLevel, Prop, HCV, RGB};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,17 +47,23 @@ impl ColourManipulator {
     }
 
     pub fn decr_chroma(&mut self, delta: Prop) -> bool {
-        if let Some(hue) = self.hcv.hue {
-            match self.hcv.chroma - delta {
-                Chroma::ZERO => {
-                    self.saved_hue = hue;
-                    self.hcv = HCV::new_grey(self.hcv.sum);
+        match self.hcv.chroma {
+            Chroma::ZERO => false,
+            chroma => {
+                let new_chroma_value = if chroma.prop() > delta {
+                    chroma.prop() - delta
+                } else {
+                    self.saved_hue = self.hcv.hue().expect("chroma != 0");
+                    Prop::ZERO
+                };
+                match self
+                    .hcv
+                    .set_chroma_value(new_chroma_value, SetPolicy::Accommodate)
+                {
+                    Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
+                    _ => false,
                 }
-                new_chroma => self.hcv.chroma = new_chroma,
             }
-            true
-        } else {
-            false
         }
     }
 }
@@ -103,7 +110,7 @@ impl ColourManipulatorBuilder {
         } else {
             HCV::default()
         };
-        let saved_hue = if let Some(hue) = hcv.hue {
+        let saved_hue = if let Some(hue) = hcv.hue() {
             hue
         } else {
             Hue::RED

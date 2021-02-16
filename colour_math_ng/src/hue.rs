@@ -70,10 +70,6 @@ impl SumRange {
         }
     }
 
-    pub fn min(&self) -> Sum {
-        self.min
-    }
-
     pub fn shade_min(&self) -> Sum {
         self.min
     }
@@ -93,14 +89,10 @@ impl SumRange {
     pub fn tint_max(&self) -> Sum {
         self.max
     }
-
-    pub fn max(&self) -> Sum {
-        self.max
-    }
 }
 
 pub trait HueIfce {
-    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange>;
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange>;
     fn sum_for_max_chroma(&self) -> Sum;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
     fn warmth_for_chroma(&self, chroma: Chroma) -> Prop;
@@ -152,9 +144,10 @@ impl<T: LightLevel> ChromaOneRGB<T> for RGBHue {
 }
 
 impl HueIfce for RGBHue {
-    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
-        match chroma.prop() {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
+        match prop {
             Prop::ZERO => None,
+            Prop::ONE => Some(SumRange::from((Sum::ONE, Sum::ONE, Sum::ONE))),
             prop => Some(SumRange::from((
                 prop.into(),
                 Sum::ONE,
@@ -282,15 +275,11 @@ impl<T: Float> HueAngle<T> for CMYHue {
 }
 
 impl HueIfce for CMYHue {
-    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
-        if chroma.prop() == Prop::ZERO {
-            None
-        } else {
-            Some(SumRange::from((
-                chroma.prop() * 2,
-                Sum::TWO,
-                Sum::THREE - chroma.prop(),
-            )))
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
+        match prop {
+            Prop::ZERO => None,
+            Prop::ONE => Some(SumRange::from((Sum::TWO, Sum::TWO, Sum::TWO))),
+            prop => Some(SumRange::from((prop * 2, Sum::TWO, Sum::THREE - prop))),
         }
     }
 
@@ -384,7 +373,7 @@ impl HueIfce for CMYHue {
                 }
             }
         };
-        let sum_range = self.sum_range_for_chroma(chroma)?;
+        let sum_range = self.sum_range_for_chroma_prop(chroma.prop())?;
         if sum_range.compare_sum(sum).is_success() {
             // TODO: reassess this calculation
             Some(self.make_rgb(((sum + chroma.prop()) / 3, (sum - chroma.prop() * 2) / 3)))
@@ -495,19 +484,19 @@ impl<T: Float + From<Prop> + Copy> HueAngle<T> for SextantHue {
 }
 
 impl HueIfce for SextantHue {
-    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
-        match chroma.prop() {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
+        match prop {
             Prop::ZERO => None,
             Prop::ONE => {
                 let max_c_sum = Prop::ONE + self.1;
                 Some(SumRange::from((max_c_sum, max_c_sum, max_c_sum)))
             }
-            chroma_p => {
-                let ck = self.1 * chroma_p;
+            prop => {
+                let ck = self.1 * prop;
                 Some(SumRange::from((
-                    chroma_p + ck,
+                    prop + ck,
                     Sum::ONE + self.1,
-                    Sum::THREE - chroma_p * 2 + ck,
+                    Sum::THREE - prop * 2 + ck,
                 )))
             }
         }
@@ -640,6 +629,12 @@ impl HueConstants for Hue {
     const YELLOW: Self = Self::Secondary(CMYHue::Yellow);
 }
 
+impl Default for Hue {
+    fn default() -> Self {
+        Self::RED
+    }
+}
+
 impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
     type Error = &'static str;
 
@@ -685,11 +680,11 @@ impl<T: Float + From<Prop>> HueAngle<T> for Hue {
 }
 
 impl HueIfce for Hue {
-    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<SumRange> {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.sum_range_for_chroma(chroma),
+            Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma_prop(prop),
+            Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma_prop(prop),
+            Self::Sextant(sextant_hue) => sextant_hue.sum_range_for_chroma_prop(prop),
         }
     }
 
