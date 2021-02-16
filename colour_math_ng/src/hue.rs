@@ -62,11 +62,11 @@ impl SumRange {
     pub fn compare_sum(&self, sum: Sum) -> SumOrdering {
         if sum < self.min {
             SumOrdering::TooSmall(self.min - sum)
-        } else if sum < self.max_chroma_sum {
-            SumOrdering::Shade(self.min, self.max_chroma_sum - Sum(1))
-        } else if sum > self.max_chroma_sum {
+        } else if sum < self.max_chroma_sum - Sum(1) {
+            SumOrdering::Shade(self.min, self.max_chroma_sum - Sum(2))
+        } else if sum > self.max_chroma_sum + Sum(1) {
             if sum <= self.max {
-                SumOrdering::Tint(self.max_chroma_sum + Sum(1), self.max)
+                SumOrdering::Tint(self.max_chroma_sum + Sum(2), self.max)
             } else {
                 SumOrdering::TooBig(sum - self.max)
             }
