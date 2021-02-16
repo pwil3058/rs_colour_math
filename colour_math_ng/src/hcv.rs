@@ -77,7 +77,6 @@ impl HCV {
                         }
                     }
                 },
-                SumOrdering::Shade(_, _) | SumOrdering::Tint(_, _) => self.hue = hue,
                 SumOrdering::TooBig(overs) => match policy {
                     SetHue::FavourChroma => self.sum = self.sum - overs,
                     SetHue::FavourValue => {
@@ -88,6 +87,7 @@ impl HCV {
                         }
                     }
                 },
+                _ => self.hue = hue,
             };
             self.hue = hue
         } else {
@@ -122,10 +122,6 @@ impl HCV {
                             }
                             SetScalar::Reject => Outcome::Rejected,
                         },
-                        SumOrdering::Shade(_, _) | SumOrdering::Tint(_, _) => {
-                            self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
-                            Outcome::Ok
-                        }
                         SumOrdering::TooBig(overs) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
@@ -143,6 +139,10 @@ impl HCV {
                             }
                             SetScalar::Reject => Outcome::Rejected,
                         },
+                        _ => {
+                            self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
+                            Outcome::Ok
+                        }
                     }
                 } else {
                     // new value must be zero and needs no checking

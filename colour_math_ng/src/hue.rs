@@ -35,6 +35,7 @@ impl From<(Sum, Sum, Sum)> for SumRange {
 pub enum SumOrdering {
     TooSmall(Sum),
     Shade(Sum, Sum),
+    Neither(Sum),
     Tint(Sum, Sum),
     TooBig(Sum),
 }
@@ -61,12 +62,16 @@ impl SumRange {
     pub fn compare_sum(&self, sum: Sum) -> SumOrdering {
         if sum < self.min {
             SumOrdering::TooSmall(self.min - sum)
-        } else if sum <= self.max_chroma_sum {
-            SumOrdering::Shade(self.min, self.max_chroma_sum)
-        } else if sum <= self.max {
-            SumOrdering::Tint(self.max_chroma_sum, self.max)
+        } else if sum < self.max_chroma_sum {
+            SumOrdering::Shade(self.min, self.max_chroma_sum - Sum(1))
+        } else if sum > self.max_chroma_sum {
+            if sum <= self.max {
+                SumOrdering::Tint(self.max_chroma_sum + Sum(1), self.max)
+            } else {
+                SumOrdering::TooBig(sum - self.max)
+            }
         } else {
-            SumOrdering::TooBig(sum - self.max)
+            SumOrdering::Neither(self.max_chroma_sum)
         }
     }
 
