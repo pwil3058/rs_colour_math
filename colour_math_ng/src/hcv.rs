@@ -9,11 +9,17 @@ use crate::{
 };
 use std::cmp::Ordering;
 
-#[derive(Debug)]
-pub enum SetPolicy {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SetScalar {
     Clamp,
     Accommodate,
     Reject,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SetHue {
+    FavourChroma,
+    FavourValue,
 }
 
 #[derive(Debug)]
@@ -58,7 +64,38 @@ impl HCV {
     //     }
     // }
 
-    pub fn set_chroma_value(&mut self, chroma_value: Prop, policy: SetPolicy) -> Outcome {
+    pub fn set_hue(&mut self, hue: Hue, policy: SetHue) {
+        if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
+            match range.compare_sum(self.sum) {
+                SumOrdering::TooSmall(shortfall) => match policy {
+                    SetHue::FavourChroma => self.sum = self.sum + shortfall,
+                    SetHue::FavourValue => {
+                        if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
+                            self.chroma = chroma
+                        } else {
+                            self.sum = self.sum + shortfall
+                        }
+                    }
+                },
+                SumOrdering::Shade(_, _) | SumOrdering::Tint(_, _) => self.hue = hue,
+                SumOrdering::TooBig(overs) => match policy {
+                    SetHue::FavourChroma => self.sum = self.sum - overs,
+                    SetHue::FavourValue => {
+                        if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
+                            self.chroma = chroma
+                        } else {
+                            self.sum = self.sum - overs
+                        }
+                    }
+                },
+            };
+            self.hue = hue
+        } else {
+            self.hue = hue
+        }
+    }
+
+    pub fn set_chroma_value(&mut self, chroma_value: Prop, policy: SetScalar) -> Outcome {
         match self.chroma.prop().cmp(&chroma_value) {
             Ordering::Equal => Outcome::NoChange,
             Ordering::Less => {
@@ -69,7 +106,7 @@ impl HCV {
                 if let Some(range) = self.hue.sum_range_for_chroma_prop(chroma_value) {
                     match range.compare_sum(self.sum) {
                         SumOrdering::TooSmall(shortfall) => match policy {
-                            SetPolicy::Clamp => {
+                            SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
                                     self.chroma =
                                         Chroma::from((adj_c_val.prop(), self.hue, self.sum));
@@ -78,19 +115,19 @@ impl HCV {
                                     Outcome::Rejected
                                 }
                             }
-                            SetPolicy::Accommodate => {
+                            SetScalar::Accommodate => {
                                 self.sum = self.sum + shortfall;
                                 self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
                                 Outcome::Accommodated
                             }
-                            SetPolicy::Reject => Outcome::Rejected,
+                            SetScalar::Reject => Outcome::Rejected,
                         },
                         SumOrdering::Shade(_, _) | SumOrdering::Tint(_, _) => {
                             self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
                             Outcome::Ok
                         }
                         SumOrdering::TooBig(overs) => match policy {
-                            SetPolicy::Clamp => {
+                            SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
                                     self.chroma =
                                         Chroma::from((adj_c_val.prop(), self.hue, self.sum));
@@ -99,12 +136,12 @@ impl HCV {
                                     Outcome::Rejected
                                 }
                             }
-                            SetPolicy::Accommodate => {
+                            SetScalar::Accommodate => {
                                 self.sum = self.sum - overs;
                                 self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
                                 Outcome::Accommodated
                             }
-                            SetPolicy::Reject => Outcome::Rejected,
+                            SetScalar::Reject => Outcome::Rejected,
                         },
                     }
                 } else {
