@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-//use num_traits_plus::assert_approx_eq;
+use num_traits_plus::assert_approx_eq;
 
+use crate::hue::HueIfce;
 use crate::manipulator::{ColourManipulatorBuilder, RotationPolicy};
 use crate::{hcv::*, Chroma, Hue, HueConstants, Prop, RGBConstants, Sum, RGB};
 
@@ -116,5 +117,43 @@ fn decr_chroma() {
         assert_eq!(manipulator.hcv.sum, Sum::TWO);
         assert_eq!(manipulator.hcv.hue(), None);
         assert_eq!(manipulator.saved_hue, saved_hue.unwrap());
+    }
+}
+
+#[test]
+fn incr_chroma_clamped() {
+    let mut manipulator = super::ColourManipulatorBuilder::new().clamped(true).build();
+    assert_eq!(manipulator.hcv, HCV::BLACK);
+    assert!(!manipulator.incr_chroma(0.1_f64.into()));
+    // Test where clamping makes a difference and where it doesn't
+    for array in &[[0.75_f64, 0.5, 0.0], [0.75, 0.5, 0.75]] {
+        let rgb = RGB::from(*array);
+        manipulator.set_colour(&rgb);
+        let start_sum = manipulator.hcv.sum;
+        let saved_hue = manipulator.hcv.hue().unwrap();
+        let incr = Prop::from(0.1_f64);
+        let mut max_chroma = saved_hue.max_chroma_for_sum(manipulator.hcv.sum).unwrap();
+        let mut expected: Prop = (manipulator.hcv.chroma.prop() + incr)
+            .min(max_chroma.prop().into())
+            .into();
+        println!("Max: {:?}", max_chroma);
+        println! {"HCV: {:?} incr: {:?} expected: {:?}", manipulator.hcv, incr, expected};
+        while manipulator.incr_chroma(incr) {
+            println! {"HCV: {:?} incr: {:?} expected: {:?}", manipulator.hcv, incr, expected};
+            assert_eq!(manipulator.hcv.chroma.prop(), expected);
+            max_chroma = saved_hue.max_chroma_for_sum(manipulator.hcv.sum).unwrap();
+            expected = (manipulator.hcv.chroma.prop() + incr)
+                .min(max_chroma.prop().into())
+                .into();
+            assert_eq!(manipulator.hcv.sum, start_sum);
+            assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
+        }
+        assert!(!manipulator.hcv.is_grey());
+        assert_eq!(
+            manipulator.hcv.chroma,
+            saved_hue.max_chroma_for_sum(start_sum).unwrap()
+        );
+        assert_eq!(manipulator.hcv.sum, start_sum);
+        assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
     }
 }

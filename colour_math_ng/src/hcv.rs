@@ -98,19 +98,23 @@ impl HCV {
     pub fn set_chroma_value(&mut self, chroma_value: Prop, policy: SetScalar) -> Outcome {
         match self.chroma.prop().cmp(&chroma_value) {
             Ordering::Equal => Outcome::NoChange,
-            Ordering::Less => {
+            Ordering::Greater => {
                 self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
                 Outcome::Ok
             }
-            Ordering::Greater => {
+            Ordering::Less => {
                 if let Some(range) = self.hue.sum_range_for_chroma_prop(chroma_value) {
                     match range.compare_sum(self.sum) {
                         SumOrdering::TooSmall(shortfall) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
-                                    self.chroma =
-                                        Chroma::from((adj_c_val.prop(), self.hue, self.sum));
-                                    Outcome::Clamped
+                                    if adj_c_val == self.chroma {
+                                        Outcome::NoChange
+                                    } else {
+                                        self.chroma =
+                                            Chroma::from((adj_c_val.prop(), self.hue, self.sum));
+                                        Outcome::Clamped
+                                    }
                                 } else {
                                     Outcome::Rejected
                                 }
@@ -125,9 +129,13 @@ impl HCV {
                         SumOrdering::TooBig(overs) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
-                                    self.chroma =
-                                        Chroma::from((adj_c_val.prop(), self.hue, self.sum));
-                                    Outcome::Clamped
+                                    if adj_c_val == self.chroma {
+                                        Outcome::NoChange
+                                    } else {
+                                        self.chroma =
+                                            Chroma::from((adj_c_val.prop(), self.hue, self.sum));
+                                        Outcome::Clamped
+                                    }
                                 } else {
                                     Outcome::Rejected
                                 }

@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::hcv::{Outcome, SetScalar};
-use crate::{hcv::ColourIfce, Chroma, Hue, HueConstants, LightLevel, Prop, HCV, RGB};
+use crate::{hcv::ColourIfce, Hue, HueConstants, LightLevel, Prop, HCV, RGB};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RotationPolicy {
@@ -47,19 +47,44 @@ impl ColourManipulator {
     }
 
     pub fn decr_chroma(&mut self, delta: Prop) -> bool {
-        match self.hcv.chroma {
-            Chroma::ZERO => false,
-            chroma => {
-                let new_chroma_value = if chroma.prop() > delta {
-                    chroma.prop() - delta
+        match self.hcv.chroma.prop() {
+            Prop::ZERO => false,
+            c_prop => {
+                let new_chroma_value = if c_prop > delta {
+                    c_prop - delta
                 } else {
                     self.saved_hue = self.hcv.hue().expect("chroma != 0");
                     Prop::ZERO
                 };
-                match self
-                    .hcv
-                    .set_chroma_value(new_chroma_value, SetScalar::Accommodate)
-                {
+                let policy = if self.clamped {
+                    SetScalar::Clamp
+                } else {
+                    SetScalar::Accommodate
+                };
+                match self.hcv.set_chroma_value(new_chroma_value, policy) {
+                    Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
+                    _ => false,
+                }
+            }
+        }
+    }
+
+    pub fn incr_chroma(&mut self, delta: Prop) -> bool {
+        match self.hcv.chroma.prop() {
+            Prop::ONE => false,
+            c_prop => {
+                let new_chroma_value = if c_prop < Prop::ONE - delta {
+                    (c_prop + delta).into()
+                } else {
+                    Prop::ONE
+                };
+                let policy = if self.clamped {
+                    SetScalar::Clamp
+                } else {
+                    SetScalar::Accommodate
+                };
+                let outcome = self.hcv.set_chroma_value(new_chroma_value, policy);
+                match outcome {
                     Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
                     _ => false,
                 }
