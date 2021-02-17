@@ -10,9 +10,10 @@ use crate::{HueConstants, Prop};
 pub struct Angle(i64);
 
 impl Angle {
-    pub const DEGREE: Self = Self(i64::MAX / 180);
-    pub const MINUTE: Self = Self(Self::DEGREE.0 / 60);
-    pub const SECOND: Self = Self(Self::MINUTE.0 / 60);
+    pub const MSEC: Self = Self(i64::MAX / (180 * 60 * 60 * 1000));
+    pub const SECOND: Self = Self(Self::MSEC.0 * 100);
+    pub const MINUTE: Self = Self(Self::SECOND.0 * 60);
+    pub const DEGREE: Self = Self(Self::MINUTE.0 * 60);
 
     pub(crate) const MIN: Self = Self(Self::DEGREE.0 * -180);
     pub(crate) const MAX: Self = Self(Self::DEGREE.0 * 180);
