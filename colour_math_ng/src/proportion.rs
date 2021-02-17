@@ -133,9 +133,9 @@ impl Prop {
 impl Prop {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other) < Prop(acceptable_rounding_error)
+            self.abs_diff(other).0 < acceptable_rounding_error
         } else {
-            self.0 < 3
+            self.abs_diff(other).0 < 3
         }
     }
 }
@@ -313,9 +313,9 @@ impl Debug for Sum {
 impl Sum {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other) < Sum(acceptable_rounding_error as u128)
+            self.abs_diff(other).0 < acceptable_rounding_error as u128
         } else {
-            self.0 < 3
+            self.abs_diff(other).0 < 3
         }
     }
 }

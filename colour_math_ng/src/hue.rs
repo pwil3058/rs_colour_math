@@ -6,6 +6,8 @@ use std::{
     fmt::Debug,
 };
 
+pub mod angle;
+
 use normalised_angles::Degrees;
 
 use crate::{
@@ -643,6 +645,40 @@ impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
         }
     }
 }
+
+// impl From<Degrees<f64>> for Hue {
+//     fn from(angle: Degrees<f64>) -> Self {
+//         match angle {
+//             Degrees::<f64>::RED => Hue::RED,
+//             Degrees::<f64>::GREEN => Hue::GREEN,
+//             Degrees::<f64>::BLUE => Hue::BLUE,
+//             Degrees::<f64>::CYAN => Hue::CYAN,
+//             Degrees::<f64>::MAGENTA => Hue::MAGENTA,
+//             Degrees::<f64>::YELLOW => Hue::YELLOW,
+//             _ => {
+//                 fn f(angle: Degrees<f64>) -> Prop {
+//                     // Careful of float not fully representing real numbers
+//                     Prop::from((angle.sin() / (Degrees::GREEN - angle).sin()).min(1.0))
+//                 };
+//                 if angle >= Degrees::DEG_0 {
+//                     if angle < Degrees::YELLOW {
+//                         Hue::Sextant(SextantHue(Sextant::RedYellow, f(angle)))
+//                     } else if angle < Degrees::GREEN {
+//                         Hue::Sextant(SextantHue(Sextant::GreenYellow, f(Degrees::GREEN - angle)))
+//                     } else {
+//                         Hue::Sextant(SextantHue(Sextant::GreenCyan, f(angle - Degrees::GREEN)))
+//                     }
+//                 } else if angle > Degrees::MAGENTA {
+//                     Hue::Sextant(SextantHue(Sextant::RedMagenta, f(-angle)))
+//                 } else if angle > Degrees::BLUE {
+//                     Hue::Sextant(SextantHue(Sextant::BlueMagenta, f(Degrees::GREEN + angle)))
+//                 } else {
+//                     Hue::Sextant(SextantHue(Sextant::BlueCyan, f(-angle - Degrees::GREEN)))
+//                 }
+//             }
+//         }
+//     }
+// }
 
 impl<T: Float + From<Prop>> HueAngle<T> for Hue {
     fn hue_angle(&self) -> Degrees<T> {
