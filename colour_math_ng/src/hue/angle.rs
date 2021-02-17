@@ -1,8 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::cmp::Ordering;
 use std::ops::{Add, Neg, Sub};
 
-use crate::HueConstants;
-use std::cmp::Ordering;
+use crate::{HueConstants, Prop};
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
@@ -16,6 +16,14 @@ impl Angle {
 
     pub(crate) const MIN: Self = Self(Self::DEGREE.0 * -180);
     pub(crate) const MAX: Self = Self(Self::DEGREE.0 * 180);
+
+    pub fn asin(arg: Prop) -> Self {
+        Self::from(f64::from(arg).asin().to_degrees())
+    }
+
+    pub fn sin(self) -> Prop {
+        Prop::from(f64::from(self).to_radians().sin())
+    }
 
     pub fn is_valid(self) -> bool {
         self >= Self::MIN && self < Self::MAX
@@ -95,7 +103,7 @@ impl Sub for Angle {
 #[derive(
     Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
 )]
-struct DMS(pub (u16, u8, u8));
+pub struct DMS(pub (u16, u8, u8));
 
 impl From<DMS> for Angle {
     fn from(dms: DMS) -> Self {
@@ -152,6 +160,20 @@ mod angle_tests {
         assert_eq!(
             Angle::from(DMS((120, 0, 0))) - Angle::from(DMS((150, 0, 0))),
             -Angle::from(DMS((30, 0, 0)))
+        );
+    }
+
+    #[test]
+    fn trigonometry() {
+        assert_approx_eq!(
+            Angle::from(DMS((30, 0, 0))).sin(),
+            Prop::from(0.5_f64),
+            10000
+        );
+        assert_approx_eq!(
+            Angle::asin(Prop::from(0.5_f64)),
+            Angle::from(DMS((30, 0, 0))),
+            10000
         );
     }
 }

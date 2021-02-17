@@ -4,6 +4,7 @@ use std::convert::From;
 use super::*;
 use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
+use crate::hue::angle::DMS;
 use crate::proportion::Chroma;
 use crate::{proportion::*, rgb::RGB, CCI};
 
@@ -238,6 +239,32 @@ fn hue_angle() {
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, *second));
         assert_approx_eq!(hue.hue_angle(), *angle, 0.0000001);
+    }
+}
+
+#[test]
+fn hue_from_angle() {
+    for (angle, hue) in Angle::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
+        assert_eq!(Hue::from(*angle), *hue);
+    }
+    for (angle, hue) in Angle::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
+        assert_eq!(Hue::from(*angle), *hue);
+    }
+    let second = Prop::from(0.5_f64);
+    use Sextant::*;
+    for (angle, sextant) in &[
+        (Angle::from(DMS((30, 0, 0))), RedYellow),
+        (Angle::from(DMS((90, 0, 0))), GreenYellow),
+        (Angle::from(DMS((150, 0, 0))), GreenCyan),
+        (-Angle::from(DMS((30, 0, 0))), RedMagenta),
+        (-Angle::from(DMS((90, 0, 0))), BlueMagenta),
+        (-Angle::from(DMS((150, 0, 0))), BlueCyan),
+    ] {
+        assert_approx_eq!(
+            Hue::from(*angle),
+            Hue::Sextant(SextantHue(*sextant, second)),
+            10000
+        );
     }
 }
 
