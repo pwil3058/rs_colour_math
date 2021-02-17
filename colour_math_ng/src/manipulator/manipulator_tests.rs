@@ -157,3 +157,45 @@ fn incr_chroma_clamped() {
         assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
     }
 }
+
+#[test]
+fn incr_chroma_unclamped() {
+    let mut manipulator = super::ColourManipulatorBuilder::new()
+        .clamped(false)
+        .build();
+    assert_eq!(manipulator.hcv, HCV::BLACK);
+    assert!(manipulator.incr_chroma(0.1_f64.into()));
+    // Test where clamping makes a difference and where it doesn't
+    for array in &[[0.75_f64, 0.5, 0.0], [0.75, 0.5, 0.75]] {
+        let rgb = RGB::from(*array);
+        manipulator.set_colour(&rgb);
+        let saved_hue = manipulator.hcv.hue().unwrap();
+        let incr: Prop = 0.1_f64.into();
+        let mut expected: Prop = (manipulator.hcv.chroma.prop() + incr).min(Sum::ONE).into();
+        while manipulator.incr_chroma(incr) {
+            assert_eq!(manipulator.hcv.chroma.prop(), expected);
+            expected = (manipulator.hcv.chroma.prop() + incr).min(Sum::ONE).into();
+            if let Some(range) = saved_hue.sum_range_for_chroma_prop(manipulator.hcv.chroma.prop())
+            {
+                assert!(range.compare_sum(manipulator.hcv.sum).is_success());
+            };
+            assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
+        }
+        assert!(!manipulator.hcv.is_grey());
+        assert_eq!(manipulator.hcv.chroma, Chroma::ONE);
+        if let Some(range) = saved_hue.sum_range_for_chroma_prop(manipulator.hcv.chroma.prop()) {
+            assert!(range.compare_sum(manipulator.hcv.sum).is_success());
+        };
+        assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
+    }
+}
+
+#[test]
+fn round_trip_chroma() {
+    let mut manipulator = super::ColourManipulatorBuilder::new().clamped(true).build();
+    manipulator.set_colour(&crate::rgb::RGB::<u64>::CYAN);
+    while manipulator.decr_chroma(0.01.into()) {}
+    assert!(manipulator.hcv.is_grey());
+    while manipulator.incr_chroma(0.01.into()) {}
+    assert_eq!(manipulator.rgb::<u64>(), crate::rgb::RGB::<u64>::CYAN);
+}
