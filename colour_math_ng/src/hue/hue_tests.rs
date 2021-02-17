@@ -243,12 +243,14 @@ fn hue_angle() {
 }
 
 #[test]
-fn hue_from_angle() {
+fn hue_to_from_angle() {
     for (angle, hue) in Angle::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
         assert_eq!(Hue::from(*angle), *hue);
+        assert_eq!(hue.angle(), *angle);
     }
     for (angle, hue) in Angle::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
         assert_eq!(Hue::from(*angle), *hue);
+        assert_eq!(hue.angle(), *angle);
     }
     let second = Prop::from(0.5_f64);
     use Sextant::*;
@@ -260,11 +262,9 @@ fn hue_from_angle() {
         (-Angle::from(DMS((90, 0, 0))), BlueMagenta),
         (-Angle::from(DMS((150, 0, 0))), BlueCyan),
     ] {
-        assert_approx_eq!(
-            Hue::from(*angle),
-            Hue::Sextant(SextantHue(*sextant, second)),
-            10000
-        );
+        let hue = Hue::Sextant(SextantHue(*sextant, second));
+        assert_approx_eq!(Hue::from(*angle), hue, 10000);
+        assert_approx_eq!(hue.angle(), *angle, 100000);
     }
 }
 

@@ -13,6 +13,7 @@ pub mod manipulator;
 pub mod proportion;
 pub mod rgb;
 
+use crate::hue::angle::Angle;
 pub use crate::{
     hcv::HCV,
     hue::Hue,
@@ -99,11 +100,12 @@ impl<F: Float> HueConstants for Degrees<F> {
     const YELLOW: Self = Self::DEG_60;
 }
 
-pub trait HueAngle<T: Float> {
-    fn hue_angle(&self) -> Degrees<T>;
+pub trait HueAngle {
+    fn hue_angle<T: Float + From<Prop>>(&self) -> Degrees<T>;
+    fn angle(&self) -> Angle;
 }
 
-pub trait ChromaOneRGB<T: LightLevel> {
+pub trait ChromaOneRGB {
     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
-    fn chroma_one_rgb(&self) -> RGB<T>;
+    fn chroma_one_rgb<T: LightLevel>(&self) -> RGB<T>;
 }
