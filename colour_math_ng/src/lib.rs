@@ -4,7 +4,6 @@ extern crate serde_derive;
 
 use std::fmt::Debug;
 
-use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 use num_traits_plus::float_plus::*;
 
 pub mod hcv;
@@ -13,10 +12,9 @@ pub mod manipulator;
 pub mod proportion;
 pub mod rgb;
 
-use crate::hue::angle::Angle;
 pub use crate::{
     hcv::HCV,
-    hue::Hue,
+    hue::{angle::Angle, Hue},
     proportion::{Chroma, Prop, Sum},
     rgb::RGB,
 };
@@ -28,10 +26,7 @@ pub enum CCI {
     Blue,
 }
 
-pub trait Float:
-    FloatPlus + DegreesConst + RadiansConst + std::iter::Sum + FloatApproxEq<Self>
-{
-}
+pub trait Float: FloatPlus + std::iter::Sum + FloatApproxEq<Self> {}
 
 impl Float for f32 {}
 impl Float for f64 {}
@@ -90,19 +85,8 @@ pub trait RGBConstants: HueConstants + Copy {
     const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
 }
 
-impl<F: Float> HueConstants for Degrees<F> {
-    const RED: Self = Self::DEG_0;
-    const GREEN: Self = Self::DEG_120;
-    const BLUE: Self = Self::NEG_DEG_120;
-
-    const CYAN: Self = Self::DEG_180;
-    const MAGENTA: Self = Self::NEG_DEG_60;
-    const YELLOW: Self = Self::DEG_60;
-}
-
 pub trait HueAngle {
-    fn hue_angle<T: Float + From<Prop>>(&self) -> Degrees<T>;
-    fn angle(&self) -> Angle;
+    fn hue_angle(&self) -> Angle;
 }
 
 pub trait ChromaOneRGB {

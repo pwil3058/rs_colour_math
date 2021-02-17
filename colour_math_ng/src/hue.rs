@@ -8,11 +8,9 @@ use std::{
 
 pub mod angle;
 
-use normalised_angles::Degrees;
-
-use crate::hue::angle::Angle;
 use crate::{
-    Chroma, ChromaOneRGB, Float, HueAngle, HueConstants, LightLevel, Prop, RGBConstants, Sum, RGB,
+    hue::angle::Angle, Chroma, ChromaOneRGB, HueAngle, HueConstants, LightLevel, Prop,
+    RGBConstants, Sum, RGB,
 };
 use num_traits_plus::float_plus::FloatPlus;
 
@@ -132,15 +130,7 @@ impl RGBHue {
 }
 
 impl HueAngle for RGBHue {
-    fn hue_angle<T: Float>(&self) -> Degrees<T> {
-        match self {
-            RGBHue::Red => Degrees::RED,
-            RGBHue::Green => Degrees::GREEN,
-            RGBHue::Blue => Degrees::BLUE,
-        }
-    }
-
-    fn angle(&self) -> Angle {
+    fn hue_angle(&self) -> Angle {
         match self {
             RGBHue::Red => Angle::RED,
             RGBHue::Green => Angle::GREEN,
@@ -282,15 +272,7 @@ impl CMYHue {
 }
 
 impl HueAngle for CMYHue {
-    fn hue_angle<T: Float>(&self) -> Degrees<T> {
-        match self {
-            CMYHue::Cyan => Degrees::CYAN,
-            CMYHue::Magenta => Degrees::MAGENTA,
-            CMYHue::Yellow => Degrees::YELLOW,
-        }
-    }
-
-    fn angle(&self) -> Angle {
+    fn hue_angle(&self) -> Angle {
         match self {
             CMYHue::Cyan => Angle::CYAN,
             CMYHue::Magenta => Angle::MAGENTA,
@@ -466,21 +448,7 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
 }
 
 impl HueAngle for SextantHue {
-    fn hue_angle<T: Float + From<Prop>>(&self) -> Degrees<T> {
-        let second: T = self.1.into();
-        let sin = T::SQRT_3 * second / T::TWO / (T::ONE - second + second.powi(2)).sqrt();
-        let angle = Degrees::asin(sin);
-        match self.0 {
-            Sextant::RedMagenta => -angle,
-            Sextant::RedYellow => angle,
-            Sextant::GreenYellow => Degrees::GREEN - angle,
-            Sextant::GreenCyan => Degrees::GREEN + angle,
-            Sextant::BlueCyan => Degrees::BLUE - angle,
-            Sextant::BlueMagenta => Degrees::BLUE + angle,
-        }
-    }
-
-    fn angle(&self) -> Angle {
+    fn hue_angle(&self) -> Angle {
         let second: f64 = self.1.into();
         let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
         let angle = Angle::asin(Prop::from(sin));
@@ -712,19 +680,11 @@ impl From<Angle> for Hue {
 }
 
 impl HueAngle for Hue {
-    fn hue_angle<T: Float + From<Prop>>(&self) -> Degrees<T> {
+    fn hue_angle(&self) -> Angle {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
             Self::Secondary(cmy_hue) => cmy_hue.hue_angle(),
             Self::Sextant(sextant_hue) => sextant_hue.hue_angle(),
-        }
-    }
-
-    fn angle(&self) -> Angle {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.angle(),
-            Self::Secondary(cmy_hue) => cmy_hue.angle(),
-            Self::Sextant(sextant_hue) => sextant_hue.angle(),
         }
     }
 }

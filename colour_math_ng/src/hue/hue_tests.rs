@@ -2,7 +2,7 @@
 use std::convert::From;
 
 use super::*;
-use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
+use num_traits_plus::assert_approx_eq;
 
 use crate::proportion::Chroma;
 use crate::{proportion::*, rgb::RGB, CCI};
@@ -194,62 +194,14 @@ fn hue_max_chroma_rgb() {
 }
 
 #[test]
-fn hue_angle() {
-    for (hue, angle) in Hue::PRIMARIES.iter().zip(Degrees::<f64>::PRIMARIES.iter()) {
-        assert_eq!(hue.hue_angle(), *angle);
-    }
-    for (hue, angle) in Hue::SECONDARIES
-        .iter()
-        .zip(Degrees::<f64>::SECONDARIES.iter())
-    {
-        assert_eq!(hue.hue_angle(), *angle);
-    }
-    for (sextant, second, angle) in &[
-        (
-            Sextant::RedYellow,
-            Prop::from(0.5_f64),
-            Degrees::<f64>::DEG_30,
-        ),
-        (
-            Sextant::BlueCyan,
-            Prop::from(0.5_f64),
-            Degrees::<f64>::NEG_DEG_150,
-        ),
-        (
-            Sextant::BlueMagenta,
-            Prop::from(0.5_f64),
-            Degrees::<f64>::NEG_DEG_90,
-        ),
-        (
-            Sextant::RedMagenta,
-            Prop::from(0.5_f64),
-            Degrees::<f64>::NEG_DEG_30,
-        ),
-        (
-            Sextant::GreenYellow,
-            Prop::from(0.5_f64),
-            Degrees::<f64>::DEG_90,
-        ),
-        (
-            Sextant::GreenCyan,
-            Prop::from(0.5_f64),
-            Degrees::<f64>::DEG_150,
-        ),
-    ] {
-        let hue = Hue::Sextant(SextantHue(*sextant, *second));
-        assert_approx_eq!(hue.hue_angle(), *angle, 0.0000001);
-    }
-}
-
-#[test]
 fn hue_to_from_angle() {
     for (angle, hue) in Angle::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
         assert_eq!(Hue::from(*angle), *hue);
-        assert_eq!(hue.angle(), *angle);
+        assert_eq!(hue.hue_angle(), *angle);
     }
     for (angle, hue) in Angle::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
         assert_eq!(Hue::from(*angle), *hue);
-        assert_eq!(hue.angle(), *angle);
+        assert_eq!(hue.hue_angle(), *angle);
     }
     let second = Prop::from(0.5_f64);
     use Sextant::*;
@@ -263,7 +215,7 @@ fn hue_to_from_angle() {
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, second));
         assert_approx_eq!(Hue::from(*angle), hue, 10000);
-        assert_approx_eq!(hue.angle(), *angle, 100000);
+        assert_approx_eq!(hue.hue_angle(), *angle, 100000);
     }
 }
 
