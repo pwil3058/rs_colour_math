@@ -101,22 +101,47 @@ impl Sub for Angle {
     }
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
-)]
-pub struct DMS(pub (u16, u8, u8));
-
-impl From<DMS> for Angle {
-    fn from(dms: DMS) -> Self {
-        debug_assert!(dms.0 .0 <= 360 && dms.0 .1 < 60 && dms.0 .2 < 60);
-        let ws: i128 = Self::DEGREE.0 as i128 * dms.0 .0 as i128
-            + Self::MINUTE.0 as i128 * dms.0 .1 as i128
-            + Self::SECOND.0 as i128 * dms.0 .2 as i128;
-        if ws >= Self::MAX.0 as i128 {
-            Self((ws - Self::MAX.0 as i128 * 2) as i64)
+impl From<i16> for Angle {
+    fn from(deg: i16) -> Self {
+        let mut ws = deg;
+        if deg > 0 {
+            while ws >= 180 {
+                ws -= 360
+            }
         } else {
-            Self(ws as i64)
-        }
+            while ws < -180 {
+                ws += 360
+            }
+        };
+        Self(ws as i64 * Self::DEGREE.0)
+    }
+}
+
+impl From<(u8, u8)> for Angle {
+    fn from((deg, min): (u8, u8)) -> Self {
+        debug_assert!(deg < 179 && min < 60);
+        Self(Self::DEGREE.0 * deg as i64 + Self::MINUTE.0 * min as i64)
+    }
+}
+
+impl From<(u8, u8, u8)> for Angle {
+    fn from((deg, min, sec): (u8, u8, u8)) -> Self {
+        debug_assert!(deg < 179 && min < 60 && sec < 60);
+        Self(
+            Self::DEGREE.0 * deg as i64 + Self::MINUTE.0 * min as i64 + Self::SECOND.0 * sec as i64,
+        )
+    }
+}
+
+impl From<(u8, u8, u8, u16)> for Angle {
+    fn from((deg, min, sec, msec): (u8, u8, u8, u16)) -> Self {
+        debug_assert!(deg < 179 && min < 60 && sec < 60 && msec < 1000);
+        Self(
+            Self::DEGREE.0 * deg as i64
+                + Self::MINUTE.0 * min as i64
+                + Self::SECOND.0 * sec as i64
+                + Self::MSEC.0 * msec as i64,
+        )
     }
 }
 
@@ -148,33 +173,26 @@ mod angle_tests {
 
     #[test]
     fn convert() {
+        assert_eq!(Angle::from(-240).0, Angle::DEGREE.0 * 120);
+        assert_eq!(Angle::from(180).0, Angle::DEGREE.0 * -180);
+        assert_approx_eq!(Angle::from((120, 45)), Angle::from(120.75), 0x100);
         assert_approx_eq!(Angle::from(180.0), Angle::from(-180.0), 16);
-        assert_approx_eq!(Angle::from(120.0), Angle::from(DMS((120, 0, 0))), 2000);
+        assert_approx_eq!(Angle::from(120.0), Angle::from(120), 2000);
     }
 
     #[test]
     fn ops() {
+        assert_eq!(Angle::from(120) + Angle::from(120), -Angle::from(120));
+        assert_eq!(Angle::from(120) - Angle::from(150), -Angle::from(30));
         assert_eq!(
-            Angle::from(DMS((120, 0, 0))) + Angle::from(DMS((120, 0, 0))),
-            -Angle::from(DMS((120, 0, 0)))
-        );
-        assert_eq!(
-            Angle::from(DMS((120, 0, 0))) - Angle::from(DMS((150, 0, 0))),
-            -Angle::from(DMS((30, 0, 0)))
+            Angle::from(120) + Angle::from((9, 11, 25, 900)),
+            Angle::from((129, 11, 25, 900))
         );
     }
 
     #[test]
     fn trigonometry() {
-        assert_approx_eq!(
-            Angle::from(DMS((30, 0, 0))).sin(),
-            Prop::from(0.5_f64),
-            10000
-        );
-        assert_approx_eq!(
-            Angle::asin(Prop::from(0.5_f64)),
-            Angle::from(DMS((30, 0, 0))),
-            10000
-        );
+        assert_approx_eq!(Angle::from(30).sin(), Prop::from(0.5_f64), 10000);
+        assert_approx_eq!(Angle::asin(Prop::from(0.5_f64)), Angle::from(30), 10000);
     }
 }
