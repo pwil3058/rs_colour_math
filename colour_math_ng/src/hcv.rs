@@ -5,7 +5,7 @@ use crate::hue::SumOrdering;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
-    Angle, Chroma, Hue, HueAngle, HueConstants, LightLevel, Prop, RGBConstants, Sum,
+    Angle, Chroma, ColourBasics, Hue, HueAngle, HueConstants, LightLevel, Prop, RGBConstants, Sum,
 };
 use std::cmp::Ordering;
 
@@ -354,21 +354,16 @@ impl HueAngle for HCV {
     }
 }
 
-pub trait ColourIfce {
-    fn hue(&self) -> Option<Hue>;
-    fn chroma(&self) -> Chroma;
-    fn value(&self) -> Prop;
-    fn warmth(&self) -> Prop;
-
-    fn rgb<L: LightLevel>(&self) -> RGB<L>;
-}
-
-impl ColourIfce for HCV {
+impl ColourBasics for HCV {
     fn hue(&self) -> Option<Hue> {
         match self.chroma {
             Chroma::ZERO => None,
             _ => Some(self.hue),
         }
+    }
+
+    fn is_grey(&self) -> bool {
+        self.chroma == Chroma::ZERO
     }
 
     fn chroma(&self) -> Chroma {
@@ -395,6 +390,10 @@ impl ColourIfce for HCV {
                 .rgb_for_sum_and_chroma::<L>(self.sum, chroma)
                 .expect("Assume that we're valid and there must be an equivalent RGB"),
         }
+    }
+
+    fn hcv(&self) -> HCV {
+        *self
     }
 }
 

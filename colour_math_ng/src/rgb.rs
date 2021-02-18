@@ -1,13 +1,17 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{
     cmp::Ordering,
+    convert::TryInto,
     convert::{From, TryFrom},
     ops::Index,
     ops::Mul,
 };
 
 use crate::hue::{CMYHue, HueIfce, RGBHue, Sextant};
-use crate::{hue::Hue, Chroma, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI};
+use crate::{
+    hue::Hue, Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI,
+    HCV,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct RGB<T: LightLevel>(pub(crate) [T; 3]);
@@ -36,22 +40,9 @@ impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
 }
 
 impl<T: LightLevel + Into<Prop>> RGB<T> {
-    pub fn is_grey(&self) -> bool {
-        self.0[0] == self.0[1] && self.0[1] == self.0[2]
-    }
-
     pub fn sum(&self) -> Sum {
         let [red, green, blue] = <[Prop; 3]>::from(*self);
         red + green + blue
-    }
-
-    pub fn value(&self) -> Prop {
-        self.sum() / 3
-    }
-
-    pub fn warmth(&self) -> Prop {
-        let [red, green, blue] = <[Prop; 3]>::from(*self);
-        (Sum::ONE + red - (blue + green) / 2) / 2
     }
 
     pub fn max_chroma_rgb(&self) -> RGB<T> {
@@ -61,8 +52,22 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
             RGB::<T>::new_grey(self.value())
         }
     }
+}
 
-    pub fn chroma(&self) -> Chroma {
+impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
+    fn hue(&self) -> Option<Hue> {
+        if let Ok(hcv) = self.try_into() {
+            Some(hcv)
+        } else {
+            None
+        }
+    }
+
+    fn is_grey(&self) -> bool {
+        self.0[0] == self.0[1] && self.0[1] == self.0[2]
+    }
+
+    fn chroma(&self) -> Chroma {
         if let Ok(hue) = Hue::try_from(self) {
             let [red, green, blue] = <[Prop; 3]>::from(*self);
             let sum = self.sum();
@@ -85,6 +90,22 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
         } else {
             Chroma::ZERO
         }
+    }
+    fn value(&self) -> Prop {
+        self.sum() / 3
+    }
+
+    fn warmth(&self) -> Prop {
+        let [red, green, blue] = <[Prop; 3]>::from(*self);
+        (Sum::ONE + red - (blue + green) / 2) / 2
+    }
+
+    fn hcv(&self) -> HCV {
+        self.into()
+    }
+
+    fn rgb<L: LightLevel>(&self) -> RGB<L> {
+        <[Prop; 3]>::from(*self).into()
     }
 }
 

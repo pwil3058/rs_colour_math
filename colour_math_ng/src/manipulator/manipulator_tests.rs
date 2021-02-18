@@ -4,7 +4,8 @@ use num_traits_plus::assert_approx_eq;
 use crate::hue::HueIfce;
 use crate::manipulator::ColourManipulatorBuilder;
 use crate::{
-    hcv::*, hue::angle::*, Chroma, Hue, HueAngle, HueConstants, Prop, RGBConstants, Sum, RGB,
+    hcv::*, hue::angle::*, Chroma, ColourBasics, Hue, HueAngle, HueConstants, Prop, RGBConstants,
+    Sum, RGB,
 };
 
 #[test]

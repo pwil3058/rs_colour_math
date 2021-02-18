@@ -89,6 +89,17 @@ pub trait HueAngle {
     fn hue_angle(&self) -> Option<Angle>;
 }
 
+pub trait ColourBasics {
+    fn hue(&self) -> Option<Hue>;
+    fn is_grey(&self) -> bool;
+    fn chroma(&self) -> Chroma;
+    fn value(&self) -> Prop;
+    fn warmth(&self) -> Prop;
+
+    fn hcv(&self) -> HCV;
+    fn rgb<L: LightLevel>(&self) -> RGB<L>;
+}
+
 pub trait ChromaOneRGB {
     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
     fn chroma_one_rgb<T: LightLevel>(&self) -> RGB<T>;

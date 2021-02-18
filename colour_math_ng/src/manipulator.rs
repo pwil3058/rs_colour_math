@@ -2,8 +2,7 @@
 
 use crate::hcv::{Outcome, SetScalar};
 use crate::{
-    hcv::{ColourIfce, SetHue},
-    Angle, Hue, HueAngle, HueConstants, LightLevel, Prop, Sum, HCV, RGB,
+    hcv::SetHue, Angle, ColourBasics, Hue, HueAngle, HueConstants, LightLevel, Prop, Sum, HCV, RGB,
 };
 
 #[derive(Debug)]
