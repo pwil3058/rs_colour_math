@@ -3,7 +3,7 @@
 use crate::hcv::{Outcome, SetScalar};
 use crate::{
     hcv::{ColourIfce, SetHue},
-    Angle, Hue, HueAngle, HueConstants, LightLevel, Prop, HCV, RGB,
+    Angle, Hue, HueAngle, HueConstants, LightLevel, Prop, Sum, HCV, RGB,
 };
 
 #[derive(Debug)]
@@ -80,11 +80,52 @@ impl ColourManipulator {
                 } else {
                     SetScalar::Accommodate
                 };
-                let outcome = self.hcv.set_chroma_value(new_chroma_value, policy);
-                match outcome {
+                match self.hcv.set_chroma_value(new_chroma_value, policy) {
                     Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
                     _ => false,
                 }
+            }
+        }
+    }
+
+    pub fn decr_value(&mut self, delta: Prop) -> bool {
+        if self.hcv.sum == Sum::ZERO {
+            false
+        } else {
+            let new_sum = if delta * 3 < self.hcv.sum {
+                self.hcv.sum - delta * 3
+            } else {
+                Sum::ZERO
+            };
+            let policy = if self.clamped {
+                SetScalar::Clamp
+            } else {
+                SetScalar::Accommodate
+            };
+            match self.hcv.set_sum(new_sum, policy) {
+                Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
+                _ => false,
+            }
+        }
+    }
+
+    pub fn incr_value(&mut self, delta: Prop) -> bool {
+        if self.hcv.sum == Sum::THREE {
+            false
+        } else {
+            let new_sum = if delta * 3 < Sum::THREE - self.hcv.sum {
+                self.hcv.sum + delta * 3
+            } else {
+                Sum::THREE
+            };
+            let policy = if self.clamped {
+                SetScalar::Clamp
+            } else {
+                SetScalar::Accommodate
+            };
+            match self.hcv.set_sum(new_sum, policy) {
+                Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
+                _ => false,
             }
         }
     }
