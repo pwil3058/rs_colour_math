@@ -37,6 +37,11 @@ impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
     pub fn new_grey(value: Prop) -> Self {
         Self::from([value, value, value])
     }
+
+    pub fn new_warmth_rgb(warmth: Prop) -> Self {
+        // TODO: fix generation of warmth RGB
+        Self::from([warmth, warmth, warmth])
+    }
 }
 
 impl<T: LightLevel + Into<Prop>> RGB<T> {
