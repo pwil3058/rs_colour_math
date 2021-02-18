@@ -5,7 +5,7 @@ use crate::hue::SumOrdering;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
-    Angle, Chroma, ColourBasics, Hue, HueAngle, HueConstants, LightLevel, Prop, RGBConstants, Sum,
+    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants, Sum,
 };
 use std::cmp::Ordering;
 
@@ -345,20 +345,18 @@ impl<L: LightLevel> From<&HCV> for RGB<L> {
     }
 }
 
-impl HueAngle for HCV {
-    fn hue_angle(&self) -> Option<Angle> {
-        match self.chroma {
-            Chroma::ZERO => None,
-            _ => Some(self.hue.angle()),
-        }
-    }
-}
-
 impl ColourBasics for HCV {
     fn hue(&self) -> Option<Hue> {
         match self.chroma {
             Chroma::ZERO => None,
             _ => Some(self.hue),
+        }
+    }
+
+    fn hue_angle(&self) -> Option<Angle> {
+        match self.chroma {
+            Chroma::ZERO => None,
+            _ => Some(self.hue.angle()),
         }
     }
 

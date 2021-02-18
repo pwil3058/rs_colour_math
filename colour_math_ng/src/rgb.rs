@@ -61,10 +61,9 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
 
 impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
     fn hue(&self) -> Option<Hue> {
-        if let Ok(hcv) = self.try_into() {
-            Some(hcv)
-        } else {
-            None
+        match self.try_into() {
+            Ok(rgb) => Some(rgb),
+            Err(_) => None,
         }
     }
 
@@ -98,11 +97,6 @@ impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
     }
     fn value(&self) -> Prop {
         self.sum() / 3
-    }
-
-    fn warmth(&self) -> Prop {
-        let [red, green, blue] = <[Prop; 3]>::from(*self);
-        (Sum::ONE + red - (blue + green) / 2) / 2
     }
 
     fn hcv(&self) -> HCV {

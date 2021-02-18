@@ -253,6 +253,14 @@ impl Div for Prop {
     }
 }
 
+impl Div<u8> for Prop {
+    type Output = Self;
+
+    fn div(self, rhs: u8) -> Self {
+        Prop(self.0 / rhs as u64)
+    }
+}
+
 impl Add for Prop {
     type Output = Sum;
 

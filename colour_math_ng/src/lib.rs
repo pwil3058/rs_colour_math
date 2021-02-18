@@ -14,7 +14,7 @@ pub mod rgb;
 
 pub use crate::{
     hcv::HCV,
-    hue::{angle::Angle, Hue},
+    hue::{angle::Angle, Hue, HueIfce},
     proportion::{Chroma, Prop, Sum},
     rgb::RGB,
 };
@@ -85,16 +85,31 @@ pub trait RGBConstants: HueConstants + Copy {
     const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
 }
 
-pub trait HueAngle {
-    fn hue_angle(&self) -> Option<Angle>;
-}
-
 pub trait ColourBasics {
     fn hue(&self) -> Option<Hue>;
-    fn is_grey(&self) -> bool;
+
+    fn hue_angle(&self) -> Option<Angle> {
+        Some(self.hue()?.angle())
+    }
+
+    fn hue_rgb<L: LightLevel>(&self) -> Option<RGB<L>> {
+        Some(self.hue()?.max_chroma_rgb())
+    }
+
+    fn is_grey(&self) -> bool {
+        self.chroma() == Chroma::ZERO
+    }
+
     fn chroma(&self) -> Chroma;
     fn value(&self) -> Prop;
-    fn warmth(&self) -> Prop;
+
+    fn warmth(&self) -> Prop {
+        if let Some(hue) = self.hue() {
+            hue.warmth_for_chroma(self.chroma())
+        } else {
+            (Prop::ONE - self.value()) / 2
+        }
+    }
 
     fn hcv(&self) -> HCV;
     fn rgb<L: LightLevel>(&self) -> RGB<L>;
@@ -138,6 +153,9 @@ pub trait ColourAttributes: ColourBasics {
         }
     }
 }
+
+impl ColourAttributes for HCV {}
+impl<L: LightLevel> ColourAttributes for RGB<L> {}
 
 pub trait ChromaOneRGB {
     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)

@@ -1,9 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::hcv::{Outcome, SetScalar};
-use crate::{
-    hcv::SetHue, Angle, ColourBasics, Hue, HueAngle, HueConstants, LightLevel, Prop, Sum, HCV, RGB,
-};
+use crate::{hcv::SetHue, Angle, ColourBasics, Hue, HueConstants, LightLevel, Prop, Sum, HCV, RGB};
 
 #[derive(Debug)]
 pub struct ColourManipulator {
