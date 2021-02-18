@@ -49,11 +49,11 @@ impl Angle {
 }
 
 impl HueConstants for Angle {
-    const RED: Self = Self(Self::DEGREE.0);
+    const RED: Self = Self(Self::DEGREE.0 * 0);
     const GREEN: Self = Self(Self::DEGREE.0 * 120);
     const BLUE: Self = Self(Self::DEGREE.0 * -120);
 
-    const CYAN: Self = Self::MIN;
+    const CYAN: Self = Self(Self::DEGREE.0 * -180);
     const MAGENTA: Self = Self(Self::DEGREE.0 * -60);
     const YELLOW: Self = Self(Self::DEGREE.0 * 60);
 }

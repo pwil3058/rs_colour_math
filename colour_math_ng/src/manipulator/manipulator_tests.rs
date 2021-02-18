@@ -1,44 +1,46 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-//use num_traits_plus::assert_approx_eq;
+use num_traits_plus::assert_approx_eq;
 
 use crate::hue::HueIfce;
-use crate::manipulator::{ColourManipulatorBuilder, RotationPolicy};
-use crate::{hcv::*, Chroma, Hue, HueConstants, Prop, RGBConstants, Sum, RGB};
+use crate::manipulator::ColourManipulatorBuilder;
+use crate::{
+    hcv::*, hue::angle::*, Chroma, Hue, HueAngle, HueConstants, Prop, RGBConstants, Sum, RGB,
+};
 
 #[test]
 fn build_manipulator() {
     let manipualor = ColourManipulatorBuilder::new().build();
     assert_eq!(manipualor.clamped, false);
-    assert_eq!(manipualor.rotation_policy, RotationPolicy::FavourChroma);
+    assert_eq!(manipualor.rotation_policy, SetHue::FavourChroma);
     assert_eq!(manipualor.hcv(), HCV::default());
     assert_eq!(manipualor.saved_hue, Hue::RED);
     let manipualor = ColourManipulatorBuilder::new().clamped(true).build();
     assert_eq!(manipualor.clamped, true);
-    assert_eq!(manipualor.rotation_policy, RotationPolicy::FavourChroma);
+    assert_eq!(manipualor.rotation_policy, SetHue::FavourChroma);
     assert_eq!(manipualor.hcv(), HCV::default());
     assert_eq!(manipualor.saved_hue, Hue::RED);
     let manipualor = ColourManipulatorBuilder::new()
-        .rotation_policy(RotationPolicy::FavourValue)
+        .rotation_policy(SetHue::FavourValue)
         .build();
     assert_eq!(manipualor.clamped, false);
-    assert_eq!(manipualor.rotation_policy, RotationPolicy::FavourValue);
+    assert_eq!(manipualor.rotation_policy, SetHue::FavourValue);
     assert_eq!(manipualor.hcv(), HCV::default());
     assert_eq!(manipualor.saved_hue, Hue::RED);
     let manipualor = ColourManipulatorBuilder::new()
         .init_rgb(&RGB::<u8>::CYAN)
         .build();
     assert_eq!(manipualor.clamped, false);
-    assert_eq!(manipualor.rotation_policy, RotationPolicy::FavourChroma);
+    assert_eq!(manipualor.rotation_policy, SetHue::FavourChroma);
     assert_eq!(manipualor.hcv(), HCV::CYAN);
     assert_eq!(manipualor.rgb::<u8>(), RGB::CYAN);
     assert_eq!(manipualor.saved_hue, Hue::CYAN);
     let manipualor = ColourManipulatorBuilder::new()
         .clamped(true)
         .init_hcv(&HCV::YELLOW)
-        .rotation_policy(RotationPolicy::FavourValue)
+        .rotation_policy(SetHue::FavourValue)
         .build();
     assert_eq!(manipualor.clamped, true);
-    assert_eq!(manipualor.rotation_policy, RotationPolicy::FavourValue);
+    assert_eq!(manipualor.rotation_policy, SetHue::FavourValue);
     assert_eq!(manipualor.hcv(), HCV::YELLOW);
     assert_eq!(manipualor.rgb::<u8>(), RGB::YELLOW);
     assert_eq!(manipualor.saved_hue, Hue::YELLOW);
@@ -74,14 +76,14 @@ fn set_get_parameters() {
         assert_eq!(*clamped, manipualor.clamped());
     }
     for rotation_policy in &[
-        RotationPolicy::FavourValue,
-        RotationPolicy::FavourValue,
-        RotationPolicy::FavourChroma,
-        RotationPolicy::FavourChroma,
-        RotationPolicy::FavourValue,
-        RotationPolicy::FavourChroma,
-        RotationPolicy::FavourValue,
-        RotationPolicy::FavourValue,
+        SetHue::FavourValue,
+        SetHue::FavourValue,
+        SetHue::FavourChroma,
+        SetHue::FavourChroma,
+        SetHue::FavourValue,
+        SetHue::FavourChroma,
+        SetHue::FavourValue,
+        SetHue::FavourValue,
     ] {
         manipualor.set_rotation_policy(*rotation_policy);
         assert_eq!(*rotation_policy, manipualor.rotation_policy());
@@ -169,23 +171,29 @@ fn incr_chroma_unclamped() {
     for array in &[[0.75_f64, 0.5, 0.0], [0.75, 0.5, 0.75]] {
         let rgb = RGB::from(*array);
         manipulator.set_colour(&rgb);
+        let start_sum = manipulator.hcv.sum;
         let saved_hue = manipulator.hcv.hue().unwrap();
         let incr: Prop = 0.1_f64.into();
         let mut expected: Prop = (manipulator.hcv.chroma.prop() + incr).min(Sum::ONE).into();
         while manipulator.incr_chroma(incr) {
             assert_eq!(manipulator.hcv.chroma.prop(), expected);
             expected = (manipulator.hcv.chroma.prop() + incr).min(Sum::ONE).into();
-            if let Some(range) = saved_hue.sum_range_for_chroma_prop(manipulator.hcv.chroma.prop())
-            {
-                assert!(range.compare_sum(manipulator.hcv.sum).is_success());
-            };
+            let (min_sum, max_sum) = manipulator.hcv.sum_range_for_current_chroma();
+            assert!(
+                start_sum.approx_eq(&manipulator.hcv.sum, None)
+                    || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                    || max_sum.approx_eq(&manipulator.hcv.sum, None)
+            );
             assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
         }
         assert!(!manipulator.hcv.is_grey());
         assert_eq!(manipulator.hcv.chroma, Chroma::ONE);
-        if let Some(range) = saved_hue.sum_range_for_chroma_prop(manipulator.hcv.chroma.prop()) {
-            assert!(range.compare_sum(manipulator.hcv.sum).is_success());
-        };
+        let (min_sum, max_sum) = manipulator.hcv.sum_range_for_current_chroma();
+        assert!(
+            start_sum.approx_eq(&manipulator.hcv.sum, None)
+                || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                || max_sum.approx_eq(&manipulator.hcv.sum, None)
+        );
         assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
     }
 }
@@ -198,4 +206,164 @@ fn round_trip_chroma() {
     assert!(manipulator.hcv.is_grey());
     while manipulator.incr_chroma(0.01.into()) {}
     assert_eq!(manipulator.rgb::<u64>(), crate::rgb::RGB::<u64>::CYAN);
+}
+
+#[test]
+fn rotate_rgb_favouring_chroma() {
+    let mut manipulator = ColourManipulatorBuilder::new()
+        .rotation_policy(SetHue::FavourChroma)
+        .build();
+    let deltas = [
+        -Angle::from(180),
+        -Angle::from(120),
+        -Angle::from(60),
+        -Angle::from(30),
+        -Angle::from(10),
+        -Angle::from(5),
+        Angle::from(5),
+        Angle::from(10),
+        Angle::from(30),
+        Angle::from(60),
+        Angle::from(120),
+        Angle::from(180),
+    ];
+    for delta in deltas.iter() {
+        assert!(!manipulator.rotate((*delta).into()));
+    }
+    // pure colours
+    for rgb in crate::rgb::RGB::<u64>::PRIMARIES
+        .iter()
+        .chain(crate::rgb::RGB::SECONDARIES.iter())
+    {
+        manipulator.set_colour(rgb);
+        for delta in deltas.iter() {
+            let cur_chroma = manipulator.hcv.chroma;
+            let cur_sum = manipulator.hcv.sum;
+            let cur_angle = manipulator.hcv.hue_angle().unwrap();
+            assert!(manipulator.rotate((*delta).into()));
+            assert_eq!(cur_chroma, manipulator.hcv.chroma);
+            let (min_sum, max_sum) = manipulator.hcv.sum_range_for_current_chroma();
+            assert!(
+                cur_sum.approx_eq(&manipulator.hcv.sum, None)
+                    || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                    || max_sum.approx_eq(&manipulator.hcv.sum, None)
+            );
+            let expected_angle = cur_angle + (*delta).into();
+            assert_approx_eq!(expected_angle, manipulator.hcv.hue_angle().unwrap(), 0x1000);
+        }
+    }
+    // shades and tints
+    let half = u64::MAX / 2;
+    for array in [
+        [half, 0, 0],
+        [0, half, 0],
+        [0, 0, half],
+        [half, half, 0],
+        [half, 0, half],
+        [0, half, half],
+        [u64::MAX, half, half],
+        [half, u64::MAX, half],
+        [half, half, u64::MAX],
+        [u64::MAX, u64::MAX, half],
+        [u64::MAX, half, u64::MAX],
+        [half, u64::MAX, u64::MAX],
+    ]
+    .iter()
+    {
+        manipulator.set_colour(&(*array).into());
+        for delta in deltas.iter() {
+            let cur_chroma = manipulator.hcv.chroma;
+            let cur_sum = manipulator.hcv.sum;
+            let cur_angle = manipulator.hcv.hue_angle().unwrap();
+            assert!(manipulator.rotate((*delta).into()));
+            assert_eq!(cur_chroma, manipulator.hcv.chroma);
+            let (min_sum, max_sum) = manipulator.hcv.sum_range_for_current_chroma();
+            assert!(
+                cur_sum.approx_eq(&manipulator.hcv.sum, None)
+                    || min_sum.approx_eq(&manipulator.hcv.sum, None)
+                    || max_sum.approx_eq(&manipulator.hcv.sum, None)
+            );
+            let expected_angle = cur_angle + (*delta).into();
+            assert_approx_eq!(expected_angle, manipulator.hcv.hue_angle().unwrap(), 0x1000);
+        }
+    }
+}
+
+#[test]
+fn rotate_rgb_favouring_value() {
+    let mut manipulator = ColourManipulatorBuilder::new()
+        .rotation_policy(SetHue::FavourValue)
+        .build();
+    let deltas = [
+        -Angle::from(180),
+        -Angle::from(120),
+        -Angle::from(60),
+        -Angle::from(30),
+        -Angle::from(10),
+        -Angle::from(5),
+        Angle::from(5),
+        Angle::from(10),
+        Angle::from(30),
+        Angle::from(60),
+        Angle::from(120),
+        Angle::from(180),
+    ];
+    for delta in deltas.iter() {
+        assert!(!manipulator.rotate((*delta).into()));
+    }
+    // pure colours
+    for rgb in crate::rgb::RGB::<u64>::PRIMARIES
+        .iter()
+        .chain(crate::rgb::RGB::SECONDARIES.iter())
+    {
+        manipulator.set_colour(rgb);
+        for delta in deltas.iter() {
+            let cur_chroma = manipulator.hcv.chroma;
+            let cur_sum = manipulator.hcv.sum;
+            let cur_angle = manipulator.hcv.hue_angle().unwrap();
+            assert!(manipulator.rotate((*delta).into()));
+            let max_chroma = manipulator.hcv.max_chroma_for_current_sum();
+            assert!(
+                cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x0001))
+                    || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x0001))
+            );
+            assert_approx_eq!(cur_sum, manipulator.hcv.sum);
+            let expected_angle = cur_angle + (*delta).into();
+            assert_approx_eq!(expected_angle, manipulator.hcv.hue_angle().unwrap(), 0x1000);
+        }
+    }
+    // shades and tints
+    let half = u64::MAX / 2;
+    for array in [
+        [half, 0, 0],
+        [0, half, 0],
+        [0, 0, half],
+        [half, half, 0],
+        [half, 0, half],
+        [0, half, half],
+        [u64::MAX, half, half],
+        [half, u64::MAX, half],
+        [half, half, u64::MAX],
+        [u64::MAX, u64::MAX, half],
+        [u64::MAX, half, u64::MAX],
+        [half, u64::MAX, u64::MAX],
+    ]
+    .iter()
+    {
+        manipulator.set_colour(&(*array).into());
+        for delta in deltas.iter() {
+            let cur_chroma = manipulator.hcv.chroma;
+            let cur_sum = manipulator.hcv.sum;
+            let cur_angle = manipulator.hcv.hue_angle().unwrap();
+            assert!(manipulator.rotate((*delta).into()));
+            let max_chroma = manipulator.hcv.max_chroma_for_current_sum();
+            assert!(
+                cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x1))
+                    || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x1))
+            );
+            assert_approx_eq!(cur_sum, manipulator.hcv.sum);
+            let expected_angle = cur_angle + (*delta).into();
+            assert_approx_eq!(expected_angle, manipulator.hcv.hue_angle().unwrap(), 0x1000);
+        }
+    }
 }

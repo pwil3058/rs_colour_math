@@ -1,19 +1,16 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::hcv::{Outcome, SetScalar};
-use crate::{hcv::ColourIfce, Hue, HueConstants, LightLevel, Prop, HCV, RGB};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RotationPolicy {
-    FavourChroma,
-    FavourValue,
-}
+use crate::{
+    hcv::{ColourIfce, SetHue},
+    Angle, Hue, HueAngle, HueConstants, LightLevel, Prop, HCV, RGB,
+};
 
 #[derive(Debug)]
 pub struct ColourManipulator {
     hcv: HCV,
     clamped: bool,
-    rotation_policy: RotationPolicy,
+    rotation_policy: SetHue,
     saved_hue: Hue,
 }
 
@@ -38,11 +35,11 @@ impl ColourManipulator {
         self.clamped = clamped
     }
 
-    pub fn rotation_policy(&self) -> RotationPolicy {
+    pub fn rotation_policy(&self) -> SetHue {
         self.rotation_policy
     }
 
-    pub fn set_rotation_policy(&mut self, rotation_policy: RotationPolicy) {
+    pub fn set_rotation_policy(&mut self, rotation_policy: SetHue) {
         self.rotation_policy = rotation_policy
     }
 
@@ -91,13 +88,29 @@ impl ColourManipulator {
             }
         }
     }
+
+    pub fn rotate(&mut self, angle: Angle) -> bool {
+        match self.hcv.hue_angle() {
+            None => false,
+            Some(cur_angle) => {
+                let new_angle = cur_angle + angle;
+                if new_angle == cur_angle {
+                    false
+                } else {
+                    self.hcv.set_hue(Hue::from(new_angle), self.rotation_policy);
+                    self.saved_hue = self.hcv.hue().expect("chroma is not zero");
+                    true
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct ColourManipulatorBuilder {
     init_hcv: Option<HCV>,
     clamped: bool,
-    rotation_policy: RotationPolicy,
+    rotation_policy: SetHue,
 }
 
 impl ColourManipulatorBuilder {
@@ -105,7 +118,7 @@ impl ColourManipulatorBuilder {
         Self {
             init_hcv: None,
             clamped: false,
-            rotation_policy: RotationPolicy::FavourChroma,
+            rotation_policy: SetHue::FavourChroma,
         }
     }
 
@@ -124,7 +137,7 @@ impl ColourManipulatorBuilder {
         self
     }
 
-    pub fn rotation_policy(&mut self, rotation_policy: RotationPolicy) -> &mut Self {
+    pub fn rotation_policy(&mut self, rotation_policy: SetHue) -> &mut Self {
         self.rotation_policy = rotation_policy;
         self
     }

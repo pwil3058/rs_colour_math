@@ -5,7 +5,7 @@ use crate::hue::SumOrdering;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
-    Chroma, Hue, HueConstants, LightLevel, Prop, RGBConstants, Sum,
+    Angle, Chroma, Hue, HueAngle, HueConstants, LightLevel, Prop, RGBConstants, Sum,
 };
 use std::cmp::Ordering;
 
@@ -39,13 +39,13 @@ pub struct HCV {
 }
 
 impl HCV {
-    // pub(crate) fn new_grey(sum: Sum) -> Self {
-    //     Self {
-    //         hue: Hue::default(),
-    //         chroma: Chroma::ZERO,
-    //         sum,
-    //     }
-    // }
+    pub fn new_grey(sum: Sum) -> Self {
+        Self {
+            hue: Hue::default(),
+            chroma: Chroma::ZERO,
+            sum,
+        }
+    }
 
     pub fn is_grey(&self) -> bool {
         self.chroma == Chroma::ZERO
@@ -61,6 +61,22 @@ impl HCV {
                     false
                 }
             }
+        }
+    }
+
+    pub fn sum_range_for_current_chroma(&self) -> (Sum, Sum) {
+        if let Some(range) = self.hue.sum_range_for_chroma_prop(self.chroma.prop()) {
+            (range.min, range.max)
+        } else {
+            (Sum::ZERO, Sum::THREE)
+        }
+    }
+
+    pub fn max_chroma_for_current_sum(&self) -> Chroma {
+        if let Some(max_chroma) = self.hue.max_chroma_for_sum(self.sum) {
+            max_chroma
+        } else {
+            Chroma::ZERO
         }
     }
 
@@ -236,6 +252,15 @@ impl<L: LightLevel> From<&RGB<L>> for HCV {
 impl<L: LightLevel> From<&HCV> for RGB<L> {
     fn from(hcv: &HCV) -> Self {
         hcv.rgb::<L>()
+    }
+}
+
+impl HueAngle for HCV {
+    fn hue_angle(&self) -> Option<Angle> {
+        match self.chroma {
+            Chroma::ZERO => None,
+            _ => Some(self.hue.angle()),
+        }
     }
 }
 

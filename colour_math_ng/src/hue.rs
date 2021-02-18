@@ -9,8 +9,7 @@ use std::{
 pub mod angle;
 
 use crate::{
-    hue::angle::Angle, Chroma, ChromaOneRGB, HueAngle, HueConstants, LightLevel, Prop,
-    RGBConstants, Sum, RGB,
+    hue::angle::Angle, Chroma, ChromaOneRGB, HueConstants, LightLevel, Prop, RGBConstants, Sum, RGB,
 };
 use num_traits_plus::float_plus::FloatPlus;
 
@@ -99,6 +98,7 @@ impl SumRange {
 }
 
 pub trait HueIfce {
+    fn angle(&self) -> Angle;
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange>;
     fn sum_for_max_chroma(&self) -> Sum;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
@@ -129,16 +129,6 @@ impl RGBHue {
     }
 }
 
-impl HueAngle for RGBHue {
-    fn hue_angle(&self) -> Angle {
-        match self {
-            RGBHue::Red => Angle::RED,
-            RGBHue::Green => Angle::GREEN,
-            RGBHue::Blue => Angle::BLUE,
-        }
-    }
-}
-
 impl ChromaOneRGB for RGBHue {
     /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
     fn chroma_one_rgb<T: LightLevel>(&self) -> RGB<T> {
@@ -151,6 +141,14 @@ impl ChromaOneRGB for RGBHue {
 }
 
 impl HueIfce for RGBHue {
+    fn angle(&self) -> Angle {
+        match self {
+            RGBHue::Red => Angle::RED,
+            RGBHue::Green => Angle::GREEN,
+            RGBHue::Blue => Angle::BLUE,
+        }
+    }
+
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
         match prop {
             Prop::ZERO => None,
@@ -271,17 +269,15 @@ impl CMYHue {
     }
 }
 
-impl HueAngle for CMYHue {
-    fn hue_angle(&self) -> Angle {
+impl HueIfce for CMYHue {
+    fn angle(&self) -> Angle {
         match self {
             CMYHue::Cyan => Angle::CYAN,
             CMYHue::Magenta => Angle::MAGENTA,
             CMYHue::Yellow => Angle::YELLOW,
         }
     }
-}
 
-impl HueIfce for CMYHue {
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
         match prop {
             Prop::ZERO => None,
@@ -447,8 +443,8 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     }
 }
 
-impl HueAngle for SextantHue {
-    fn hue_angle(&self) -> Angle {
+impl HueIfce for SextantHue {
+    fn angle(&self) -> Angle {
         let second: f64 = self.1.into();
         let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
         let angle = Angle::asin(Prop::from(sin));
@@ -461,9 +457,7 @@ impl HueAngle for SextantHue {
             Sextant::BlueMagenta => Angle::BLUE + angle,
         }
     }
-}
 
-impl HueIfce for SextantHue {
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
         match prop {
             Prop::ZERO => None,
@@ -679,17 +673,15 @@ impl From<Angle> for Hue {
     }
 }
 
-impl HueAngle for Hue {
-    fn hue_angle(&self) -> Angle {
+impl HueIfce for Hue {
+    fn angle(&self) -> Angle {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.hue_angle(),
-            Self::Secondary(cmy_hue) => cmy_hue.hue_angle(),
-            Self::Sextant(sextant_hue) => sextant_hue.hue_angle(),
+            Self::Primary(rgb_hue) => rgb_hue.angle(),
+            Self::Secondary(cmy_hue) => cmy_hue.angle(),
+            Self::Sextant(sextant_hue) => sextant_hue.angle(),
         }
     }
-}
 
-impl HueIfce for Hue {
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma_prop(prop),

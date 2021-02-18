@@ -197,11 +197,11 @@ fn hue_max_chroma_rgb() {
 fn hue_to_from_angle() {
     for (angle, hue) in Angle::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
         assert_eq!(Hue::from(*angle), *hue);
-        assert_eq!(hue.hue_angle(), *angle);
+        assert_eq!(hue.angle(), *angle);
     }
     for (angle, hue) in Angle::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
         assert_eq!(Hue::from(*angle), *hue);
-        assert_eq!(hue.hue_angle(), *angle);
+        assert_eq!(hue.angle(), *angle);
     }
     let second = Prop::from(0.5_f64);
     use Sextant::*;
@@ -215,7 +215,7 @@ fn hue_to_from_angle() {
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, second));
         assert_approx_eq!(Hue::from(*angle), hue, 10000);
-        assert_approx_eq!(hue.hue_angle(), *angle, 100000);
+        assert_approx_eq!(hue.angle(), *angle, 100000);
     }
 }
 

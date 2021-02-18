@@ -86,7 +86,7 @@ pub trait RGBConstants: HueConstants + Copy {
 }
 
 pub trait HueAngle {
-    fn hue_angle(&self) -> Angle;
+    fn hue_angle(&self) -> Option<Angle>;
 }
 
 pub trait ChromaOneRGB {
