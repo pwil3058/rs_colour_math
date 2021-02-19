@@ -1,9 +1,10 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::convert::From;
 
-//use num_traits_plus::assert_approx_eq;
+use num_traits_plus::assert_approx_eq;
 
 use crate::hcv::*;
+use crate::hue::Warmth;
 
 #[test]
 fn default_hcv_is_black() {
@@ -71,4 +72,19 @@ fn from_to_rgb_f64() {
             }
         }
     }
+}
+
+#[test]
+fn warmth() {
+    assert_eq!(HCV::RED.warmth(), Prop::ONE);
+    assert_eq!(HCV::BLUE.warmth(), Prop::ONE / 2);
+    assert_eq!(HCV::CYAN.warmth(), Prop::ONE / 3);
+    assert_eq!(HCV::YELLOW.warmth(), Prop::ONE * 5 / 6);
+    assert_eq!(HCV::WHITE.warmth(), Prop::ZERO);
+    assert_eq!(HCV::BLACK.warmth(), Prop::ONE / 2);
+    assert_approx_eq!(
+        RGB::<u8>::from([Prop::ONE, Prop::ONE / 2, Prop::ONE / 2]).warmth(),
+        Prop::ONE * 5 / 12,
+        0x100000000000000
+    )
 }

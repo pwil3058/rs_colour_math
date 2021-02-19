@@ -374,7 +374,7 @@ impl ColourBasics for HCV {
 
     fn warmth(&self) -> Prop {
         match self.chroma {
-            Chroma::ONE => (Sum::THREE - self.sum) / 6,
+            Chroma::ZERO => (Sum::THREE - self.sum) / 6,
             _ => self.hue.warmth_for_chroma(self.chroma),
         }
     }

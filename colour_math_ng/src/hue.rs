@@ -97,6 +97,29 @@ impl SumRange {
     }
 }
 
+pub(crate) struct Warmth;
+
+impl Warmth {
+    pub(crate) const K: Prop = Prop(u64::MAX / 3);
+    const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
+    pub(crate) const B: Sum = Sum(u64::MAX as u128 / 2);
+
+    fn calculate(chroma: Chroma, x_dash: Prop) -> Prop {
+        println!("Chroma: {:?} x_dash: {:?}", chroma, x_dash);
+        debug_assert_ne!(chroma, Chroma::ZERO);
+        let temp = (Self::K + Self::K_COMP * x_dash) * chroma.prop();
+        debug_assert!(temp <= Sum::ONE);
+        match chroma {
+            Chroma::Shade(prop) => {
+                let warmth = Self::B - Self::B * prop + temp;
+                debug_assert!(warmth <= Sum::ONE);
+                warmth.into()
+            }
+            _ => temp.into(),
+        }
+    }
+}
+
 pub trait HueIfce {
     fn angle(&self) -> Angle;
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange>;
@@ -179,11 +202,11 @@ impl HueIfce for RGBHue {
     }
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
-        match self {
-            // TODO: take tint and shade into account
+        let x_dash = match self {
             RGBHue::Red => (Sum::ONE + chroma.prop()) / 2,
             RGBHue::Green | RGBHue::Blue => (Sum::TWO - chroma.prop()) / 4,
-        }
+        };
+        Warmth::calculate(chroma, x_dash)
     }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
@@ -304,11 +327,11 @@ impl HueIfce for CMYHue {
     }
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
-        match self {
-            // TODO: take tint and shade into account
+        let x_dash = match self {
             CMYHue::Cyan => (Sum::ONE - chroma.prop()) / 2,
             CMYHue::Magenta | CMYHue::Yellow => (Sum::TWO + chroma.prop()) / 4,
-        }
+        };
+        Warmth::calculate(chroma, x_dash)
     }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
@@ -498,12 +521,13 @@ impl HueIfce for SextantHue {
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
         let kc = chroma.prop() * self.1;
-        match self.0 {
+        let x_dash = match self.0 {
             // TODO: take tint and shade into account
             Sextant::RedYellow | Sextant::RedMagenta => (Sum::TWO + chroma.prop() * 2 - kc) / 4,
             Sextant::GreenYellow | Sextant::BlueMagenta => (Sum::TWO + kc * 2 - chroma.prop()) / 4,
             Sextant::GreenCyan | Sextant::BlueCyan => (Sum::TWO - kc - chroma.prop()) / 4,
-        }
+        };
+        Warmth::calculate(chroma, x_dash)
     }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
