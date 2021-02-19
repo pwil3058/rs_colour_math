@@ -8,6 +8,7 @@ use std::{
 };
 
 use crate::hue::{CMYHue, HueIfce, RGBHue, Sextant};
+use crate::proportion::Warmth;
 use crate::{
     hue::Hue, Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI,
     HCV,
@@ -38,9 +39,9 @@ impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
         Self::from([value, value, value])
     }
 
-    pub fn new_warmth_rgb(warmth: Prop) -> Self {
+    pub fn new_warmth_rgb(warmth: Warmth) -> Self {
         // TODO: fix generation of warmth RGB
-        Self::from([warmth, warmth, warmth])
+        Self::from([warmth.into(), warmth.into(), warmth.into()])
     }
 }
 

@@ -12,6 +12,7 @@ pub mod manipulator;
 pub mod proportion;
 pub mod rgb;
 
+use crate::proportion::Warmth;
 pub use crate::{
     hcv::HCV,
     hue::{angle::Angle, Hue, HueIfce},
@@ -103,11 +104,11 @@ pub trait ColourBasics {
     fn chroma(&self) -> Chroma;
     fn value(&self) -> Prop;
 
-    fn warmth(&self) -> Prop {
+    fn warmth(&self) -> Warmth {
         if let Some(hue) = self.hue() {
             hue.warmth_for_chroma(self.chroma())
         } else {
-            (Prop::ONE - self.value()) / 2
+            Warmth::calculate_monochrome(self.value())
         }
     }
 
@@ -140,7 +141,7 @@ pub trait ColourAttributes: ColourBasics {
             ScalarAttribute::Chroma => self.chroma().prop(),
             ScalarAttribute::Greyness => Prop::ONE - self.chroma().prop(),
             ScalarAttribute::Value => self.value(),
-            ScalarAttribute::Warmth => self.warmth(),
+            ScalarAttribute::Warmth => self.warmth().into(),
         }
     }
 

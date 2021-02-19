@@ -447,3 +447,77 @@ impl Mul<Prop> for Sum {
         }
     }
 }
+
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
+)]
+pub struct Warmth(pub(crate) u64);
+
+impl Warmth {
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(u64::MAX);
+
+    const K: Prop = Prop(u64::MAX / 3);
+    const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
+    const B: Sum = Sum(u64::MAX as u128 / 2);
+
+    pub fn calculate(chroma: Chroma, x_dash: Prop) -> Self {
+        debug_assert_ne!(chroma, Chroma::ZERO);
+        let temp = (Self::K + Self::K_COMP * x_dash) * chroma.prop();
+        debug_assert!(temp <= Sum::ONE);
+        match chroma {
+            Chroma::Shade(prop) => {
+                let warmth = Self::B - Self::B * prop + temp;
+                debug_assert!(warmth <= Sum::ONE);
+                warmth.into()
+            }
+            _ => temp.into(),
+        }
+    }
+
+    pub(crate) fn calculate_monochrome_fm_sum(sum: Sum) -> Self {
+        ((Sum::THREE - sum) / 6).into()
+    }
+
+    pub fn calculate_monochrome(value: Prop) -> Self {
+        ((Prop::ONE - value) / 2).into()
+    }
+
+    pub fn abs_diff(&self, other: &Self) -> Warmth {
+        match self.cmp(other) {
+            Ordering::Greater => Warmth(self.0 - other.0),
+            Ordering::Less => Warmth(other.0 - self.0),
+            Ordering::Equal => Warmth(0),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Warmth {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
+            self.abs_diff(other).0 < acceptable_rounding_error
+        } else {
+            self.abs_diff(other).0 < 3
+        }
+    }
+}
+
+impl From<Prop> for Warmth {
+    fn from(prop: Prop) -> Self {
+        Self(prop.0)
+    }
+}
+
+impl From<Warmth> for Prop {
+    fn from(warmth: Warmth) -> Self {
+        Self(warmth.0)
+    }
+}
+
+impl From<Sum> for Warmth {
+    fn from(sum: Sum) -> Self {
+        debug_assert!(sum <= Sum::ONE);
+        Self(sum.0 as u64)
+    }
+}

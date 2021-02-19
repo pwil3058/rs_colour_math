@@ -2,6 +2,7 @@
 use std::convert::TryFrom;
 
 use crate::hue::SumOrdering;
+use crate::proportion::Warmth;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
@@ -372,9 +373,9 @@ impl ColourBasics for HCV {
         self.sum / 3
     }
 
-    fn warmth(&self) -> Prop {
+    fn warmth(&self) -> Warmth {
         match self.chroma {
-            Chroma::ZERO => (Sum::THREE - self.sum) / 6,
+            Chroma::ZERO => Warmth::calculate_monochrome_fm_sum(self.sum),
             _ => self.hue.warmth_for_chroma(self.chroma),
         }
     }

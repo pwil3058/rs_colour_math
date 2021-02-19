@@ -9,7 +9,8 @@ use std::{
 pub mod angle;
 
 use crate::{
-    hue::angle::Angle, Chroma, ChromaOneRGB, HueConstants, LightLevel, Prop, RGBConstants, Sum, RGB,
+    hue::angle::Angle, proportion::Warmth, Chroma, ChromaOneRGB, HueConstants, LightLevel, Prop,
+    RGBConstants, Sum, RGB,
 };
 use num_traits_plus::float_plus::FloatPlus;
 
@@ -97,35 +98,12 @@ impl SumRange {
     }
 }
 
-pub(crate) struct Warmth;
-
-impl Warmth {
-    pub(crate) const K: Prop = Prop(u64::MAX / 3);
-    const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
-    pub(crate) const B: Sum = Sum(u64::MAX as u128 / 2);
-
-    fn calculate(chroma: Chroma, x_dash: Prop) -> Prop {
-        println!("Chroma: {:?} x_dash: {:?}", chroma, x_dash);
-        debug_assert_ne!(chroma, Chroma::ZERO);
-        let temp = (Self::K + Self::K_COMP * x_dash) * chroma.prop();
-        debug_assert!(temp <= Sum::ONE);
-        match chroma {
-            Chroma::Shade(prop) => {
-                let warmth = Self::B - Self::B * prop + temp;
-                debug_assert!(warmth <= Sum::ONE);
-                warmth.into()
-            }
-            _ => temp.into(),
-        }
-    }
-}
-
 pub trait HueIfce {
     fn angle(&self) -> Angle;
     fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SumRange>;
     fn sum_for_max_chroma(&self) -> Sum;
     fn max_chroma_for_sum(&self, sum: Sum) -> Option<Chroma>;
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop;
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T>;
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: Sum) -> Option<RGB<T>>;
@@ -201,7 +179,7 @@ impl HueIfce for RGBHue {
         }
     }
 
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
             RGBHue::Red => (Sum::ONE + chroma.prop()) / 2,
             RGBHue::Green | RGBHue::Blue => (Sum::TWO - chroma.prop()) / 4,
@@ -326,7 +304,7 @@ impl HueIfce for CMYHue {
         }
     }
 
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
             CMYHue::Cyan => (Sum::ONE - chroma.prop()) / 2,
             CMYHue::Magenta | CMYHue::Yellow => (Sum::TWO + chroma.prop()) / 4,
@@ -519,7 +497,7 @@ impl HueIfce for SextantHue {
         }
     }
 
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let kc = chroma.prop() * self.1;
         let x_dash = match self.0 {
             // TODO: take tint and shade into account
@@ -730,7 +708,7 @@ impl HueIfce for Hue {
         }
     }
 
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Prop {
+    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.warmth_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.warmth_for_chroma(chroma),
