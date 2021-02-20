@@ -9,9 +9,10 @@ use std::{
 pub mod angle;
 
 use crate::{
-    hue::angle::Angle, proportion::Warmth, Chroma, ChromaOneRGB, HueConstants, LightLevel, Prop,
-    RGBConstants, UFDRNumber, RGB,
+    fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, ChromaOneRGB, HueConstants,
+    LightLevel, Prop, RGBConstants, RGB,
 };
+
 use num_traits_plus::float_plus::FloatPlus;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -34,7 +35,7 @@ impl From<(UFDRNumber, UFDRNumber, UFDRNumber)> for UFDRNumberRange {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum UFDRNumberOrdering {
+pub enum SumOrdering {
     TooSmall(UFDRNumber),
     Shade(UFDRNumber, UFDRNumber),
     Neither(UFDRNumber),
@@ -42,9 +43,9 @@ pub enum UFDRNumberOrdering {
     TooBig(UFDRNumber),
 }
 
-impl UFDRNumberOrdering {
+impl SumOrdering {
     pub fn is_failure(&self) -> bool {
-        use UFDRNumberOrdering::*;
+        use SumOrdering::*;
         match self {
             TooSmall(_) | TooBig(_) => true,
             _ => false,
@@ -52,7 +53,7 @@ impl UFDRNumberOrdering {
     }
 
     pub fn is_success(&self) -> bool {
-        use UFDRNumberOrdering::*;
+        use SumOrdering::*;
         match self {
             TooSmall(_) | TooBig(_) => false,
             _ => true,
@@ -61,19 +62,19 @@ impl UFDRNumberOrdering {
 }
 
 impl UFDRNumberRange {
-    pub fn compare_sum(&self, sum: UFDRNumber) -> UFDRNumberOrdering {
+    pub fn compare_sum(&self, sum: UFDRNumber) -> SumOrdering {
         if sum < self.min {
-            UFDRNumberOrdering::TooSmall(self.min - sum)
+            SumOrdering::TooSmall(self.min - sum)
         } else if sum < self.max_chroma_sum - UFDRNumber(1) {
-            UFDRNumberOrdering::Shade(self.min, self.max_chroma_sum - UFDRNumber(2))
+            SumOrdering::Shade(self.min, self.max_chroma_sum - UFDRNumber(2))
         } else if sum > self.max_chroma_sum + UFDRNumber(1) {
             if sum <= self.max {
-                UFDRNumberOrdering::Tint(self.max_chroma_sum + UFDRNumber(2), self.max)
+                SumOrdering::Tint(self.max_chroma_sum + UFDRNumber(2), self.max)
             } else {
-                UFDRNumberOrdering::TooBig(sum - self.max)
+                SumOrdering::TooBig(sum - self.max)
             }
         } else {
-            UFDRNumberOrdering::Neither(self.max_chroma_sum)
+            SumOrdering::Neither(self.max_chroma_sum)
         }
     }
 
@@ -377,8 +378,8 @@ impl HueIfce for CMYHue {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
         let sum_range = self.sum_range_for_chroma_prop(chroma.prop())?;
         match sum_range.compare_sum(sum) {
-            UFDRNumberOrdering::TooSmall(_) | UFDRNumberOrdering::TooBig(_) => None,
-            UFDRNumberOrdering::Neither(_) => Some(self.make_rgb((chroma.prop(), Prop::ZERO))),
+            SumOrdering::TooSmall(_) | SumOrdering::TooBig(_) => None,
+            SumOrdering::Neither(_) => Some(self.make_rgb((chroma.prop(), Prop::ZERO))),
             _ => Some(self.make_rgb((
                 ((sum + chroma.prop()) / 3).into(),
                 ((sum - chroma.prop() * 2) / 3).into(),

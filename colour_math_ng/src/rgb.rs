@@ -7,11 +7,11 @@ use std::{
     ops::Mul,
 };
 
-use crate::hue::{CMYHue, HueIfce, RGBHue, Sextant};
-use crate::proportion::Warmth;
 use crate::{
-    hue::Hue, Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants,
-    UFDRNumber, CCI, HCV,
+    fdrn::UFDRNumber,
+    hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
+    proportion::Warmth,
+    Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, CCI, HCV,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]

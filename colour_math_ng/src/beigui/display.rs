@@ -1,7 +1,10 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use crate::beigui::{Dirn, Draw, DrawIsosceles, FDRNumber, Point, TextPosn};
-use crate::{ColourBasics, Prop, RGBConstants, UFDRNumber, HCV};
+use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
+use crate::{
+    fdrn::{FDRNumber, UFDRNumber},
+    ColourBasics, Prop, RGBConstants, HCV,
+};
 
 pub trait ColourAttributeDisplayIfce {
     const LABEL: &'static str;

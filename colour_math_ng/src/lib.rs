@@ -7,17 +7,18 @@ use std::fmt::Debug;
 use num_traits_plus::float_plus::*;
 
 pub mod beigui;
+pub mod fdrn;
 pub mod hcv;
 pub mod hue;
 pub mod manipulator;
 pub mod proportion;
 pub mod rgb;
 
-use crate::proportion::Warmth;
 pub use crate::{
+    fdrn::UFDRNumber,
     hcv::HCV,
     hue::{angle::Angle, Hue, HueIfce},
-    proportion::{Chroma, Prop, UFDRNumber},
+    proportion::{Chroma, Prop, Warmth},
     rgb::RGB,
 };
 

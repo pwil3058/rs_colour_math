@@ -1,14 +1,13 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::convert::TryFrom;
+use std::{cmp::Ordering, convert::TryFrom};
 
-use crate::hue::UFDRNumberOrdering;
-use crate::proportion::Warmth;
 use crate::{
-    hue::{CMYHue, HueIfce, RGBHue},
+    fdrn::UFDRNumber,
+    hue::{CMYHue, HueIfce, RGBHue, SumOrdering},
+    proportion::Warmth,
     rgb::RGB,
-    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants, UFDRNumber,
+    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants,
 };
-use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SetScalar {
@@ -123,7 +122,7 @@ impl HCV {
     pub fn set_hue(&mut self, hue: Hue, policy: SetHue) {
         if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
             match range.compare_sum(self.sum) {
-                UFDRNumberOrdering::TooSmall(shortfall) => match policy {
+                SumOrdering::TooSmall(shortfall) => match policy {
                     SetHue::FavourChroma => self.sum = self.sum + shortfall,
                     SetHue::FavourValue => {
                         if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
@@ -133,7 +132,7 @@ impl HCV {
                         }
                     }
                 },
-                UFDRNumberOrdering::TooBig(overs) => match policy {
+                SumOrdering::TooBig(overs) => match policy {
                     SetHue::FavourChroma => self.sum = self.sum - overs,
                     SetHue::FavourValue => {
                         if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
@@ -161,7 +160,7 @@ impl HCV {
             Ordering::Less => {
                 if let Some(range) = self.hue.sum_range_for_chroma_prop(chroma_value) {
                     match range.compare_sum(self.sum) {
-                        UFDRNumberOrdering::TooSmall(shortfall) => match policy {
+                        SumOrdering::TooSmall(shortfall) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
                                     if adj_c_val == self.chroma {
@@ -182,7 +181,7 @@ impl HCV {
                             }
                             SetScalar::Reject => Outcome::Rejected,
                         },
-                        UFDRNumberOrdering::TooBig(overs) => match policy {
+                        SumOrdering::TooBig(overs) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
                                     if adj_c_val == self.chroma {

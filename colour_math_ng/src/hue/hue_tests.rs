@@ -584,7 +584,7 @@ fn general_rgb_for_sum_and_chroma() {
                 let sum_range = hue.sum_range_for_chroma_prop(chroma.prop()).unwrap();
                 for sum in VALID_OTHER_SUMS.iter().map(|a| UFDRNumber::from(*a)) {
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
-                        use UFDRNumberOrdering::*;
+                        use SumOrdering::*;
                         match sum_range.compare_sum(sum) {
                             Shade(_, _) => {
                                 assert_eq!(rgb.sum(), sum);

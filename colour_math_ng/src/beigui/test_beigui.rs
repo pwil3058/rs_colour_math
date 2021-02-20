@@ -1,6 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use crate::beigui::FDRNumber;
+use crate::fdrn::FDRNumber;
 
 #[test]
 fn div_by_u8() {

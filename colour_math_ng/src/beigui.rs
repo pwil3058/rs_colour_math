@@ -1,90 +1,14 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::cmp::Ordering;
-use std::ops::{Add, Div, Mul, Sub};
 
-use crate::{ColourBasics, UFDRNumber, HCV};
-use num_traits::FromPrimitive;
+use crate::{
+    fdrn::{FDRNumber, UFDRNumber},
+    ColourBasics, HCV,
+};
 
 #[cfg(test)]
 mod test_beigui;
 
 pub mod display;
-
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
-)]
-pub struct FDRNumber(pub(crate) i128);
-
-// NB: ONE is the same value as for UFDRNumber
-impl FDRNumber {
-    pub const ZERO: Self = Self(0);
-    pub const ONE: Self = Self(u64::MAX as i128);
-
-    pub fn abs_diff(&self, other: &Self) -> FDRNumber {
-        match self.cmp(other) {
-            Ordering::Greater => FDRNumber(self.0 - other.0),
-            Ordering::Less => FDRNumber(other.0 - self.0),
-            Ordering::Equal => FDRNumber(0),
-        }
-    }
-}
-
-#[cfg(test)]
-impl FDRNumber {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other).0 < acceptable_rounding_error as i128
-        } else {
-            self.abs_diff(other).0 < 3
-        }
-    }
-}
-
-impl Div<u8> for FDRNumber {
-    type Output = Self;
-
-    fn div(self, rhs: u8) -> Self {
-        Self(self.0.div(rhs as i128))
-    }
-}
-
-impl Add for FDRNumber {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        Self(self.0.add(other.0))
-    }
-}
-
-impl Sub for FDRNumber {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
-        Self(self.0.sub(other.0))
-    }
-}
-
-impl Mul<u8> for FDRNumber {
-    type Output = Self;
-
-    fn mul(self, rhs: u8) -> Self {
-        Self(self.0.mul(rhs as i128))
-    }
-}
-
-impl From<UFDRNumber> for FDRNumber {
-    fn from(unsigned: UFDRNumber) -> Self {
-        Self(unsigned.0 as i128)
-    }
-}
-
-impl From<f64> for FDRNumber {
-    fn from(arg: f64) -> Self {
-        let one = f64::from_i128(u64::MAX as i128).unwrap();
-        let val = i128::from_f64(arg * one).unwrap();
-        Self(val)
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Point {
