@@ -181,7 +181,7 @@ impl HueIfce for RGBHue {
         } else if sum < UFDRNumber::ONE {
             Some(Chroma::Shade(sum.into()))
         } else if sum > UFDRNumber::ONE {
-            Some(Chroma::Tint((UFDRNumber::THREE - sum) / 2))
+            Some(Chroma::Tint(((UFDRNumber::THREE - sum) / 2).into()))
         } else {
             Some(Chroma::ONE)
         }
@@ -189,8 +189,8 @@ impl HueIfce for RGBHue {
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
-            RGBHue::Red => (UFDRNumber::ONE + chroma.prop()) / 2,
-            RGBHue::Green | RGBHue::Blue => (UFDRNumber::TWO - chroma.prop()) / 4,
+            RGBHue::Red => ((UFDRNumber::ONE + chroma.prop()) / 2).into(),
+            RGBHue::Green | RGBHue::Blue => ((UFDRNumber::TWO - chroma.prop()) / 4).into(),
         };
         Warmth::calculate(chroma, x_dash)
     }
@@ -211,7 +211,7 @@ impl HueIfce for RGBHue {
             if sum <= UFDRNumber::ONE {
                 Some(self.make_rgb((sum.into(), Prop::ZERO)))
             } else {
-                Some(self.make_rgb((Prop::ONE, ((sum - UFDRNumber::ONE) / 2))))
+                Some(self.make_rgb((Prop::ONE, ((sum - UFDRNumber::ONE) / 2).into())))
             }
         }
     }
@@ -252,9 +252,9 @@ impl HueIfce for RGBHue {
                     let first = other + c_prop;
                     // NB: Need to check that UFDRNumber wasn't too big
                     if first <= UFDRNumber::ONE {
-                        assert_eq!(first.0 as u64 - other.0, c_prop.0);
+                        assert_eq!((first.0 - other.0) as u64, c_prop.0);
                         assert!(sum.abs_diff(&(first + other * 2)) < UFDRNumber(3));
-                        Some(self.make_rgb::<T>((first.into(), other)))
+                        Some(self.make_rgb::<T>((first.into(), other.into())))
                     } else {
                         None
                     }
@@ -316,7 +316,7 @@ impl HueIfce for CMYHue {
         if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
             None
         } else if sum < UFDRNumber::TWO {
-            Some(Chroma::Shade(sum / 2))
+            Some(Chroma::Shade((sum / 2).into()))
         } else if sum > UFDRNumber::TWO {
             Some(Chroma::Tint((UFDRNumber::THREE - sum).into()))
         } else {
@@ -329,7 +329,7 @@ impl HueIfce for CMYHue {
             CMYHue::Cyan => (UFDRNumber::ONE - chroma.prop()) / 2,
             CMYHue::Magenta | CMYHue::Yellow => (UFDRNumber::TWO + chroma.prop()) / 4,
         };
-        Warmth::calculate(chroma, x_dash)
+        Warmth::calculate(chroma, x_dash.into())
     }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
@@ -345,7 +345,7 @@ impl HueIfce for CMYHue {
         if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
             None
         } else if sum < UFDRNumber::TWO {
-            Some(self.make_rgb(((sum / 2), Prop::ZERO)))
+            Some(self.make_rgb(((sum / 2).into(), Prop::ZERO)))
         } else if sum > UFDRNumber::TWO {
             Some(self.make_rgb((Prop::ONE, (sum - UFDRNumber::TWO).into())))
         } else {
@@ -379,7 +379,10 @@ impl HueIfce for CMYHue {
         match sum_range.compare_sum(sum) {
             UFDRNumberOrdering::TooSmall(_) | UFDRNumberOrdering::TooBig(_) => None,
             UFDRNumberOrdering::Neither(_) => Some(self.make_rgb((chroma.prop(), Prop::ZERO))),
-            _ => Some(self.make_rgb(((sum + chroma.prop()) / 3, (sum - chroma.prop() * 2) / 3))),
+            _ => Some(self.make_rgb((
+                ((sum + chroma.prop()) / 3).into(),
+                ((sum - chroma.prop() * 2) / 3).into(),
+            ))),
         }
     }
 }
@@ -515,11 +518,11 @@ impl HueIfce for SextantHue {
             match sum.cmp(&(Prop::ONE + self.1)) {
                 Ordering::Less => {
                     let temp = sum / (Prop::ONE + self.1);
-                    Some(Chroma::Shade(temp))
+                    Some(Chroma::Shade(temp.into()))
                 }
                 Ordering::Greater => {
                     let temp = (UFDRNumber::THREE - sum) / (UFDRNumber::TWO - self.1);
-                    Some(Chroma::Tint(temp))
+                    Some(Chroma::Tint(temp.into()))
                 }
                 Ordering::Equal => Some(Chroma::ONE),
             }
@@ -538,7 +541,7 @@ impl HueIfce for SextantHue {
             }
             Sextant::GreenCyan | Sextant::BlueCyan => (UFDRNumber::TWO - kc - chroma.prop()) / 4,
         };
-        Warmth::calculate(chroma, x_dash)
+        Warmth::calculate(chroma, x_dash.into())
     }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
@@ -588,21 +591,23 @@ impl HueIfce for SextantHue {
                     Ordering::Greater => {
                         let three_delta = sum - ck_plus_c;
                         let delta = three_delta / 3;
-                        let components = match three_delta % 3 {
+                        let components = match three_delta % UFDRNumber(3) {
                             // NB: allocation os spare light levels is done so as to preserve
                             // both the requested chroma and sum. Attempts to ensure hue does
                             // not drift have failed to rounding errors involved with division
-                            1 => ((c_prop + delta), (ck + delta + Prop(1)), delta.into()),
-                            2 => ((c_prop + delta + Prop(1)), (ck + delta), (delta + Prop(1))),
-                            _ => ((c_prop + delta), (ck + delta), delta.into()),
+                            UFDRNumber(1) => (delta + c_prop, delta + ck + Prop(1), delta),
+                            UFDRNumber(2) => {
+                                (delta + c_prop + Prop(1), delta + ck, delta + Prop(1))
+                            }
+                            _ => (delta + c_prop, delta + ck, delta),
                         };
                         debug_assert_eq!(components.0 + components.1 + components.2, sum);
                         debug_assert_eq!(components.0 - components.2, c_prop.into());
                         debug_assert!(
                             self.1
                                 .abs_diff(
-                                    (&((components.1 - components.2)
-                                        / (components.0 - components.2)))
+                                    &((components.1 - components.2)
+                                        / (components.0 - components.2))
                                         .into()
                                 )
                                 .0

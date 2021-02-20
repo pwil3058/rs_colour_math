@@ -97,7 +97,7 @@ impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
         }
     }
     fn value(&self) -> Prop {
-        self.sum() / 3
+        (self.sum() / 3).into()
     }
 
     fn hcv(&self) -> HCV {

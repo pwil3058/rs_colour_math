@@ -355,8 +355,8 @@ impl From<Prop> for UFDRNumber {
 impl Add for UFDRNumber {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> UFDRNumber {
-        UFDRNumber(self.0 + rhs.0)
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0 + rhs.0)
     }
 }
 
@@ -370,9 +370,9 @@ impl Sub for UFDRNumber {
 }
 
 impl Div for UFDRNumber {
-    type Output = Prop;
+    type Output = Self;
 
-    fn div(self, rhs: Self) -> Prop {
+    fn div(self, rhs: Self) -> Self {
         let result = if rhs.0 == u64::MAX as u128 {
             self.0
         // Avoid subtraction overflow
@@ -386,29 +386,23 @@ impl Div for UFDRNumber {
         } else {
             (self.0 * u64::MAX as u128) / rhs.0
         };
-        // NB: this requirement enforces policy made about when this operation should be used
-        // and is designed to detect policy violations
-        debug_assert!(result <= u64::MAX as u128);
-        Prop(result as u64)
+        Self(result)
     }
 }
 
 impl Div<u8> for UFDRNumber {
-    type Output = Prop;
+    type Output = Self;
 
-    fn div(self, rhs: u8) -> Prop {
-        let result = self.0 as u128 / rhs as u128;
-        // this requirement enforces decisions made about when this operation should be used
-        debug_assert!(result <= u64::MAX as u128);
-        Prop(result as u64)
+    fn div(self, rhs: u8) -> Self {
+        Self(self.0 / rhs as u128)
     }
 }
 
-impl Rem<u128> for UFDRNumber {
-    type Output = u128;
+impl Rem for UFDRNumber {
+    type Output = Self;
 
-    fn rem(self, rhs: u128) -> u128 {
-        self.0 % rhs
+    fn rem(self, rhs: Self) -> Self {
+        Self(self.0 % rhs.0)
     }
 }
 
@@ -445,6 +439,14 @@ impl Mul<Prop> for UFDRNumber {
         } else {
             Self((self.0 * rhs.0 as u128) / u64::MAX as u128)
         }
+    }
+}
+
+impl Mul<u8> for UFDRNumber {
+    type Output = Self;
+
+    fn mul(self, rhs: u8) -> Self {
+        Self(self.0 * rhs as u128)
     }
 }
 

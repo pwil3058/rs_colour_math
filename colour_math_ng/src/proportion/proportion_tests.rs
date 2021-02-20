@@ -107,7 +107,7 @@ fn sum_sub() {
 #[test]
 fn sum_div() {
     for [a, b] in &[[0.0f64, 0.3], [0.024, 0.5], [0.18, 0.5], [1.0, 1.001]] {
-        let expected = Prop::from(a / b);
+        let expected = UFDRNumber::from(a / b);
         println!("{:?} / {:?} = {:?} {:?}", a, b, a / b, expected);
         let result = UFDRNumber::from(*a) / UFDRNumber::from(*b);
         println!("diff = {:#X}", result.abs_diff(&expected).0);
@@ -119,7 +119,7 @@ fn sum_div() {
 #[test]
 fn sum_div_u8() {
     for (a, b) in &[(0.9_f64, 3_u8), (0.6, 2), (0.3, 2)] {
-        let expected = Prop::from(*a / *b as f64);
+        let expected = UFDRNumber::from(*a / *b as f64);
         println!("{:?} / {:?} = {:?} : {:?}", a, b, a / *b as f64, expected);
         let result = UFDRNumber::from(*a) / *b;
         println!("diff = {:#X}", result.abs_diff(&expected).0);

@@ -370,7 +370,7 @@ impl ColourBasics for HCV {
     }
 
     fn value(&self) -> Prop {
-        self.sum / 3
+        (self.sum / 3).into()
     }
 
     fn warmth(&self) -> Warmth {
