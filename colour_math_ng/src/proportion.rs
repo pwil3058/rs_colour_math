@@ -328,17 +328,14 @@ impl UFDRNumber {
     }
 }
 
-#[cfg(test)]
 impl From<f64> for UFDRNumber {
     fn from(arg: f64) -> Self {
-        debug_assert!(arg <= 3.0);
         let one = f64::from_u128(u64::MAX as u128).unwrap();
         let val = u128::from_f64(arg * one).unwrap();
         Self(val)
     }
 }
 
-//#[cfg(test)]
 impl From<UFDRNumber> for f64 {
     fn from(arg: UFDRNumber) -> Self {
         let one = f64::from_u128(u64::MAX as u128).unwrap();

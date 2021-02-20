@@ -6,7 +6,7 @@ use std::fmt::Debug;
 
 use num_traits_plus::float_plus::*;
 
-//pub mod beigui;
+pub mod beigui;
 pub mod hcv;
 pub mod hue;
 pub mod manipulator;
