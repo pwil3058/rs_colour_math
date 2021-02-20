@@ -10,10 +10,11 @@ pub mod angle;
 
 use crate::{
     fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, ChromaOneRGB, HueConstants,
-    LightLevel, Prop, RGBConstants, RGB,
+    LightLevel, Prop, RGBConstants, HCV, RGB,
 };
 
 use num_traits_plus::float_plus::FloatPlus;
+use std::ops::{Add, Sub};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub struct UFDRNumberRange {
@@ -107,6 +108,7 @@ pub trait HueIfce {
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T>;
+    fn max_chroma_hcv(&self) -> HCV;
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>>;
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
     fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
@@ -201,6 +203,14 @@ impl HueIfce for RGBHue {
             RGBHue::Red => RGB::RED,
             RGBHue::Green => RGB::GREEN,
             RGBHue::Blue => RGB::BLUE,
+        }
+    }
+
+    fn max_chroma_hcv(&self) -> HCV {
+        match self {
+            RGBHue::Red => HCV::new(Hue::RED, Chroma::ONE, UFDRNumber::ONE),
+            RGBHue::Green => HCV::new(Hue::GREEN, Chroma::ONE, UFDRNumber::ONE),
+            RGBHue::Blue => HCV::new(Hue::BLUE, Chroma::ONE, UFDRNumber::ONE),
         }
     }
 
@@ -338,6 +348,14 @@ impl HueIfce for CMYHue {
             CMYHue::Cyan => RGB::CYAN,
             CMYHue::Magenta => RGB::MAGENTA,
             CMYHue::Yellow => RGB::YELLOW,
+        }
+    }
+
+    fn max_chroma_hcv(&self) -> HCV {
+        match self {
+            CMYHue::Cyan => HCV::new(Hue::CYAN, Chroma::ONE, UFDRNumber::TWO),
+            CMYHue::Magenta => HCV::new(Hue::MAGENTA, Chroma::ONE, UFDRNumber::TWO),
+            CMYHue::Yellow => HCV::new(Hue::YELLOW, Chroma::ONE, UFDRNumber::TWO),
         }
     }
 
@@ -547,6 +565,10 @@ impl HueIfce for SextantHue {
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
         self.make_rgb((Prop::ONE, self.1, Prop::ZERO))
+    }
+
+    fn max_chroma_hcv(&self) -> HCV {
+        HCV::new(Hue::Sextant(*self), Chroma::ONE, Prop::ONE + self.1)
     }
 
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
@@ -767,6 +789,14 @@ impl HueIfce for Hue {
         }
     }
 
+    fn max_chroma_hcv(&self) -> HCV {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.max_chroma_hcv(),
+            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_hcv(),
+            Self::Sextant(sextant_hue) => sextant_hue.max_chroma_hcv(),
+        }
+    }
+
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
@@ -836,6 +866,30 @@ impl Hue {
                 _ => Prop::ONE,
             },
         }
+    }
+}
+
+impl Add<Angle> for Hue {
+    type Output = Self;
+
+    fn add(self, angle: Angle) -> Self {
+        Hue::from(self.angle().add(angle))
+    }
+}
+
+impl Sub<Angle> for Hue {
+    type Output = Self;
+
+    fn sub(self, angle: Angle) -> Self {
+        Hue::from(self.angle().sub(angle))
+    }
+}
+
+impl Sub for Hue {
+    type Output = Angle;
+
+    fn sub(self, other: Self) -> Angle {
+        self.angle().sub(other.angle())
     }
 }
 

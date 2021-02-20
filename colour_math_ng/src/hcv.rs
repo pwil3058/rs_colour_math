@@ -78,6 +78,16 @@ impl PartialOrd for HCV {
 }
 
 impl HCV {
+    pub(crate) fn new(hue: Hue, chroma: Chroma, sum: UFDRNumber) -> Self {
+        if let Some(range) = hue.sum_range_for_chroma_prop(chroma.prop()) {
+            debug_assert!(range.compare_sum(sum).is_success());
+            // TODO: verify chroma shade/tint
+            Self { hue, chroma, sum }
+        } else {
+            Self { hue, chroma, sum }
+        }
+    }
+
     pub(crate) fn new_grey_sum(sum: UFDRNumber) -> Self {
         Self {
             hue: Hue::default(),

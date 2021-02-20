@@ -14,6 +14,7 @@ use crate::{fdrn::UFDRNumber, hue::HueIfce, Hue};
 
 use num_traits::FromPrimitive;
 
+use crate::fdrn::FDRNumber;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
 
@@ -187,6 +188,13 @@ impl From<Prop> for f64 {
 impl From<UFDRNumber> for Prop {
     fn from(arg: UFDRNumber) -> Self {
         debug_assert!(arg.0 <= u64::MAX as u128);
+        Self(arg.0 as u64)
+    }
+}
+
+impl From<FDRNumber> for Prop {
+    fn from(arg: FDRNumber) -> Self {
+        debug_assert!(arg.0 >= 0 && arg.0 <= u64::MAX as i128);
         Self(arg.0 as u64)
     }
 }

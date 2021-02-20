@@ -2,6 +2,7 @@
 use std::cmp::Ordering;
 use std::ops::{Add, Neg, Sub};
 
+use crate::fdrn::FDRNumber;
 use crate::{HueConstants, Prop};
 
 #[derive(
@@ -166,6 +167,13 @@ impl From<Angle> for f64 {
     }
 }
 
+impl From<Angle> for FDRNumber {
+    fn from(angle: Angle) -> Self {
+        debug_assert!(angle.is_valid());
+        Self(angle.0 as i128 * u64::MAX as i128 / Angle::DEGREE.0 as i128)
+    }
+}
+
 #[cfg(test)]
 mod angle_tests {
     use super::*;
@@ -178,6 +186,9 @@ mod angle_tests {
         assert_approx_eq!(Angle::from((120, 45)), Angle::from(120.75), 0x100);
         assert_approx_eq!(Angle::from(180.0), Angle::from(-180.0), 16);
         assert_approx_eq!(Angle::from(120.0), Angle::from(120), 2000);
+
+        assert_eq!(FDRNumber::from(Angle::DEGREE), FDRNumber::ONE);
+        assert_eq!(FDRNumber::from(Angle::from(12)), FDRNumber::ONE * 12);
     }
 
     #[test]

@@ -3,7 +3,7 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    ColourBasics, Prop, RGBConstants, HCV,
+    Angle, ColourBasics, Hue, HueIfce, Prop, RGBConstants, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -91,6 +91,149 @@ pub trait ColourAttributeDisplayIfce {
         self.draw_target_attr_value_indicator(drawer);
         self.draw_attr_value_indicator(drawer);
         self.draw_label(drawer);
+    }
+}
+
+// HUE
+pub struct HueCAD {
+    hue: Option<Hue>,
+    target_hue: Option<Hue>,
+    hue_value: Option<Prop>,
+    hue_fg_colour: HCV,
+    target_hue_fg_colour: HCV,
+    colour_stops: Vec<(HCV, Prop)>,
+}
+
+impl HueCAD {
+    fn set_colour_stops_for_hue(&mut self, hue: Hue) {
+        let mut stops = vec![];
+        let mut hue = hue + Angle::from(180);
+        let delta = Angle::from(30);
+        for i in 0_u8..13 {
+            let offset: Prop = (Prop::ONE * i / 12).into();
+            let hcv = hue.max_chroma_hcv();
+            stops.push((hcv, offset));
+            hue = hue - delta;
+        }
+        self.colour_stops = stops
+    }
+
+    fn set_colour_stops(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            if let Some(hue) = colour.hue() {
+                self.set_colour_stops_for_hue(hue);
+            } else {
+                let grey = colour.hcv();
+                self.colour_stops = vec![(grey, Prop::ZERO), (grey, Prop::ONE)];
+            }
+        } else {
+            self.set_default_colour_stops();
+        }
+    }
+
+    fn set_default_colour_stops(&mut self) {
+        let grey = HCV::new_grey(Prop::ONE / 2);
+        self.colour_stops = vec![(grey, Prop::ZERO), (grey, Prop::ONE)];
+    }
+
+    fn set_defaults_for_no_hue(&mut self) {
+        self.hue = None;
+        self.hue_value = None;
+        if let Some(target_hue) = self.target_hue {
+            self.set_colour_stops_for_hue(target_hue);
+        } else {
+            self.set_default_colour_stops();
+        }
+    }
+
+    fn set_defaults_for_no_target(&mut self) {
+        self.target_hue = None;
+        if let Some(hue) = self.hue {
+            self.set_colour_stops_for_hue(hue);
+            self.hue_value = Some(Prop::ONE / 2);
+        } else {
+            self.set_default_colour_stops();
+        }
+    }
+
+    fn calc_hue_value(hue: Hue, target_hue: Hue) -> Prop {
+        ((FDRNumber::ONE + FDRNumber::from(target_hue - hue) / 180) / 2).into()
+    }
+}
+
+impl ColourAttributeDisplayIfce for HueCAD {
+    const LABEL: &'static str = "Hue";
+
+    fn new() -> Self {
+        let grey = HCV::new_grey(Prop::ONE / 2);
+        Self {
+            hue: None,
+            target_hue: None,
+            hue_value: None,
+            hue_fg_colour: HCV::BLACK,
+            target_hue_fg_colour: HCV::BLACK,
+            colour_stops: vec![(grey, Prop::ZERO), (grey, Prop::ONE)],
+        }
+    }
+
+    fn set_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            if let Some(hue) = colour.hue() {
+                self.hue = Some(hue);
+                self.hue_fg_colour = hue.max_chroma_hcv().best_foreground();
+                if let Some(target_hue) = self.target_hue {
+                    self.hue_value = Some(Self::calc_hue_value(hue, target_hue));
+                } else {
+                    self.set_colour_stops(Some(colour));
+                    self.hue_value = Some(Prop::ONE / 2);
+                }
+            } else {
+                self.set_defaults_for_no_hue()
+            }
+        } else {
+            self.set_defaults_for_no_hue()
+        }
+    }
+
+    fn attr_value(&self) -> Option<Prop> {
+        self.hue_value
+    }
+
+    fn attr_value_fg_colour(&self) -> HCV {
+        self.hue_fg_colour
+    }
+
+    fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            if let Some(target_hue) = colour.hue() {
+                self.target_hue = Some(target_hue);
+                self.target_hue_fg_colour = target_hue.max_chroma_hcv().best_foreground();
+                self.set_colour_stops_for_hue(target_hue);
+                if let Some(hue) = self.hue {
+                    self.hue_value = Some(Self::calc_hue_value(hue, target_hue));
+                }
+            } else {
+                self.set_defaults_for_no_target();
+            }
+        } else {
+            self.set_defaults_for_no_target();
+        }
+    }
+
+    fn attr_target_value(&self) -> Option<Prop> {
+        if self.target_hue.is_some() {
+            Some(Prop::ONE / 2)
+        } else {
+            None
+        }
+    }
+
+    fn attr_target_value_fg_colour(&self) -> HCV {
+        self.target_hue_fg_colour
+    }
+
+    fn colour_stops(&self) -> Vec<(HCV, Prop)> {
+        self.colour_stops.clone()
     }
 }
 
