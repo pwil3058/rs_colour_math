@@ -78,12 +78,16 @@ impl PartialOrd for HCV {
 }
 
 impl HCV {
-    pub fn new_grey(sum: UFDRNumber) -> Self {
+    pub(crate) fn new_grey_sum(sum: UFDRNumber) -> Self {
         Self {
             hue: Hue::default(),
             chroma: Chroma::ZERO,
             sum,
         }
+    }
+
+    pub fn new_grey(value: Prop) -> Self {
+        Self::new_grey_sum(value * 3)
     }
 
     pub fn is_grey(&self) -> bool {

@@ -2,7 +2,7 @@
 
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    ColourBasics, HCV,
+    ColourBasics, Prop, HCV,
 };
 
 #[cfg(test)]
@@ -75,7 +75,7 @@ pub trait Draw {
     fn draw_line(&self, line: &[Point]);
     fn draw_text(&self, text: &str, posn: TextPosn, font_size: UFDRNumber);
 
-    fn paint_linear_gradient(&self, posn: Point, size: Size, colour_stops: &[(HCV, FDRNumber)]);
+    fn paint_linear_gradient(&self, posn: Point, size: Size, colour_stops: &[(HCV, Prop)]);
 }
 
 pub trait DrawIsosceles: Draw {

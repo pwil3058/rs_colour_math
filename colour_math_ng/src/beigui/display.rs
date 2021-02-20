@@ -29,8 +29,8 @@ pub trait ColourAttributeDisplayIfce {
         }
     }
 
-    fn colour_stops(&self) -> Vec<(HCV, FDRNumber)> {
-        vec![(HCV::BLACK, FDRNumber::ZERO), (HCV::WHITE, FDRNumber::ONE)]
+    fn colour_stops(&self) -> Vec<(HCV, Prop)> {
+        vec![(HCV::BLACK, Prop::ZERO), (HCV::WHITE, Prop::ONE)]
     }
 
     fn draw_attr_value_indicator(&self, drawer: &impl DrawIsosceles) {
@@ -91,5 +91,66 @@ pub trait ColourAttributeDisplayIfce {
         self.draw_target_attr_value_indicator(drawer);
         self.draw_attr_value_indicator(drawer);
         self.draw_label(drawer);
+    }
+}
+
+// VALUE
+pub struct ValueCAD {
+    value: Option<Prop>,
+    target_value: Option<Prop>,
+    value_fg_colour: HCV,
+    target_value_fg_colour: HCV,
+}
+
+impl ColourAttributeDisplayIfce for ValueCAD {
+    const LABEL: &'static str = "Value";
+
+    fn new() -> Self {
+        Self {
+            value: None,
+            target_value: None,
+            value_fg_colour: HCV::BLACK,
+            target_value_fg_colour: HCV::BLACK,
+        }
+    }
+
+    fn set_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.value = Some(colour.value());
+            self.value_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+        } else {
+            self.value = None;
+            self.value_fg_colour = HCV::BLACK;
+        }
+    }
+
+    fn attr_value(&self) -> Option<Prop> {
+        self.value
+    }
+
+    fn attr_value_fg_colour(&self) -> HCV {
+        self.value_fg_colour
+    }
+
+    fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.target_value = Some(colour.value());
+            self.target_value_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+        } else {
+            self.target_value = None;
+            self.target_value_fg_colour = HCV::BLACK;
+        }
+    }
+
+    fn attr_target_value(&self) -> Option<Prop> {
+        self.target_value
+    }
+
+    fn attr_target_value_fg_colour(&self) -> HCV {
+        self.target_value_fg_colour
+    }
+
+    fn label_colour(&self) -> HCV {
+        HCV::WHITE
     }
 }

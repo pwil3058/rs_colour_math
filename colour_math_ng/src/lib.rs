@@ -116,6 +116,20 @@ pub trait ColourBasics {
 
     fn hcv(&self) -> HCV;
     fn rgb<L: LightLevel>(&self) -> RGB<L>;
+
+    fn best_foreground(&self) -> HCV {
+        match self.chroma() {
+            Chroma::Shade(_) => HCV::WHITE,
+            Chroma::Tint(_) => HCV::BLACK,
+            _ => {
+                if self.value() < Prop::ONE / 2 {
+                    HCV::WHITE
+                } else {
+                    HCV::BLACK
+                }
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
