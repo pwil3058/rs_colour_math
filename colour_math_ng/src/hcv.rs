@@ -1,12 +1,12 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::convert::TryFrom;
 
-use crate::hue::SumOrdering;
+use crate::hue::UFDRNumberOrdering;
 use crate::proportion::Warmth;
 use crate::{
     hue::{CMYHue, HueIfce, RGBHue},
     rgb::RGB,
-    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants, Sum,
+    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants, UFDRNumber,
 };
 use std::cmp::Ordering;
 
@@ -36,7 +36,7 @@ pub enum Outcome {
 pub struct HCV {
     hue: Hue,
     pub(crate) chroma: Chroma,
-    pub(crate) sum: Sum,
+    pub(crate) sum: UFDRNumber,
 }
 
 impl PartialEq for HCV {
@@ -79,7 +79,7 @@ impl PartialOrd for HCV {
 }
 
 impl HCV {
-    pub fn new_grey(sum: Sum) -> Self {
+    pub fn new_grey(sum: UFDRNumber) -> Self {
         Self {
             hue: Hue::default(),
             chroma: Chroma::ZERO,
@@ -93,7 +93,7 @@ impl HCV {
 
     pub(crate) fn is_valid(&self) -> bool {
         match self.chroma.prop() {
-            Prop::ZERO => self.sum <= Sum::THREE,
+            Prop::ZERO => self.sum <= UFDRNumber::THREE,
             prop => {
                 if let Some(range) = self.hue.sum_range_for_chroma_prop(prop) {
                     range.compare_sum(self.sum).is_success()
@@ -104,11 +104,11 @@ impl HCV {
         }
     }
 
-    pub fn sum_range_for_current_chroma(&self) -> (Sum, Sum) {
+    pub fn sum_range_for_current_chroma(&self) -> (UFDRNumber, UFDRNumber) {
         if let Some(range) = self.hue.sum_range_for_chroma_prop(self.chroma.prop()) {
             (range.min, range.max)
         } else {
-            (Sum::ZERO, Sum::THREE)
+            (UFDRNumber::ZERO, UFDRNumber::THREE)
         }
     }
 
@@ -123,7 +123,7 @@ impl HCV {
     pub fn set_hue(&mut self, hue: Hue, policy: SetHue) {
         if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
             match range.compare_sum(self.sum) {
-                SumOrdering::TooSmall(shortfall) => match policy {
+                UFDRNumberOrdering::TooSmall(shortfall) => match policy {
                     SetHue::FavourChroma => self.sum = self.sum + shortfall,
                     SetHue::FavourValue => {
                         if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
@@ -133,7 +133,7 @@ impl HCV {
                         }
                     }
                 },
-                SumOrdering::TooBig(overs) => match policy {
+                UFDRNumberOrdering::TooBig(overs) => match policy {
                     SetHue::FavourChroma => self.sum = self.sum - overs,
                     SetHue::FavourValue => {
                         if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
@@ -161,7 +161,7 @@ impl HCV {
             Ordering::Less => {
                 if let Some(range) = self.hue.sum_range_for_chroma_prop(chroma_value) {
                     match range.compare_sum(self.sum) {
-                        SumOrdering::TooSmall(shortfall) => match policy {
+                        UFDRNumberOrdering::TooSmall(shortfall) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
                                     if adj_c_val == self.chroma {
@@ -182,7 +182,7 @@ impl HCV {
                             }
                             SetScalar::Reject => Outcome::Rejected,
                         },
-                        SumOrdering::TooBig(overs) => match policy {
+                        UFDRNumberOrdering::TooBig(overs) => match policy {
                             SetScalar::Clamp => {
                                 if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
                                     if adj_c_val == self.chroma {
@@ -218,7 +218,7 @@ impl HCV {
         }
     }
 
-    pub(crate) fn set_sum(&mut self, new_sum: Sum, policy: SetScalar) -> Outcome {
+    pub(crate) fn set_sum(&mut self, new_sum: UFDRNumber, policy: SetScalar) -> Outcome {
         debug_assert!(new_sum.is_valid());
         let (min_sum, max_sum) = self.sum_range_for_current_chroma();
         if new_sum < min_sum {
@@ -274,37 +274,37 @@ impl HueConstants for HCV {
     const RED: Self = Self {
         hue: Hue::Primary(RGBHue::Red),
         chroma: Chroma::ONE,
-        sum: Sum::ONE,
+        sum: UFDRNumber::ONE,
     };
 
     const GREEN: Self = Self {
         hue: Hue::Primary(RGBHue::Green),
         chroma: Chroma::ONE,
-        sum: Sum::ONE,
+        sum: UFDRNumber::ONE,
     };
 
     const BLUE: Self = Self {
         hue: Hue::Primary(RGBHue::Blue),
         chroma: Chroma::ONE,
-        sum: Sum::ONE,
+        sum: UFDRNumber::ONE,
     };
 
     const CYAN: Self = Self {
         hue: Hue::Secondary(CMYHue::Cyan),
         chroma: Chroma::ONE,
-        sum: Sum::TWO,
+        sum: UFDRNumber::TWO,
     };
 
     const MAGENTA: Self = Self {
         hue: Hue::Secondary(CMYHue::Magenta),
         chroma: Chroma::ONE,
-        sum: Sum::TWO,
+        sum: UFDRNumber::TWO,
     };
 
     const YELLOW: Self = Self {
         hue: Hue::Secondary(CMYHue::Yellow),
         chroma: Chroma::ONE,
-        sum: Sum::TWO,
+        sum: UFDRNumber::TWO,
     };
 }
 
@@ -312,13 +312,13 @@ impl RGBConstants for HCV {
     const WHITE: Self = Self {
         hue: Hue::RED,
         chroma: Chroma::ZERO,
-        sum: Sum::THREE,
+        sum: UFDRNumber::THREE,
     };
 
     const BLACK: Self = Self {
         hue: Hue::RED,
         chroma: Chroma::ZERO,
-        sum: Sum::ZERO,
+        sum: UFDRNumber::ZERO,
     };
 }
 

@@ -50,8 +50,8 @@ impl Default for Chroma {
     }
 }
 
-impl From<(Prop, Hue, Sum)> for Chroma {
-    fn from((prop, hue, sum): (Prop, Hue, Sum)) -> Self {
+impl From<(Prop, Hue, UFDRNumber)> for Chroma {
+    fn from((prop, hue, sum): (Prop, Hue, UFDRNumber)) -> Self {
         match prop {
             Prop::ZERO => Chroma::ZERO,
             Prop::ONE => Chroma::ONE,
@@ -184,8 +184,8 @@ impl From<Prop> for f64 {
     }
 }
 
-impl From<Sum> for Prop {
-    fn from(arg: Sum) -> Self {
+impl From<UFDRNumber> for Prop {
+    fn from(arg: UFDRNumber) -> Self {
         debug_assert!(arg.0 <= u64::MAX as u128);
         Self(arg.0 as u64)
     }
@@ -236,10 +236,10 @@ impl Mul for Prop {
 }
 
 impl Mul<u8> for Prop {
-    type Output = Sum;
+    type Output = UFDRNumber;
 
-    fn mul(self, rhs: u8) -> Sum {
-        Sum(self.0 as u128 * rhs as u128)
+    fn mul(self, rhs: u8) -> UFDRNumber {
+        UFDRNumber(self.0 as u128 * rhs as u128)
     }
 }
 
@@ -262,10 +262,10 @@ impl Div<u8> for Prop {
 }
 
 impl Add for Prop {
-    type Output = Sum;
+    type Output = UFDRNumber;
 
-    fn add(self, rhs: Self) -> Sum {
-        Sum(self.0 as u128 + rhs.0 as u128)
+    fn add(self, rhs: Self) -> UFDRNumber {
+        UFDRNumber(self.0 as u128 + rhs.0 as u128)
     }
 }
 
@@ -279,9 +279,9 @@ impl Sub for Prop {
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub struct Sum(pub(crate) u128);
+pub struct UFDRNumber(pub(crate) u128);
 
-impl Sum {
+impl UFDRNumber {
     pub const ZERO: Self = Self(0);
     pub const ONE: Self = Self(u64::MAX as u128);
     pub const TWO: Self = Self(u64::MAX as u128 * 2);
@@ -295,16 +295,16 @@ impl Sum {
         self > Self::ZERO && self < Self::THREE
     }
 
-    pub fn abs_diff(&self, other: &Self) -> Sum {
+    pub fn abs_diff(&self, other: &Self) -> UFDRNumber {
         match self.cmp(other) {
-            Ordering::Greater => Sum(self.0 - other.0),
-            Ordering::Less => Sum(other.0 - self.0),
-            Ordering::Equal => Sum(0),
+            Ordering::Greater => UFDRNumber(self.0 - other.0),
+            Ordering::Less => UFDRNumber(other.0 - self.0),
+            Ordering::Equal => UFDRNumber(0),
         }
     }
 }
 
-impl Debug for Sum {
+impl Debug for UFDRNumber {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         // let a = if self.0 > u64::MAX as u128 {
         //     self.0 - u64::MAX as u128
@@ -312,13 +312,13 @@ impl Debug for Sum {
         //     0
         // };
         // let b = self.0 - a;
-        //formatter.write_fmt(format_args!("Sum({:X}.{:08X})", a as u64, b as u64))
-        formatter.write_fmt(format_args!("Sum({:?})", f64::from(*self)))
+        //formatter.write_fmt(format_args!("UFDRNumber({:X}.{:08X})", a as u64, b as u64))
+        formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
     }
 }
 
 #[cfg(test)]
-impl Sum {
+impl UFDRNumber {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
         if let Some(acceptable_rounding_error) = acceptable_rounding_error {
             self.abs_diff(other).0 < acceptable_rounding_error as u128
@@ -329,7 +329,7 @@ impl Sum {
 }
 
 #[cfg(test)]
-impl From<f64> for Sum {
+impl From<f64> for UFDRNumber {
     fn from(arg: f64) -> Self {
         debug_assert!(arg <= 3.0);
         let one = f64::from_u128(u64::MAX as u128).unwrap();
@@ -339,28 +339,28 @@ impl From<f64> for Sum {
 }
 
 //#[cfg(test)]
-impl From<Sum> for f64 {
-    fn from(arg: Sum) -> Self {
+impl From<UFDRNumber> for f64 {
+    fn from(arg: UFDRNumber) -> Self {
         let one = f64::from_u128(u64::MAX as u128).unwrap();
         f64::from_u128(arg.0).unwrap() / one
     }
 }
 
-impl From<Prop> for Sum {
+impl From<Prop> for UFDRNumber {
     fn from(arg: Prop) -> Self {
         Self(arg.0 as u128)
     }
 }
 
-impl Add for Sum {
+impl Add for UFDRNumber {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Sum {
-        Sum(self.0 + rhs.0)
+    fn add(self, rhs: Self) -> UFDRNumber {
+        UFDRNumber(self.0 + rhs.0)
     }
 }
 
-impl Sub for Sum {
+impl Sub for UFDRNumber {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -369,7 +369,7 @@ impl Sub for Sum {
     }
 }
 
-impl Div for Sum {
+impl Div for UFDRNumber {
     type Output = Prop;
 
     fn div(self, rhs: Self) -> Prop {
@@ -393,7 +393,7 @@ impl Div for Sum {
     }
 }
 
-impl Div<u8> for Sum {
+impl Div<u8> for UFDRNumber {
     type Output = Prop;
 
     fn div(self, rhs: u8) -> Prop {
@@ -404,7 +404,7 @@ impl Div<u8> for Sum {
     }
 }
 
-impl Rem<u128> for Sum {
+impl Rem<u128> for UFDRNumber {
     type Output = u128;
 
     fn rem(self, rhs: u128) -> u128 {
@@ -412,15 +412,15 @@ impl Rem<u128> for Sum {
     }
 }
 
-impl Add<Prop> for Sum {
+impl Add<Prop> for UFDRNumber {
     type Output = Self;
 
-    fn add(self, rhs: Prop) -> Sum {
-        Sum(self.0 + rhs.0 as u128)
+    fn add(self, rhs: Prop) -> UFDRNumber {
+        UFDRNumber(self.0 + rhs.0 as u128)
     }
 }
 
-impl Sub<Prop> for Sum {
+impl Sub<Prop> for UFDRNumber {
     type Output = Self;
 
     fn sub(self, rhs: Prop) -> Self {
@@ -429,7 +429,7 @@ impl Sub<Prop> for Sum {
     }
 }
 
-impl Mul<Prop> for Sum {
+impl Mul<Prop> for UFDRNumber {
     type Output = Self;
 
     fn mul(self, rhs: Prop) -> Self {
@@ -459,24 +459,24 @@ impl Warmth {
 
     const K: Prop = Prop(u64::MAX / 3);
     const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
-    const B: Sum = Sum(u64::MAX as u128 / 2);
+    const B: UFDRNumber = UFDRNumber(u64::MAX as u128 / 2);
 
     pub fn calculate(chroma: Chroma, x_dash: Prop) -> Self {
         debug_assert_ne!(chroma, Chroma::ZERO);
         let temp = (Self::K + Self::K_COMP * x_dash) * chroma.prop();
-        debug_assert!(temp <= Sum::ONE);
+        debug_assert!(temp <= UFDRNumber::ONE);
         match chroma {
             Chroma::Shade(prop) => {
                 let warmth = Self::B - Self::B * prop + temp;
-                debug_assert!(warmth <= Sum::ONE);
+                debug_assert!(warmth <= UFDRNumber::ONE);
                 warmth.into()
             }
             _ => temp.into(),
         }
     }
 
-    pub(crate) fn calculate_monochrome_fm_sum(sum: Sum) -> Self {
-        ((Sum::THREE - sum) / 6).into()
+    pub(crate) fn calculate_monochrome_fm_sum(sum: UFDRNumber) -> Self {
+        ((UFDRNumber::THREE - sum) / 6).into()
     }
 
     pub fn calculate_monochrome(value: Prop) -> Self {
@@ -515,9 +515,9 @@ impl From<Warmth> for Prop {
     }
 }
 
-impl From<Sum> for Warmth {
-    fn from(sum: Sum) -> Self {
-        debug_assert!(sum <= Sum::ONE);
+impl From<UFDRNumber> for Warmth {
+    fn from(sum: UFDRNumber) -> Self {
+        debug_assert!(sum <= UFDRNumber::ONE);
         Self(sum.0 as u64)
     }
 }

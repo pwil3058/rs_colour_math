@@ -1,7 +1,9 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::hcv::{Outcome, SetScalar};
-use crate::{hcv::SetHue, Angle, ColourBasics, Hue, HueConstants, LightLevel, Prop, Sum, HCV, RGB};
+use crate::{
+    hcv::SetHue, Angle, ColourBasics, Hue, HueConstants, LightLevel, Prop, UFDRNumber, HCV, RGB,
+};
 
 #[derive(Debug)]
 pub struct ColourManipulator {
@@ -86,13 +88,13 @@ impl ColourManipulator {
     }
 
     pub fn decr_value(&mut self, delta: Prop) -> bool {
-        if self.hcv.sum == Sum::ZERO {
+        if self.hcv.sum == UFDRNumber::ZERO {
             false
         } else {
             let new_sum = if delta * 3 < self.hcv.sum {
                 self.hcv.sum - delta * 3
             } else {
-                Sum::ZERO
+                UFDRNumber::ZERO
             };
             let policy = if self.clamped {
                 SetScalar::Clamp
@@ -107,13 +109,13 @@ impl ColourManipulator {
     }
 
     pub fn incr_value(&mut self, delta: Prop) -> bool {
-        if self.hcv.sum == Sum::THREE {
+        if self.hcv.sum == UFDRNumber::THREE {
             false
         } else {
-            let new_sum = if delta * 3 < Sum::THREE - self.hcv.sum {
+            let new_sum = if delta * 3 < UFDRNumber::THREE - self.hcv.sum {
                 self.hcv.sum + delta * 3
             } else {
-                Sum::THREE
+                UFDRNumber::THREE
             };
             let policy = if self.clamped {
                 SetScalar::Clamp

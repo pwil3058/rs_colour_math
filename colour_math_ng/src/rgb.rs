@@ -10,8 +10,8 @@ use std::{
 use crate::hue::{CMYHue, HueIfce, RGBHue, Sextant};
 use crate::proportion::Warmth;
 use crate::{
-    hue::Hue, Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, Sum, CCI,
-    HCV,
+    hue::Hue, Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants,
+    UFDRNumber, CCI, HCV,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -46,7 +46,7 @@ impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
 }
 
 impl<T: LightLevel + Into<Prop>> RGB<T> {
-    pub fn sum(&self) -> Sum {
+    pub fn sum(&self) -> UFDRNumber {
         let [red, green, blue] = <[Prop; 3]>::from(*self);
         red + green + blue
     }
