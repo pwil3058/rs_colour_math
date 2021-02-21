@@ -7,3 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+
+colour_math_ng = { path = "../colour_math_ng" }
+colour_math_cairo_ng = { path = "../colour_math_cairo_ng" }

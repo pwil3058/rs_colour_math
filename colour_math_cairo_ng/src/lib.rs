@@ -6,17 +6,15 @@ use pw_gix::cairo;
 
 use colour_math_ng::{
     beigui::{Draw, DrawIsosceles, Point, Size, TextPosn},
-    ColourBasics, Prop, UFDRNumber, CCI, HCV,
+    ColourBasics, Prop, RGBConstants, UFDRNumber, CCI, HCV, RGB,
 };
 
-pub type RGB = colour_math_ng::RGB<f64>;
-
 pub trait CairoSetColour {
-    fn set_source_colour_rgb(&self, rgb: &RGB);
+    fn set_source_colour_rgb(&self, rgb: &RGB<f64>);
 }
 
 impl CairoSetColour for pw_gix::cairo::Context {
-    fn set_source_colour_rgb(&self, rgb: &RGB) {
+    fn set_source_colour_rgb(&self, rgb: &RGB<f64>) {
         self.set_source_rgb(rgb[CCI::Red], rgb[CCI::Green], rgb[CCI::Blue]);
     }
 }
@@ -24,12 +22,22 @@ impl CairoSetColour for pw_gix::cairo::Context {
 pub struct Drawer<'a> {
     pub cairo_context: &'a cairo::Context,
     size: Size,
-    fill_colour: Cell<RGB>,
-    line_colour: Cell<RGB>,
-    text_colour: Cell<RGB>,
+    fill_colour: Cell<RGB<f64>>,
+    line_colour: Cell<RGB<f64>>,
+    text_colour: Cell<RGB<f64>>,
 }
 
 impl<'a> Drawer<'a> {
+    pub fn new(cairo_context: &'a cairo::Context, size: Size) -> Self {
+        Self {
+            cairo_context,
+            size,
+            fill_colour: Cell::new(RGB::<f64>::BLACK),
+            line_colour: Cell::new(RGB::<f64>::BLACK),
+            text_colour: Cell::new(RGB::<f64>::BLACK),
+        }
+    }
+
     fn fill(&self) {
         self.cairo_context
             .set_source_colour_rgb(&self.fill_colour.get());

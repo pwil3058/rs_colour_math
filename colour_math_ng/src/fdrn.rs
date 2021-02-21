@@ -156,6 +156,13 @@ impl From<FDRNumber> for UFDRNumber {
 impl_to_from_float!(f64, u128, UFDRNumber);
 impl_to_from_float!(f32, u128, UFDRNumber);
 
+impl From<i32> for UFDRNumber {
+    fn from(signed: i32) -> Self {
+        debug_assert!(signed > 0);
+        Self(signed as u128 * u64::MAX as u128)
+    }
+}
+
 impl Add for UFDRNumber {
     type Output = Self;
 
