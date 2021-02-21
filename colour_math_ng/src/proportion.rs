@@ -10,11 +10,12 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use crate::{fdrn::UFDRNumber, hue::HueIfce, Hue};
+use crate::{
+    fdrn::{FDRNumber, UFDRNumber},
+    hue::HueIfce,
+    Hue,
+};
 
-use num_traits::FromPrimitive;
-
-use crate::fdrn::FDRNumber;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
 
@@ -148,56 +149,47 @@ impl Debug for Prop {
     }
 }
 
-impl From<f32> for Prop {
-    fn from(arg: f32) -> Self {
-        debug_assert!(arg <= 1.0);
-        let one = f32::from_u64(u64::MAX).unwrap();
-        let val = u64::from_f32(arg * one).unwrap();
-        Self(val)
-    }
-}
-
-impl From<Prop> for f32 {
-    fn from(arg: Prop) -> Self {
-        let one = f32::from_u64(u64::MAX).unwrap();
-        f32::from_u64(arg.0).unwrap() / one
-    }
-}
-
-impl From<f64> for Prop {
-    fn from(arg: f64) -> Self {
-        debug_assert!(0.0 <= arg && arg <= 1.0);
-        let one = f64::from_u64(u64::MAX).unwrap();
-        let prod = arg * one;
-        // NB: watch out for floating point not being proper reals
-        if prod >= one {
-            Self(u64::MAX)
-        } else {
-            Self(u64::from_f64(arg * one).unwrap())
+macro_rules! impl_to_from_float {
+    ($float:ty, $number:ty) => {
+        impl From<$float> for $number {
+            fn from(arg: $float) -> Self {
+                debug_assert!(0.0 <= arg && arg <= 1.0);
+                // TODO: watch out for floating point not being proper reals
+                Self((arg * u64::MAX as $float) as u64)
+            }
         }
-    }
+
+        impl From<$number> for $float {
+            fn from(arg: $number) -> Self {
+                arg.0 as $float / u64::MAX as $float
+            }
+        }
+    };
 }
 
-impl From<Prop> for f64 {
-    fn from(arg: Prop) -> Self {
-        let one = f64::from_u64(u64::MAX).unwrap();
-        f64::from_u64(arg.0).unwrap() / one
-    }
+impl_to_from_float!(f32, Prop);
+impl_to_from_float!(f64, Prop);
+
+macro_rules! impl_to_from_number {
+    ($number:ty, $core:ty, $proportion:ty) => {
+        impl From<$number> for $proportion {
+            #[allow(unused_comparisons)]
+            fn from(arg: $number) -> Self {
+                debug_assert!(arg.0 >= 0 && arg.0 <= u64::MAX as $core);
+                Self(arg.0 as u64)
+            }
+        }
+
+        impl From<$proportion> for $number {
+            fn from(arg: $proportion) -> Self {
+                Self(arg.0 as $core)
+            }
+        }
+    };
 }
 
-impl From<UFDRNumber> for Prop {
-    fn from(arg: UFDRNumber) -> Self {
-        debug_assert!(arg.0 <= u64::MAX as u128);
-        Self(arg.0 as u64)
-    }
-}
-
-impl From<FDRNumber> for Prop {
-    fn from(arg: FDRNumber) -> Self {
-        debug_assert!(arg.0 >= 0 && arg.0 <= u64::MAX as i128);
-        Self(arg.0 as u64)
-    }
-}
+impl_to_from_number!(UFDRNumber, u128, Prop);
+impl_to_from_number!(FDRNumber, i128, Prop);
 
 macro_rules! impl_unsigned_to_from_prop {
     (u64) => {
@@ -330,12 +322,6 @@ impl Mul<u8> for UFDRNumber {
     }
 }
 
-impl From<Prop> for UFDRNumber {
-    fn from(arg: Prop) -> Self {
-        Self(arg.0 as u128)
-    }
-}
-
 #[derive(
     Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
 )]
@@ -391,6 +377,9 @@ impl Warmth {
     }
 }
 
+impl_to_from_float!(f32, Warmth);
+impl_to_from_float!(f64, Warmth);
+
 impl From<Prop> for Warmth {
     fn from(prop: Prop) -> Self {
         Self(prop.0)
@@ -403,9 +392,5 @@ impl From<Warmth> for Prop {
     }
 }
 
-impl From<UFDRNumber> for Warmth {
-    fn from(sum: UFDRNumber) -> Self {
-        debug_assert!(sum <= UFDRNumber::ONE);
-        Self(sum.0 as u64)
-    }
-}
+impl_to_from_number!(UFDRNumber, u128, Warmth);
+impl_to_from_number!(FDRNumber, i128, Warmth);

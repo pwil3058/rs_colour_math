@@ -1,20 +1,38 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use num_traits::FromPrimitive;
-use std::cmp::Ordering;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::{
+    cmp::Ordering,
+    fmt::{self, Debug, Formatter},
+    ops::{Add, Div, Mul, Rem, Sub},
+};
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
-)]
+macro_rules! impl_to_from_float {
+    ($float:ty, $core:ty, $number:ty) => {
+        impl From<$float> for $number {
+            fn from(arg: $float) -> Self {
+                Self((arg * u64::MAX as $float) as $core)
+            }
+        }
+
+        impl From<$number> for $float {
+            fn from(arg: $number) -> Self {
+                arg.0 as $float / u64::MAX as $float
+            }
+        }
+    };
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct FDRNumber(pub(crate) i128);
 
 // NB: ONE is the same value as for UFDRNumber
 impl FDRNumber {
     pub const ZERO: Self = Self(0);
+    // u64::MAX: 18446744073709551615
     pub const ONE: Self = Self(u64::MAX as i128);
+    // SQRT_2: 1.41421356237309504880168872420969808
+    pub const SQRT_2: Self =
+        Self(u64::MAX as i128 + 4142135623730950488 * u64::MAX as i128 / 10000000000000000000);
 
     pub fn abs_diff(&self, other: &Self) -> FDRNumber {
         match self.cmp(other) {
@@ -22,6 +40,12 @@ impl FDRNumber {
             Ordering::Less => FDRNumber(other.0 - self.0),
             Ordering::Equal => FDRNumber(0),
         }
+    }
+}
+
+impl Debug for FDRNumber {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
     }
 }
 
@@ -74,13 +98,8 @@ impl From<UFDRNumber> for FDRNumber {
     }
 }
 
-impl From<f64> for FDRNumber {
-    fn from(arg: f64) -> Self {
-        let one = f64::from_i128(u64::MAX as i128).unwrap();
-        let val = i128::from_f64(arg * one).unwrap();
-        Self(val)
-    }
-}
+impl_to_from_float!(f64, i128, FDRNumber);
+impl_to_from_float!(f32, i128, FDRNumber);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct UFDRNumber(pub(crate) u128);
@@ -90,6 +109,8 @@ impl UFDRNumber {
     pub const ONE: Self = Self(u64::MAX as u128);
     pub const TWO: Self = Self(u64::MAX as u128 * 2);
     pub const THREE: Self = Self(u64::MAX as u128 * 3);
+
+    pub const SQRT_2: Self = Self(FDRNumber::SQRT_2.0 as u128);
 
     pub fn is_valid(self) -> bool {
         self <= Self::THREE
@@ -110,13 +131,6 @@ impl UFDRNumber {
 
 impl Debug for UFDRNumber {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        // let a = if self.0 > u64::MAX as u128 {
-        //     self.0 - u64::MAX as u128
-        // } else {
-        //     0
-        // };
-        // let b = self.0 - a;
-        //formatter.write_fmt(format_args!("UFDRNumber({:X}.{:08X})", a as u64, b as u64))
         formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
     }
 }
@@ -132,18 +146,20 @@ impl UFDRNumber {
     }
 }
 
-impl From<f64> for UFDRNumber {
-    fn from(arg: f64) -> Self {
-        let one = f64::from_u128(u64::MAX as u128).unwrap();
-        let val = u128::from_f64(arg * one).unwrap();
-        Self(val)
+impl From<FDRNumber> for UFDRNumber {
+    fn from(signed: FDRNumber) -> Self {
+        debug_assert!(signed.0 >= 0);
+        Self(signed.0 as u128)
     }
 }
 
-impl From<UFDRNumber> for f64 {
-    fn from(arg: UFDRNumber) -> Self {
-        let one = f64::from_u128(u64::MAX as u128).unwrap();
-        f64::from_u128(arg.0).unwrap() / one
+impl_to_from_float!(f64, u128, UFDRNumber);
+impl_to_from_float!(f32, u128, UFDRNumber);
+
+impl From<i32> for UFDRNumber {
+    fn from(signed: i32) -> Self {
+        debug_assert!(signed > 0);
+        Self(signed as u128 * u64::MAX as u128)
     }
 }
 
