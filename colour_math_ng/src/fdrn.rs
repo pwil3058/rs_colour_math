@@ -200,3 +200,6 @@ impl Rem for UFDRNumber {
         Self(self.0 % rhs.0)
     }
 }
+
+#[cfg(test)]
+mod fdrn_tests;
