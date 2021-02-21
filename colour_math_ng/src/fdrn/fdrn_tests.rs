@@ -2,7 +2,13 @@
 
 use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
-use crate::UFDRNumber;
+use crate::{fdrn::FDRNumber, UFDRNumber};
+
+#[test]
+fn sqrt_2() {
+    assert_eq!(f64::from(FDRNumber::SQRT_2), std::f64::consts::SQRT_2);
+    assert_eq!(f64::from(UFDRNumber::SQRT_2), std::f64::consts::SQRT_2);
+}
 
 #[test]
 fn ufdrn_div() {
