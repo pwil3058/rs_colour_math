@@ -9,5 +9,6 @@ members = [
     "colour_math_gtk",
     "colour_math_gtk_ng",
     "test_gdk_pixbuf",
-    "test_gui_gtk"
+    "test_gui_gtk",
+    "test_gui_gtk_ng",
 ]
