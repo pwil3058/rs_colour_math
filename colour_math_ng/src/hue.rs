@@ -497,16 +497,26 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
 
 impl HueIfce for SextantHue {
     fn angle(&self) -> Angle {
-        let second: f64 = self.1.into();
-        let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
-        let angle = Angle::asin(Prop::from(sin));
-        match self.0 {
-            Sextant::RedMagenta => -angle,
-            Sextant::RedYellow => angle,
-            Sextant::GreenYellow => Angle::GREEN - angle,
-            Sextant::GreenCyan => Angle::GREEN + angle,
-            Sextant::BlueCyan => Angle::BLUE - angle,
-            Sextant::BlueMagenta => Angle::BLUE + angle,
+        match self {
+            SextantHue(Sextant::BlueCyan, Prop::HALF) => Angle::BLUE_CYAN,
+            SextantHue(Sextant::BlueMagenta, Prop::HALF) => Angle::BLUE_MAGENTA,
+            SextantHue(Sextant::RedMagenta, Prop::HALF) => Angle::RED_MAGENTA,
+            SextantHue(Sextant::RedYellow, Prop::HALF) => Angle::RED_YELLOW,
+            SextantHue(Sextant::GreenYellow, Prop::HALF) => Angle::GREEN_YELLOW,
+            SextantHue(Sextant::GreenCyan, Prop::HALF) => Angle::GREEN_CYAN,
+            _ => {
+                let second: f64 = self.1.into();
+                let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
+                let angle = Angle::asin(Prop::from(sin));
+                match self.0 {
+                    Sextant::RedMagenta => -angle,
+                    Sextant::RedYellow => angle,
+                    Sextant::GreenYellow => Angle::GREEN - angle,
+                    Sextant::GreenCyan => Angle::GREEN + angle,
+                    Sextant::BlueCyan => Angle::BLUE - angle,
+                    Sextant::BlueMagenta => Angle::BLUE + angle,
+                }
+            }
         }
     }
 
@@ -681,6 +691,13 @@ impl HueConstants for Hue {
     const CYAN: Self = Self::Secondary(CMYHue::Cyan);
     const MAGENTA: Self = Self::Secondary(CMYHue::Magenta);
     const YELLOW: Self = Self::Secondary(CMYHue::Yellow);
+
+    const BLUE_CYAN: Self = Self::Sextant(SextantHue(Sextant::BlueCyan, Prop::HALF));
+    const BLUE_MAGENTA: Self = Self::Sextant(SextantHue(Sextant::BlueMagenta, Prop::HALF));
+    const RED_MAGENTA: Self = Self::Sextant(SextantHue(Sextant::RedMagenta, Prop::HALF));
+    const RED_YELLOW: Self = Self::Sextant(SextantHue(Sextant::RedYellow, Prop::HALF));
+    const GREEN_YELLOW: Self = Self::Sextant(SextantHue(Sextant::GreenYellow, Prop::HALF));
+    const GREEN_CYAN: Self = Self::Sextant(SextantHue(Sextant::GreenCyan, Prop::HALF));
 }
 
 impl Default for Hue {
@@ -732,6 +749,12 @@ impl From<Angle> for Hue {
             Angle::CYAN => Hue::CYAN,
             Angle::MAGENTA => Hue::MAGENTA,
             Angle::YELLOW => Hue::YELLOW,
+            Angle::BLUE_CYAN => Hue::BLUE_CYAN,
+            Angle::BLUE_MAGENTA => Hue::BLUE_MAGENTA,
+            Angle::RED_MAGENTA => Hue::RED_MAGENTA,
+            Angle::RED_YELLOW => Hue::RED_YELLOW,
+            Angle::GREEN_YELLOW => Hue::GREEN_YELLOW,
+            Angle::GREEN_CYAN => Hue::GREEN_CYAN,
             _ => {
                 fn f(angle: Angle) -> Prop {
                     angle.sin() / (Angle::GREEN - angle).sin()
@@ -753,6 +776,12 @@ impl From<Angle> for Hue {
                 }
             }
         }
+    }
+}
+
+impl From<Hue> for Angle {
+    fn from(hue: Hue) -> Self {
+        hue.angle()
     }
 }
 

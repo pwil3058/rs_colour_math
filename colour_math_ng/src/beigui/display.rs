@@ -105,13 +105,19 @@ pub struct HueCAD {
 }
 
 impl HueCAD {
-    const DEFAULT_COLOUR_STOPS: [(HCV, Prop); 7] = [
+    const DEFAULT_COLOUR_STOPS: [(HCV, Prop); 13] = [
         (HCV::CYAN, Prop::ZERO),
+        (HCV::BLUE_CYAN, Prop(u64::MAX / 12)),
         (HCV::BLUE, Prop(u64::MAX / 6)),
+        (HCV::BLUE_MAGENTA, Prop(u64::MAX / 12 * 3)),
         (HCV::MAGENTA, Prop(u64::MAX / 6 * 2)),
+        (HCV::RED_MAGENTA, Prop(u64::MAX / 12 * 5)),
         (HCV::RED, Prop(u64::MAX / 6 * 3)),
+        (HCV::RED_YELLOW, Prop(u64::MAX / 12 * 7)),
         (HCV::YELLOW, Prop(u64::MAX / 6 * 4)),
+        (HCV::GREEN_YELLOW, Prop(u64::MAX / 12 * 9)),
         (HCV::GREEN, Prop(u64::MAX / 6 * 5)),
+        (HCV::GREEN_CYAN, Prop(u64::MAX / 12 * 11)),
         (HCV::CYAN, Prop::ONE),
     ];
 

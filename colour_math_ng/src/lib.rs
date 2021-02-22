@@ -37,35 +37,42 @@ impl Float for f64 {}
 pub trait LightLevel: Clone + Copy + From<Prop> + Into<Prop> + PartialEq + Debug {
     const ZERO: Self;
     const ONE: Self;
+    const HALF: Self;
 }
 
 impl LightLevel for f32 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
+    const HALF: Self = 0.5;
 }
 impl LightLevel for f64 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
+    const HALF: Self = 0.5;
 }
 
 impl LightLevel for u8 {
     const ZERO: Self = 0;
     const ONE: Self = u8::MAX;
+    const HALF: Self = u8::MAX / 2;
 }
 
 impl LightLevel for u16 {
     const ZERO: Self = 0;
     const ONE: Self = u16::MAX;
+    const HALF: Self = u16::MAX / 2;
 }
 
 impl LightLevel for u32 {
     const ZERO: Self = 0;
     const ONE: Self = u32::MAX;
+    const HALF: Self = u32::MAX / 2;
 }
 
 impl LightLevel for u64 {
     const ZERO: Self = 0;
     const ONE: Self = u64::MAX;
+    const HALF: Self = u64::MAX / 2;
 }
 
 pub trait HueConstants: Sized + Copy {
@@ -77,8 +84,23 @@ pub trait HueConstants: Sized + Copy {
     const MAGENTA: Self;
     const YELLOW: Self;
 
-    const PRIMARIES: [Self; 3] = [Self::RED, Self::GREEN, Self::BLUE];
+    const BLUE_CYAN: Self;
+    const BLUE_MAGENTA: Self;
+    const RED_MAGENTA: Self;
+    const RED_YELLOW: Self;
+    const GREEN_YELLOW: Self;
+    const GREEN_CYAN: Self;
+
+    const PRIMARIES: [Self; 3] = [Self::BLUE, Self::RED, Self::GREEN];
     const SECONDARIES: [Self; 3] = [Self::CYAN, Self::MAGENTA, Self::YELLOW];
+    const IN_BETWEENS: [Self; 6] = [
+        Self::BLUE_CYAN,
+        Self::BLUE_MAGENTA,
+        Self::RED_MAGENTA,
+        Self::RED_YELLOW,
+        Self::GREEN_YELLOW,
+        Self::GREEN_CYAN,
+    ];
 }
 
 pub trait RGBConstants: HueConstants + Copy {

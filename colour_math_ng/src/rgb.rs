@@ -27,6 +27,13 @@ impl<T: LightLevel> HueConstants for RGB<T> {
     const CYAN: Self = Self([T::ZERO, T::ONE, T::ONE]);
     const MAGENTA: Self = Self([T::ONE, T::ZERO, T::ONE]);
     const YELLOW: Self = Self([T::ONE, T::ONE, T::ZERO]);
+
+    const BLUE_CYAN: Self = Self([T::ZERO, T::HALF, T::ONE]);
+    const BLUE_MAGENTA: Self = Self([T::HALF, T::ZERO, T::ONE]);
+    const RED_MAGENTA: Self = Self([T::ONE, T::ZERO, T::HALF]);
+    const RED_YELLOW: Self = Self([T::ONE, T::HALF, T::ZERO]);
+    const GREEN_YELLOW: Self = Self([T::HALF, T::ONE, T::ZERO]);
+    const GREEN_CYAN: Self = Self([T::ZERO, T::ONE, T::HALF]);
 }
 
 impl<T: LightLevel> RGBConstants for RGB<T> {

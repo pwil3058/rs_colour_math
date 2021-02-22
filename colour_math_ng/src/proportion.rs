@@ -122,6 +122,8 @@ impl Prop {
     pub const ZERO: Self = Self(0);
     pub const ONE: Self = Self(u64::MAX);
 
+    pub(crate) const HALF: Self = Self(u64::MAX / 2);
+
     pub fn abs_diff(&self, other: &Self) -> Prop {
         match self.cmp(other) {
             Ordering::Greater => Prop(self.0 - other.0),
@@ -308,6 +310,7 @@ impl Mul<Prop> for UFDRNumber {
     type Output = Self;
 
     fn mul(self, rhs: Prop) -> Self {
+        // TODO: make this multiply more robust
         if rhs.0 == u64::MAX {
             self
         } else if self.0 >= u64::MAX as u128 {

@@ -3,7 +3,7 @@ use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::{
     fdrn::UFDRNumber,
-    hue::{CMYHue, HueIfce, RGBHue, SumOrdering},
+    hue::{HueIfce, SumOrdering},
     proportion::Warmth,
     rgb::RGB,
     Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants,
@@ -285,39 +285,75 @@ impl HCV {
 
 impl HueConstants for HCV {
     const RED: Self = Self {
-        hue: Hue::Primary(RGBHue::Red),
+        hue: Hue::RED,
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE,
     };
 
     const GREEN: Self = Self {
-        hue: Hue::Primary(RGBHue::Green),
+        hue: Hue::GREEN,
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE,
     };
 
     const BLUE: Self = Self {
-        hue: Hue::Primary(RGBHue::Blue),
+        hue: Hue::BLUE,
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE,
     };
 
     const CYAN: Self = Self {
-        hue: Hue::Secondary(CMYHue::Cyan),
+        hue: Hue::CYAN,
         chroma: Chroma::ONE,
         sum: UFDRNumber::TWO,
     };
 
     const MAGENTA: Self = Self {
-        hue: Hue::Secondary(CMYHue::Magenta),
+        hue: Hue::MAGENTA,
         chroma: Chroma::ONE,
         sum: UFDRNumber::TWO,
     };
 
     const YELLOW: Self = Self {
-        hue: Hue::Secondary(CMYHue::Yellow),
+        hue: Hue::YELLOW,
         chroma: Chroma::ONE,
         sum: UFDRNumber::TWO,
+    };
+
+    const BLUE_CYAN: Self = Self {
+        hue: Hue::BLUE_CYAN,
+        chroma: Chroma::ONE,
+        sum: UFDRNumber::ONE_PT_5,
+    };
+
+    const BLUE_MAGENTA: Self = Self {
+        hue: Hue::BLUE_MAGENTA,
+        chroma: Chroma::ONE,
+        sum: UFDRNumber::ONE_PT_5,
+    };
+
+    const RED_MAGENTA: Self = Self {
+        hue: Hue::RED_MAGENTA,
+        chroma: Chroma::ONE,
+        sum: UFDRNumber::ONE_PT_5,
+    };
+
+    const RED_YELLOW: Self = Self {
+        hue: Hue::RED_YELLOW,
+        chroma: Chroma::ONE,
+        sum: UFDRNumber::ONE_PT_5,
+    };
+
+    const GREEN_YELLOW: Self = Self {
+        hue: Hue::GREEN_YELLOW,
+        chroma: Chroma::ONE,
+        sum: UFDRNumber::ONE_PT_5,
+    };
+
+    const GREEN_CYAN: Self = Self {
+        hue: Hue::GREEN_CYAN,
+        chroma: Chroma::ONE,
+        sum: UFDRNumber::ONE_PT_5,
     };
 }
 

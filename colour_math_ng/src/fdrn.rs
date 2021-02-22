@@ -120,6 +120,8 @@ impl UFDRNumber {
     pub const TWO: Self = Self(u64::MAX as u128 * 2);
     pub const THREE: Self = Self(u64::MAX as u128 * 3);
 
+    pub(crate) const ONE_PT_5: Self = Self(u64::MAX as u128 * 3 / 2);
+
     pub const SQRT_2: Self = Self(FDRNumber::SQRT_2.0 as u128);
 
     pub fn is_valid(self) -> bool {
