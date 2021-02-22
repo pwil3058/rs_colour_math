@@ -3,7 +3,7 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    Angle, ColourBasics, Hue, HueIfce, Prop, RGBConstants, HCV,
+    Angle, ColourBasics, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -105,6 +105,16 @@ pub struct HueCAD {
 }
 
 impl HueCAD {
+    const DEFAULT_COLOUR_STOPS: [(HCV, Prop); 7] = [
+        (HCV::CYAN, Prop::ZERO),
+        (HCV::BLUE, Prop(u64::MAX / 6)),
+        (HCV::MAGENTA, Prop(u64::MAX / 6 * 2)),
+        (HCV::RED, Prop(u64::MAX / 6 * 3)),
+        (HCV::YELLOW, Prop(u64::MAX / 6 * 4)),
+        (HCV::GREEN, Prop(u64::MAX / 6 * 5)),
+        (HCV::CYAN, Prop::ONE),
+    ];
+
     fn set_colour_stops_for_hue(&mut self, hue: Hue) {
         let mut stops = vec![];
         let mut hue = hue + Angle::from(180);
@@ -123,17 +133,11 @@ impl HueCAD {
             if let Some(hue) = colour.hue() {
                 self.set_colour_stops_for_hue(hue);
             } else {
-                let grey = colour.hcv();
-                self.colour_stops = vec![(grey, Prop::ZERO), (grey, Prop::ONE)];
+                self.colour_stops = Self::DEFAULT_COLOUR_STOPS.to_vec();
             }
         } else {
-            self.set_default_colour_stops();
+            self.colour_stops = Self::DEFAULT_COLOUR_STOPS.to_vec();
         }
-    }
-
-    fn set_default_colour_stops(&mut self) {
-        let grey = HCV::new_grey(Prop::ONE / 2);
-        self.colour_stops = vec![(grey, Prop::ZERO), (grey, Prop::ONE)];
     }
 
     fn set_defaults_for_no_hue(&mut self) {
@@ -142,7 +146,7 @@ impl HueCAD {
         if let Some(target_hue) = self.target_hue {
             self.set_colour_stops_for_hue(target_hue);
         } else {
-            self.set_default_colour_stops();
+            self.colour_stops = Self::DEFAULT_COLOUR_STOPS.to_vec();
         }
     }
 
@@ -152,7 +156,7 @@ impl HueCAD {
             self.set_colour_stops_for_hue(hue);
             self.hue_value = Some(Prop::ONE / 2);
         } else {
-            self.set_default_colour_stops();
+            self.colour_stops = Self::DEFAULT_COLOUR_STOPS.to_vec();
         }
     }
 
@@ -165,14 +169,13 @@ impl ColourAttributeDisplayIfce for HueCAD {
     const LABEL: &'static str = "Hue";
 
     fn new() -> Self {
-        let grey = HCV::new_grey(Prop::ONE / 2);
         Self {
             hue: None,
             target_hue: None,
             hue_value: None,
             hue_fg_colour: HCV::BLACK,
             target_hue_fg_colour: HCV::BLACK,
-            colour_stops: vec![(grey, Prop::ZERO), (grey, Prop::ONE)],
+            colour_stops: Self::DEFAULT_COLOUR_STOPS.to_vec(),
         }
     }
 
