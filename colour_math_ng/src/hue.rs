@@ -208,9 +208,9 @@ impl HueIfce for RGBHue {
 
     fn max_chroma_hcv(&self) -> HCV {
         match self {
-            RGBHue::Red => HCV::new(Hue::RED, Chroma::ONE, UFDRNumber::ONE),
-            RGBHue::Green => HCV::new(Hue::GREEN, Chroma::ONE, UFDRNumber::ONE),
-            RGBHue::Blue => HCV::new(Hue::BLUE, Chroma::ONE, UFDRNumber::ONE),
+            RGBHue::Red => HCV::RED,
+            RGBHue::Green => HCV::GREEN,
+            RGBHue::Blue => HCV::BLUE,
         }
     }
 
@@ -353,9 +353,9 @@ impl HueIfce for CMYHue {
 
     fn max_chroma_hcv(&self) -> HCV {
         match self {
-            CMYHue::Cyan => HCV::new(Hue::CYAN, Chroma::ONE, UFDRNumber::TWO),
-            CMYHue::Magenta => HCV::new(Hue::MAGENTA, Chroma::ONE, UFDRNumber::TWO),
-            CMYHue::Yellow => HCV::new(Hue::YELLOW, Chroma::ONE, UFDRNumber::TWO),
+            CMYHue::Cyan => HCV::CYAN,
+            CMYHue::Magenta => HCV::MAGENTA,
+            CMYHue::Yellow => HCV::YELLOW,
         }
     }
 
