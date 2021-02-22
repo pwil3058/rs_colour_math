@@ -24,7 +24,7 @@ pub trait ColourAttributeDisplayIfce {
             Some(_) => self.attr_value_fg_colour(),
             None => match self.attr_target_value() {
                 Some(_) => self.attr_target_value_fg_colour(),
-                None => HCV::BLACK,
+                None => self.attr_value_fg_colour(),
             },
         }
     }
@@ -173,7 +173,7 @@ impl ColourAttributeDisplayIfce for HueCAD {
             hue: None,
             target_hue: None,
             hue_value: None,
-            hue_fg_colour: HCV::BLACK,
+            hue_fg_colour: HCV::WHITE,
             target_hue_fg_colour: HCV::BLACK,
             colour_stops: Self::DEFAULT_COLOUR_STOPS.to_vec(),
         }
