@@ -573,8 +573,24 @@ impl HueIfce for SextantHue {
 
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid(), "sum: {:?}", sum);
-        let chroma = self.max_chroma_for_sum(sum)?;
-        Some(self.rgb_for_sum_and_chroma(sum, chroma)?)
+        if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
+            None
+        } else {
+            let max_chroma_sum = UFDRNumber::ONE + self.1;
+            match sum.cmp(&max_chroma_sum) {
+                Ordering::Equal => Some(self.max_chroma_rgb()),
+                Ordering::Greater => {
+                    let third = (sum - max_chroma_sum) / (UFDRNumber::TWO - self.1);
+                    let second = third + self.1 - third * self.1;
+                    debug_assert!(second < UFDRNumber::ONE);
+                    Some(self.make_rgb_sum((UFDRNumber::ONE, second, third)))
+                }
+                Ordering::Less => {
+                    let ratio = sum / max_chroma_sum;
+                    Some(self.make_rgb_sum((ratio, ratio * self.1, UFDRNumber::ZERO)))
+                }
+            }
+        }
     }
 
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T> {

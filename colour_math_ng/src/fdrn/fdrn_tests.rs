@@ -11,15 +11,32 @@ fn sqrt_2() {
 }
 
 #[test]
+fn ufdrn_mul() {
+    for [lhs, rhs] in &[
+        [1.1_f64, 3.0],
+        [0.0, 0.3],
+        [1.024, 0.5],
+        [0.18, 0.5],
+        [3000.0, 0.02],
+        [1.0, 1.001],
+        [25.0, 5.0],
+    ] {
+        let expected = UFDRNumber::from(lhs * rhs);
+        let result = UFDRNumber::from(*lhs) * UFDRNumber::from(*rhs);
+        assert_approx_eq!(result, expected);
+    }
+}
+
+#[test]
 fn ufdrn_div() {
     for [lhs, rhs] in &[
         [1.1_f64, 3.0],
         [0.0, 0.3],
         [1.024, 0.5],
         [0.18, 0.5],
-        //[3000.0, 0.02],
-        //[1.0, 1.001],
-        //[25.0, 5.0],
+        [3000.0, 0.02],
+        [1.0, 1.001],
+        [25.0, 5.0],
     ] {
         let expected = UFDRNumber::from(lhs / rhs);
         println!("{:?} / {:?} = {:?} {:?}", lhs, rhs, lhs / rhs, expected);
@@ -30,7 +47,7 @@ fn ufdrn_div() {
             expected,
             result.abs_diff(&expected).0
         );
-        assert_approx_eq!(result, expected, 0x4);
+        assert_approx_eq!(result, expected, 0x0000000000040000);
     }
 }
 
@@ -71,7 +88,7 @@ fn ufdrn_sub() {
         println!("{:?} - {:?} = {:?} {:?}", a, b, a - b, expected);
         let result = UFDRNumber::from(*a) - UFDRNumber::from(*b);
         println!("diff = {:#X}", result.abs_diff(&expected).0);
-        assert_approx_eq!(result, expected, 257);
+        assert_approx_eq!(result, expected);
         assert_approx_eq!(f64::from(result), &(a - b), 0.000_000_01);
     }
 }
@@ -83,7 +100,7 @@ fn ufdrn_div_u8() {
         println!("{:?} / {:?} = {:?} : {:?}", a, b, a / *b as f64, expected);
         let result = UFDRNumber::from(*a) / *b;
         println!("diff = {:#X}", result.abs_diff(&expected).0);
-        assert_approx_eq!(result, expected, 0x156);
+        assert_approx_eq!(result, expected, 0x0000000000005000);
         assert_approx_eq!(f64::from(result), &(a / *b as f64), 0.000_000_01);
     }
 }

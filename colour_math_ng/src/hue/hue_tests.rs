@@ -402,7 +402,8 @@ fn other_max_chroma_rgbs() {
             for item in VALID_OTHER_SUMS.iter() {
                 let sum = UFDRNumber::from(*item);
                 let rgb = hue.max_chroma_rgb_for_sum::<u64>(sum).unwrap();
-                assert_approx_eq!(sum, rgb.sum(), 0xf);
+                assert_approx_eq!(sum, rgb.sum());
+                assert_approx_eq!(rgb.chroma(), hue.max_chroma_for_sum(sum).unwrap());
                 match Hue::try_from(&rgb).unwrap() {
                     Hue::Sextant(SextantHue(sextant_out, second_out)) => {
                         assert_eq!(sextant_hue.0, sextant_out);
@@ -503,7 +504,7 @@ fn primary_rgb_for_sum_and_chroma() {
                 );
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     // NB: expect rounding error due to divide by 3 in the maths
-                    assert_approx_eq!(rgb.sum(), sum, 0x3);
+                    assert_approx_eq!(rgb.sum(), sum, 0x0000000000005000);
                     // NB: near the swapover point sum errors can cause a shift in Chroma variant
                     if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
                         assert_eq!(rgb.chroma().prop(), chroma.prop());

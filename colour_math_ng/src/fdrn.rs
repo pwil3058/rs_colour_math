@@ -52,10 +52,20 @@ impl Debug for FDRNumber {
 #[cfg(test)]
 impl FDRNumber {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other).0 < acceptable_rounding_error as i128
+        let abs_diff = self.abs_diff(other);
+        let scaled_diff = if self.0.abs() >= other.0.abs() {
+            if self.0.abs() > 0 {
+                (u128::MAX / self.0.abs() as u128) * abs_diff.0 as u128 / u64::MAX as u128
+            } else {
+                abs_diff.0 as u128
+            }
         } else {
-            self.abs_diff(other).0 < 3
+            (u128::MAX / other.0.abs() as u128) * abs_diff.0 as u128 / u64::MAX as u128
+        };
+        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
+            scaled_diff < acceptable_rounding_error as u128
+        } else {
+            scaled_diff < u64::MAX as u128 / 1_000_000_000_000_000
         }
     }
 }
@@ -138,10 +148,20 @@ impl Debug for UFDRNumber {
 #[cfg(test)]
 impl UFDRNumber {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other).0 < acceptable_rounding_error as u128
+        let abs_diff = self.abs_diff(other);
+        let scaled_diff = if self >= other {
+            if self.0 > 0 {
+                (u128::MAX / self.0) * abs_diff.0 / u64::MAX as u128
+            } else {
+                abs_diff.0
+            }
         } else {
-            self.abs_diff(other).0 < 3
+            (u128::MAX / other.0) * abs_diff.0 / u64::MAX as u128
+        };
+        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
+            scaled_diff < acceptable_rounding_error as u128
+        } else {
+            scaled_diff < u64::MAX as u128 / 1_000_000_000_000_000
         }
     }
 }
@@ -180,24 +200,27 @@ impl Sub for UFDRNumber {
     }
 }
 
+impl Mul for UFDRNumber {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        let one = u64::MAX as u128;
+        let l_int = self.0 / one;
+        let l_rem = self.0 % one;
+        let r_int = rhs.0 / one;
+        let r_rem = rhs.0 % one;
+        Self(l_int * r_int * one + l_int * r_rem + r_int * l_rem + r_rem * l_rem / one)
+    }
+}
+
 impl Div for UFDRNumber {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        let result = if rhs.0 == u64::MAX as u128 {
-            self.0
-        // Avoid subtraction overflow
-        } else if self.0 >= u64::MAX as u128 {
-            // do the operation in two parts to avoid multiply overflow problems
-            let a = self.0 - u64::MAX as u128;
-            let b = self.0 - a;
-            let adiv = (a * u64::MAX as u128) / rhs.0;
-            let bdiv = (b * u64::MAX as u128) / rhs.0;
-            adiv + bdiv
-        } else {
-            (self.0 * u64::MAX as u128) / rhs.0
-        };
-        Self(result)
+        match self.0.cmp(&rhs.0) {
+            Ordering::Equal => Self::ONE,
+            Ordering::Less | Ordering::Greater => self.mul(Self(u128::MAX / rhs.0)),
+        }
     }
 }
 

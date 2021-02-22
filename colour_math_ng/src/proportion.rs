@@ -134,10 +134,20 @@ impl Prop {
 #[cfg(test)]
 impl Prop {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other).0 < acceptable_rounding_error
+        let abs_diff = self.abs_diff(other);
+        let scaled_diff = if self >= other {
+            if self.0 > 0 {
+                ((u64::MAX / self.0) as u128 * abs_diff.0 as u128 / u64::MAX as u128) as u64
+            } else {
+                abs_diff.0
+            }
         } else {
-            self.abs_diff(other).0 < 3
+            ((u64::MAX / other.0) as u128 * abs_diff.0 as u128 / u64::MAX as u128) as u64
+        };
+        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
+            scaled_diff < acceptable_rounding_error as u64
+        } else {
+            scaled_diff < u64::MAX / 1_000_000_000_000_000
         }
     }
 }
@@ -247,7 +257,6 @@ impl Div for Prop {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        debug_assert!(self.0 <= rhs.0);
         let result = (self.0 as u128 * u64::MAX as u128) / rhs.0 as u128;
         Self(result as u64)
     }
@@ -369,11 +378,7 @@ impl Warmth {
 #[cfg(test)]
 impl Warmth {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            self.abs_diff(other).0 < acceptable_rounding_error
-        } else {
-            self.abs_diff(other).0 < 3
-        }
+        Prop::from(*self).approx_eq(&(*other).into(), acceptable_rounding_error)
     }
 }
 
