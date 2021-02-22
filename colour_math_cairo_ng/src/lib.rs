@@ -5,9 +5,60 @@ use std::cell::Cell;
 use pw_gix::cairo;
 
 use colour_math_ng::{
-    beigui::{Draw, DrawIsosceles, Point, Size, TextPosn},
+    beigui::{self, Draw, DrawIsosceles, Point},
     ColourBasics, Prop, RGBConstants, UFDRNumber, CCI, HCV, RGB,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Size {
+    pub width: f64,
+    pub height: f64,
+}
+
+impl Size {
+    pub fn centre(&self) -> [f64; 2] {
+        [self.width / 2.0, self.height / 2.0]
+    }
+}
+
+impl From<Size> for beigui::Size {
+    fn from(size: Size) -> Self {
+        Self {
+            width: size.width.into(),
+            height: size.height.into(),
+        }
+    }
+}
+
+impl From<beigui::Size> for Size {
+    fn from(size: beigui::Size) -> Self {
+        Self {
+            width: size.width.into(),
+            height: size.height.into(),
+        }
+    }
+}
+
+pub enum TextPosn {
+    TopLeftCorner(f64, f64),
+    TopRightCorner(f64, f64),
+    BottomLeftCorner(f64, f64),
+    BottomRightCorner(f64, f64),
+    Centre(f64, f64),
+}
+
+impl From<beigui::TextPosn> for TextPosn {
+    fn from(text_posn: beigui::TextPosn) -> Self {
+        use beigui::TextPosn::*;
+        match text_posn {
+            TopLeftCorner(point) => TextPosn::TopLeftCorner(point.x.into(), point.y.into()),
+            TopRightCorner(point) => TextPosn::TopRightCorner(point.x.into(), point.y.into()),
+            BottomLeftCorner(point) => TextPosn::BottomLeftCorner(point.x.into(), point.y.into()),
+            BottomRightCorner(point) => TextPosn::BottomRightCorner(point.x.into(), point.y.into()),
+            Centre(point) => TextPosn::Centre(point.x.into(), point.y.into()),
+        }
+    }
+}
 
 pub trait CairoSetColour {
     fn set_source_colour_rgb(&self, rgb: &RGB<f64>);
@@ -52,8 +103,8 @@ impl<'a> Drawer<'a> {
 }
 
 impl<'a> Draw for Drawer<'a> {
-    fn size(&self) -> Size {
-        self.size
+    fn size(&self) -> beigui::Size {
+        self.size.into()
     }
 
     fn draw_polygon(&self, polygon: &[Point], fill: bool) {
@@ -101,36 +152,28 @@ impl<'a> Draw for Drawer<'a> {
         }
     }
 
-    fn draw_text(&self, text: &str, posn: TextPosn, font_size: UFDRNumber) {
+    fn draw_text(&self, text: &str, posn: beigui::TextPosn, font_size: UFDRNumber) {
         if text.is_empty() {
             return;
         }
         self.cairo_context.set_font_size(font_size.into());
         let te = self.cairo_context.text_extents(&text);
-        match posn {
-            TextPosn::Centre(point) => {
-                self.cairo_context.move_to(
-                    f64::from(point.x) - te.width / 2.0,
-                    f64::from(point.y) + te.height / 2.0,
-                );
-            }
-            TextPosn::TopLeftCorner(point) => {
+        match TextPosn::from(posn) {
+            TextPosn::Centre(x, y) => {
                 self.cairo_context
-                    .move_to(f64::from(point.x), f64::from(point.y) + te.height);
+                    .move_to(x - te.width / 2.0, y + te.height / 2.0);
             }
-            TextPosn::TopRightCorner(point) => {
-                self.cairo_context.move_to(
-                    f64::from(point.x) - te.width,
-                    f64::from(point.y) + te.height,
-                );
+            TextPosn::TopLeftCorner(x, y) => {
+                self.cairo_context.move_to(x, y + te.height);
             }
-            TextPosn::BottomLeftCorner(point) => {
-                self.cairo_context
-                    .move_to(f64::from(point.x), f64::from(point.y));
+            TextPosn::TopRightCorner(x, y) => {
+                self.cairo_context.move_to(x - te.width, y + te.height);
             }
-            TextPosn::BottomRightCorner(point) => {
-                self.cairo_context
-                    .move_to(f64::from(point.x) - te.width, f64::from(point.y));
+            TextPosn::BottomLeftCorner(x, y) => {
+                self.cairo_context.move_to(x, y);
+            }
+            TextPosn::BottomRightCorner(x, y) => {
+                self.cairo_context.move_to(x - te.width, y);
             }
         }
         self.cairo_context
@@ -138,7 +181,7 @@ impl<'a> Draw for Drawer<'a> {
         self.cairo_context.show_text(&text);
     }
 
-    fn paint_linear_gradient(&self, posn: Point, size: Size, colour_stops: &[(HCV, Prop)]) {
+    fn paint_linear_gradient(&self, posn: Point, size: beigui::Size, colour_stops: &[(HCV, Prop)]) {
         let linear_gradient = cairo::LinearGradient::new(
             0.0,
             0.5 * f64::from(size.height),

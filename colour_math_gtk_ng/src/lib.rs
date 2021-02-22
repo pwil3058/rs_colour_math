@@ -15,9 +15,9 @@ pub mod attributes {
         wrapper::*,
     };
 
-    use colour_math_cairo_ng::Drawer;
+    use colour_math_cairo_ng::{Drawer, Size};
 
-    use crate::colour::{beigui, display};
+    use crate::colour::display;
 
     #[derive(PWO, Wrapper)]
     pub struct ColourAttributeDisplay<A: display::ColourAttributeDisplayIfce> {
@@ -43,9 +43,9 @@ pub mod attributes {
             cad.drawing_area.set_size_request(90, 30);
             let cad_c = Rc::clone(&cad);
             cad.drawing_area.connect_draw(move |da, cairo_context| {
-                let size: beigui::Size = beigui::Size {
-                    width: da.get_allocated_width().into(),
-                    height: da.get_allocated_height().into(),
+                let size = Size {
+                    width: da.get_allocated_width() as f64,
+                    height: da.get_allocated_height() as f64,
                 };
                 let drawer = Drawer::new(cairo_context, size);
                 cad_c.attribute.borrow().draw_all(&drawer);
