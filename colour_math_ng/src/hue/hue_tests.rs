@@ -203,19 +203,42 @@ fn hue_to_from_angle() {
         assert_eq!(Hue::from(*angle), *hue);
         assert_eq!(hue.angle(), *angle);
     }
-    let second = Prop::from(0.5_f64);
+    for (angle, hue) in Angle::IN_BETWEENS.iter().zip(Hue::IN_BETWEENS.iter()) {
+        assert_eq!(Hue::from(*angle), *hue);
+        assert_eq!(hue.angle(), *angle);
+    }
+    let second = Prop::from(0.2679491924311227_f64);
     use Sextant::*;
     for (angle, sextant) in &[
-        (Angle::from((30, 0, 0)), RedYellow),
-        (Angle::from((90, 0, 0)), GreenYellow),
-        (Angle::from((150, 0, 0)), GreenCyan),
-        (-Angle::from((30, 0, 0)), RedMagenta),
-        (-Angle::from((90, 0, 0)), BlueMagenta),
-        (-Angle::from((150, 0, 0)), BlueCyan),
+        (Angle::from((15, 0, 0)), RedYellow),
+        (Angle::from((105, 0, 0)), GreenYellow),
+        (Angle::from((135, 0, 0)), GreenCyan),
+        (-Angle::from((15, 0, 0)), RedMagenta),
+        (-Angle::from((105, 0, 0)), BlueMagenta),
+        (-Angle::from((135, 0, 0)), BlueCyan),
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, second));
         assert_approx_eq!(Hue::from(*angle), hue, 10000);
-        assert_approx_eq!(hue.angle(), *angle, 100000);
+        assert_approx_eq!(hue.angle(), *angle, 0x0000000000000100);
+    }
+}
+
+#[test]
+fn hue_add_sub_angle() {
+    for hue in Hue::PRIMARIES
+        .iter()
+        .chain(Hue::SECONDARIES.iter())
+        .chain(Hue::IN_BETWEENS.iter())
+    {
+        for angle in &[
+            Angle::from(15),
+            Angle::from(-15),
+            Angle::from(135),
+            Angle::from(-135),
+        ] {
+            assert_approx_eq!((*hue + *angle).angle(), hue.angle() + *angle, 0x100);
+            assert_approx_eq!((*hue - *angle).angle(), hue.angle() - *angle, 0x100);
+        }
     }
 }
 

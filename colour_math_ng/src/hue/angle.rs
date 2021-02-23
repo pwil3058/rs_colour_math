@@ -1,13 +1,14 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::cmp::Ordering;
-use std::ops::{Add, Neg, Sub};
+use std::{
+    cmp::Ordering,
+    fmt::{self, Debug, Formatter},
+    ops::{Add, Neg, Sub},
+};
 
 use crate::fdrn::FDRNumber;
 use crate::{HueConstants, Prop};
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Angle(i64);
 
 impl Angle {
@@ -46,6 +47,13 @@ impl Angle {
         } else {
             self.abs_diff(other).0 < 3
         }
+    }
+}
+
+impl Debug for Angle {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        //formatter.write_fmt(format_args!("Prop(0.{:08X})", self.0))
+        formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
     }
 }
 
