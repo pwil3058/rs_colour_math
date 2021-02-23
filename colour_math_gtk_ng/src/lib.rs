@@ -19,7 +19,7 @@ pub mod attributes {
 
     use crate::colour::{display, ColourBasics, ScalarAttribute, RGB};
 
-    // pub type ChromaCAD = ColourAttributeDisplay<display::ChromaCAD>;
+    pub type ChromaCAD = ColourAttributeDisplay<display::ChromaCAD>;
     // pub type GreynessCAD = ColourAttributeDisplay<display::GreynessCAD>;
     pub type HueCAD = ColourAttributeDisplay<display::HueCAD>;
     pub type ValueCAD = ColourAttributeDisplay<display::ValueCAD>;
@@ -88,7 +88,7 @@ pub mod attributes {
             for scalar_attribute in self.attributes.iter() {
                 let cad: Rc<dyn DynColourAttributeDisplay> = match scalar_attribute {
                     ScalarAttribute::Value => ValueCAD::new(),
-                    // ScalarAttribute::Chroma => ChromaCAD::new(),
+                    ScalarAttribute::Chroma => ChromaCAD::new(),
                     // ScalarAttribute::Warmth => WarmthCAD::new(),
                     // ScalarAttribute::Greyness => GreynessCAD::new(),
                     _ => ValueCAD::new(),

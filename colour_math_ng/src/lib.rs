@@ -120,6 +120,9 @@ pub trait ColourBasics {
     fn hue_rgb<L: LightLevel>(&self) -> Option<RGB<L>> {
         Some(self.hue()?.max_chroma_rgb())
     }
+    fn hue_hcv(&self) -> Option<HCV> {
+        Some(self.hue()?.max_chroma_hcv())
+    }
 
     fn is_grey(&self) -> bool {
         self.chroma() == Chroma::ZERO

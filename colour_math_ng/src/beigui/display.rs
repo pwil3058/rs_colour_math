@@ -3,7 +3,7 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    ColourBasics, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
+    Chroma, ColourBasics, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -127,15 +127,6 @@ impl HueCAD {
             .iter()
             .map(|(hcv, prop)| (*hcv + hue_angle, *prop))
             .collect();
-        // let mut stops = vec![];
-        // let mut hue = hue + Angle::from(180);
-        // let delta = Angle::from(30);
-        // for i in 0_u8..13 {
-        //     let offset: Prop = (Prop::ONE * i / 12).into();
-        //     let hcv = hue.max_chroma_hcv();
-        //     stops.push((hcv, offset));
-        //     hue = hue - delta;
-        // }
         self.colour_stops = stops
     }
 
@@ -244,6 +235,124 @@ impl ColourAttributeDisplayIfce for HueCAD {
 
     fn attr_target_value_fg_colour(&self) -> HCV {
         self.target_hue_fg_colour
+    }
+
+    fn colour_stops(&self) -> Vec<(HCV, Prop)> {
+        self.colour_stops.clone()
+    }
+}
+
+// Chroma
+pub struct ChromaCAD {
+    chroma: Option<Chroma>,
+    target_chroma: Option<Chroma>,
+    chroma_fg_colour: HCV,
+    target_chroma_fg_colour: HCV,
+    colour_stops: Vec<(HCV, Prop)>,
+}
+
+impl ChromaCAD {
+    fn set_colour_stops(&mut self, colour: Option<&impl ColourBasics>) {
+        self.colour_stops = if let Some(colour) = colour {
+            if let Some(end_hcv) = colour.hue_hcv() {
+                let start_hcv = HCV::new_grey(colour.value());
+                vec![(start_hcv, Prop::ZERO), (end_hcv, Prop::ONE)]
+            } else {
+                let grey = colour.hcv();
+                vec![(grey, Prop::ZERO), (grey, Prop::ONE)]
+            }
+        } else {
+            Self::default_colour_stops()
+        }
+    }
+
+    fn default_colour_stops() -> Vec<(HCV, Prop)> {
+        let grey = HCV::new_grey(Prop::HALF);
+        vec![(grey, Prop::ZERO), (grey, Prop::ONE)]
+    }
+}
+
+impl ColourAttributeDisplayIfce for ChromaCAD {
+    const LABEL: &'static str = "Chroma";
+
+    fn new() -> Self {
+        let grey = HCV::new_grey(Prop::HALF);
+        Self {
+            chroma: None,
+            target_chroma: None,
+            chroma_fg_colour: HCV::BLACK,
+            target_chroma_fg_colour: HCV::BLACK,
+            colour_stops: vec![(grey, Prop::ZERO), (grey, Prop::ONE)],
+        }
+    }
+
+    fn set_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.chroma = Some(colour.chroma());
+            self.chroma_fg_colour = colour.best_foreground();
+            if let Some(target_chroma) = self.target_chroma {
+                if target_chroma == Chroma::ZERO {
+                    self.set_colour_stops(Some(colour));
+                }
+            } else {
+                self.set_colour_stops(Some(colour));
+            }
+        } else {
+            self.chroma = None;
+            self.chroma_fg_colour = HCV::BLACK;
+            if self.target_chroma.is_none() {
+                self.colour_stops = Self::default_colour_stops()
+            }
+        }
+    }
+
+    fn attr_value(&self) -> Option<Prop> {
+        if let Some(chroma) = self.chroma {
+            Some(chroma.prop())
+        } else {
+            None
+        }
+    }
+
+    fn attr_value_fg_colour(&self) -> HCV {
+        self.chroma_fg_colour
+    }
+
+    fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.target_chroma = Some(colour.chroma());
+            self.target_chroma_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+            if colour.is_grey() {
+                if let Some(chroma) = self.chroma {
+                    if chroma == Chroma::ZERO {
+                        self.set_colour_stops(Some(colour));
+                    }
+                } else {
+                    self.set_colour_stops(Some(colour));
+                }
+            } else {
+                self.set_colour_stops(Some(colour));
+            }
+        } else {
+            self.target_chroma = None;
+            self.target_chroma_fg_colour = HCV::BLACK;
+        }
+    }
+
+    fn attr_target_value(&self) -> Option<Prop> {
+        if let Some(chroma) = self.target_chroma {
+            Some(chroma.prop())
+        } else {
+            None
+        }
+    }
+
+    fn attr_target_value_fg_colour(&self) -> HCV {
+        self.target_chroma_fg_colour
+    }
+
+    fn label_colour(&self) -> HCV {
+        HCV::WHITE
     }
 
     fn colour_stops(&self) -> Vec<(HCV, Prop)> {
