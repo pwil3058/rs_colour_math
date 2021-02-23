@@ -3,7 +3,7 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    Angle, ColourBasics, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
+    ColourBasics, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -122,15 +122,20 @@ impl HueCAD {
     ];
 
     fn set_colour_stops_for_hue(&mut self, hue: Hue) {
-        let mut stops = vec![];
-        let mut hue = hue + Angle::from(180);
-        let delta = Angle::from(30);
-        for i in 0_u8..13 {
-            let offset: Prop = (Prop::ONE * i / 12).into();
-            let hcv = hue.max_chroma_hcv();
-            stops.push((hcv, offset));
-            hue = hue - delta;
-        }
+        let hue_angle = hue.angle();
+        let stops: Vec<(HCV, Prop)> = Self::DEFAULT_COLOUR_STOPS
+            .iter()
+            .map(|(hcv, prop)| (*hcv + hue_angle, *prop))
+            .collect();
+        // let mut stops = vec![];
+        // let mut hue = hue + Angle::from(180);
+        // let delta = Angle::from(30);
+        // for i in 0_u8..13 {
+        //     let offset: Prop = (Prop::ONE * i / 12).into();
+        //     let hcv = hue.max_chroma_hcv();
+        //     stops.push((hcv, offset));
+        //     hue = hue - delta;
+        // }
         self.colour_stops = stops
     }
 
