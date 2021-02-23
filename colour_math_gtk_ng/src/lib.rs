@@ -23,7 +23,7 @@ pub mod attributes {
     pub type GreynessCAD = ColourAttributeDisplay<display::GreynessCAD>;
     pub type HueCAD = ColourAttributeDisplay<display::HueCAD>;
     pub type ValueCAD = ColourAttributeDisplay<display::ValueCAD>;
-    // pub type WarmthCAD = ColourAttributeDisplay<display::WarmthCAD>;
+    pub type WarmthCAD = ColourAttributeDisplay<display::WarmthCAD>;
 
     pub trait DynColourAttributeDisplay: PackableWidgetObject<PWT = gtk::DrawingArea> {
         fn set_rgb(&self, rgb: Option<&RGB<f64>>);
@@ -89,9 +89,8 @@ pub mod attributes {
                 let cad: Rc<dyn DynColourAttributeDisplay> = match scalar_attribute {
                     ScalarAttribute::Value => ValueCAD::new(),
                     ScalarAttribute::Chroma => ChromaCAD::new(),
-                    // ScalarAttribute::Warmth => WarmthCAD::new(),
+                    ScalarAttribute::Warmth => WarmthCAD::new(),
                     ScalarAttribute::Greyness => GreynessCAD::new(),
-                    _ => ValueCAD::new(),
                 };
                 vbox.pack_start(&cad.pwo(), true, true, 0);
                 cads.push(cad);

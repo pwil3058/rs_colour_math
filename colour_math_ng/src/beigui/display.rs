@@ -3,7 +3,7 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    Chroma, ColourBasics, Greyness, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
+    Chroma, ColourBasics, Greyness, Hue, HueConstants, HueIfce, Prop, RGBConstants, Warmth, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -255,7 +255,7 @@ impl ChromaCAD {
     fn set_colour_stops(&mut self, colour: Option<&impl ColourBasics>) {
         self.colour_stops = if let Some(colour) = colour {
             if let Some(end_hcv) = colour.hue_hcv() {
-                let start_hcv = HCV::new_grey(colour.value());
+                let start_hcv = colour.monochrome_hcv();
                 vec![(start_hcv, Prop::ZERO), (end_hcv, Prop::ONE)]
             } else {
                 let grey = colour.hcv();
@@ -321,7 +321,7 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
     fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
         if let Some(colour) = colour {
             self.target_chroma = Some(colour.chroma());
-            self.target_chroma_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+            self.target_chroma_fg_colour = colour.monochrome_hcv().best_foreground();
             if colour.is_grey() {
                 if let Some(chroma) = self.chroma {
                     if chroma == Chroma::ZERO {
@@ -383,7 +383,7 @@ impl ColourAttributeDisplayIfce for ValueCAD {
     fn set_colour(&mut self, colour: Option<&impl ColourBasics>) {
         if let Some(colour) = colour {
             self.value = Some(colour.value());
-            self.value_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+            self.value_fg_colour = colour.monochrome_hcv().best_foreground();
         } else {
             self.value = None;
             self.value_fg_colour = HCV::BLACK;
@@ -401,7 +401,7 @@ impl ColourAttributeDisplayIfce for ValueCAD {
     fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
         if let Some(colour) = colour {
             self.target_value = Some(colour.value());
-            self.target_value_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+            self.target_value_fg_colour = colour.monochrome_hcv().best_foreground();
         } else {
             self.target_value = None;
             self.target_value_fg_colour = HCV::BLACK;
@@ -434,7 +434,7 @@ impl GreynessCAD {
     fn set_colour_stops(&mut self, colour: Option<&impl ColourBasics>) {
         self.colour_stops = if let Some(colour) = colour {
             if let Some(start_colour) = colour.hue_hcv() {
-                let end_colour = HCV::new_grey(colour.value());
+                let end_colour = colour.monochrome_hcv();
                 vec![(start_colour, Prop::ZERO), (end_colour, Prop::ONE)]
             } else {
                 let grey = colour.hcv();
@@ -500,7 +500,7 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
     fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
         if let Some(colour) = colour {
             self.target_greyness = Some(colour.greyness());
-            self.target_greyness_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+            self.target_greyness_fg_colour = colour.monochrome_hcv().best_foreground();
             if colour.is_grey() {
                 if let Some(greyness) = self.greyness {
                     if greyness == Greyness::ZERO {
@@ -536,5 +536,83 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
 
     fn colour_stops(&self) -> Vec<(HCV, Prop)> {
         self.colour_stops.clone()
+    }
+}
+
+// Warmth
+pub struct WarmthCAD {
+    warmth: Option<Warmth>,
+    target_warmth: Option<Warmth>,
+    warmth_fg_colour: HCV,
+    target_warmth_fg_colour: HCV,
+}
+
+impl ColourAttributeDisplayIfce for WarmthCAD {
+    const LABEL: &'static str = "Warmth";
+
+    fn new() -> Self {
+        Self {
+            warmth: None,
+            target_warmth: None,
+            warmth_fg_colour: HCV::BLACK,
+            target_warmth_fg_colour: HCV::BLACK,
+        }
+    }
+
+    fn set_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.warmth = Some(colour.warmth());
+            self.warmth_fg_colour = colour.monochrome_hcv().best_foreground();
+        } else {
+            self.warmth = None;
+            self.warmth_fg_colour = HCV::BLACK;
+        }
+    }
+
+    fn attr_value(&self) -> Option<Prop> {
+        if let Some(warmth) = self.warmth {
+            Some(warmth.into())
+        } else {
+            None
+        }
+    }
+
+    fn attr_value_fg_colour(&self) -> HCV {
+        self.warmth_fg_colour
+    }
+
+    fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.target_warmth = Some(colour.warmth());
+            self.target_warmth_fg_colour = colour.monochrome_hcv().best_foreground();
+        } else {
+            self.target_warmth = None;
+            self.target_warmth_fg_colour = HCV::BLACK;
+        }
+    }
+
+    fn attr_target_value(&self) -> Option<Prop> {
+        if let Some(target_warmth) = self.target_warmth {
+            Some(target_warmth.into())
+        } else {
+            None
+        }
+    }
+
+    fn attr_target_value_fg_colour(&self) -> HCV {
+        self.target_warmth_fg_colour
+    }
+
+    fn label_colour(&self) -> HCV {
+        HCV::WHITE
+    }
+
+    fn colour_stops(&self) -> Vec<(HCV, Prop)> {
+        vec![
+            (HCV::WHITE, Prop::ZERO),
+            (HCV::CYAN, Prop::ONE / 4),
+            (HCV::new_grey(Prop::HALF), Prop::HALF),
+            (HCV::RED, Prop::ONE),
+        ]
     }
 }

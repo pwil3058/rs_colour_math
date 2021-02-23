@@ -146,6 +146,14 @@ pub trait ColourBasics {
     fn hcv(&self) -> HCV;
     fn rgb<L: LightLevel>(&self) -> RGB<L>;
 
+    fn monochrome_hcv(&self) -> HCV {
+        HCV::new_grey(self.value())
+    }
+
+    fn monochrome_rgb<L: LightLevel>(&self) -> RGB<L> {
+        RGB::<L>::new_grey(self.value())
+    }
+
     fn best_foreground(&self) -> HCV {
         match self.chroma() {
             Chroma::Shade(_) => HCV::WHITE,

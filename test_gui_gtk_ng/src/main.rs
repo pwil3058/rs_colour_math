@@ -60,6 +60,7 @@ fn main() {
         ScalarAttribute::Value,
         ScalarAttribute::Chroma,
         ScalarAttribute::Greyness,
+        ScalarAttribute::Warmth,
     ];
 
     let cads = ColourAttributeDisplayStackBuilder::new()
