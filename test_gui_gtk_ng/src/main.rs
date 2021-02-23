@@ -45,7 +45,10 @@ pub fn recollection_file_path() -> PathBuf {
     gui_config_dir_path().join("recollections")
 }
 
-use colour_math_gtk_ng::attributes::{HueCAD, ValueCAD};
+use colour_math_gtk_ng::{
+    attributes::ColourAttributeDisplayStackBuilder,
+    colour::{ScalarAttribute, RGB},
+};
 
 fn main() {
     gtk::init().expect("nowhere to go if Gtk++ initialization fails");
@@ -53,12 +56,14 @@ fn main() {
     let win = gtk::Window::new(gtk::WindowType::Toplevel);
     win.set_geometry_from_recollections("main_window", (600, 400));
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let attributes = vec![ScalarAttribute::Value];
 
-    let hue_cad = HueCAD::new();
-    vbox.pack_start(&hue_cad.pwo(), true, true, 0);
-
-    let value_cad = ValueCAD::new();
-    vbox.pack_start(&value_cad.pwo(), true, true, 0);
+    let cads = ColourAttributeDisplayStackBuilder::new()
+        .attributes(&attributes)
+        .build();
+    cads.set_colour(Some(&RGB::from([0.1, 0.4, 0.7])));
+    cads.set_target_colour(Some(&RGB::from([0.7, 0.4, 0.7])));
+    vbox.pack_start(&cads.pwo(), true, true, 0);
 
     vbox.show_all();
     win.add(&vbox);

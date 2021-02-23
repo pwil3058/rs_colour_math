@@ -42,14 +42,14 @@ pub trait ColourAttributeDisplayIfce {
             let base: UFDRNumber = UFDRNumber::ONE * 8;
             let height: UFDRNumber = UFDRNumber::ONE * 6;
             drawer.draw_isosceles(
-                [indicator_x.into(), (height * 2).into()].into(),
+                [indicator_x.into(), (height / 2).into()].into(),
                 Dirn::Up,
                 base,
                 height,
                 true,
             );
             drawer.draw_isosceles(
-                [indicator_x.into(), (size.height - height * 2).into()].into(),
+                [indicator_x.into(), (size.height - height / 2).into()].into(),
                 Dirn::Down,
                 base,
                 height,
@@ -106,19 +106,19 @@ pub struct HueCAD {
 
 impl HueCAD {
     const DEFAULT_COLOUR_STOPS: [(HCV, Prop); 13] = [
-        (HCV::CYAN, Prop::ZERO),
-        (HCV::BLUE_CYAN, Prop(u64::MAX / 12)),
-        (HCV::BLUE, Prop(u64::MAX / 6)),
-        (HCV::BLUE_MAGENTA, Prop(u64::MAX / 12 * 3)),
-        (HCV::MAGENTA, Prop(u64::MAX / 6 * 2)),
-        (HCV::RED_MAGENTA, Prop(u64::MAX / 12 * 5)),
-        (HCV::RED, Prop(u64::MAX / 6 * 3)),
-        (HCV::RED_YELLOW, Prop(u64::MAX / 12 * 7)),
-        (HCV::YELLOW, Prop(u64::MAX / 6 * 4)),
-        (HCV::GREEN_YELLOW, Prop(u64::MAX / 12 * 9)),
-        (HCV::GREEN, Prop(u64::MAX / 6 * 5)),
-        (HCV::GREEN_CYAN, Prop(u64::MAX / 12 * 11)),
         (HCV::CYAN, Prop::ONE),
+        (HCV::BLUE_CYAN, Prop(u64::MAX / 12 * 11)),
+        (HCV::BLUE, Prop(u64::MAX / 12 * 10)),
+        (HCV::BLUE_MAGENTA, Prop(u64::MAX / 12 * 9)),
+        (HCV::MAGENTA, Prop(u64::MAX / 12 * 8)),
+        (HCV::RED_MAGENTA, Prop(u64::MAX / 12 * 7)),
+        (HCV::RED, Prop(u64::MAX / 12 * 6)),
+        (HCV::RED_YELLOW, Prop(u64::MAX / 12 * 5)),
+        (HCV::YELLOW, Prop(u64::MAX / 12 * 4)),
+        (HCV::GREEN_YELLOW, Prop(u64::MAX / 12 * 3)),
+        (HCV::GREEN, Prop(u64::MAX / 12 * 2)),
+        (HCV::GREEN_CYAN, Prop(u64::MAX / 12 * 1)),
+        (HCV::CYAN, Prop::ZERO),
     ];
 
     fn set_colour_stops_for_hue(&mut self, hue: Hue) {
