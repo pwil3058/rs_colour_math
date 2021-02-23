@@ -17,13 +17,13 @@ use num_traits_plus::float_plus::FloatPlus;
 use std::ops::{Add, Sub};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub struct UFDRNumberRange {
+pub struct SunRange {
     pub min: UFDRNumber,
     pub max_chroma_sum: UFDRNumber,
     pub max: UFDRNumber,
 }
 
-impl From<(UFDRNumber, UFDRNumber, UFDRNumber)> for UFDRNumberRange {
+impl From<(UFDRNumber, UFDRNumber, UFDRNumber)> for SunRange {
     fn from(tuple: (UFDRNumber, UFDRNumber, UFDRNumber)) -> Self {
         debug_assert!(tuple.0.is_hue_valid() && tuple.1.is_hue_valid() && tuple.2.is_hue_valid());
         debug_assert!(tuple.0 <= tuple.1 && tuple.1 <= tuple.2);
@@ -62,7 +62,7 @@ impl SumOrdering {
     }
 }
 
-impl UFDRNumberRange {
+impl SunRange {
     pub fn compare_sum(&self, sum: UFDRNumber) -> SumOrdering {
         if sum < self.min {
             SumOrdering::TooSmall(self.min - sum)
@@ -102,7 +102,8 @@ impl UFDRNumberRange {
 
 pub trait HueIfce {
     fn angle(&self) -> Angle;
-    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<UFDRNumberRange>;
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SunRange>;
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)>;
     fn sum_for_max_chroma(&self) -> UFDRNumber;
     fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma>;
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
@@ -157,19 +158,30 @@ impl HueIfce for RGBHue {
         }
     }
 
-    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<UFDRNumberRange> {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SunRange> {
         match prop {
             Prop::ZERO => None,
-            Prop::ONE => Some(UFDRNumberRange::from((
+            Prop::ONE => Some(SunRange::from((
                 UFDRNumber::ONE,
                 UFDRNumber::ONE,
                 UFDRNumber::ONE,
             ))),
-            prop => Some(UFDRNumberRange::from((
+            prop => Some(SunRange::from((
                 prop.into(),
                 UFDRNumber::ONE,
                 (UFDRNumber::THREE - prop * 2),
             ))),
+        }
+    }
+
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+        match chroma {
+            Chroma::Shade(prop) => Some((prop.into(), UFDRNumber::ALMOST_ONE)),
+            Chroma::Tint(prop) => Some((UFDRNumber::JUST_OVER_ONE, UFDRNumber::THREE - prop * 2)),
+            Chroma::Neither(prop) => match prop {
+                Prop::ZERO => None,
+                _ => Some((UFDRNumber::ONE, UFDRNumber::ONE)),
+            },
         }
     }
 
@@ -302,19 +314,30 @@ impl HueIfce for CMYHue {
         }
     }
 
-    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<UFDRNumberRange> {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SunRange> {
         match prop {
             Prop::ZERO => None,
-            Prop::ONE => Some(UFDRNumberRange::from((
+            Prop::ONE => Some(SunRange::from((
                 UFDRNumber::TWO,
                 UFDRNumber::TWO,
                 UFDRNumber::TWO,
             ))),
-            prop => Some(UFDRNumberRange::from((
+            prop => Some(SunRange::from((
                 prop * 2,
                 UFDRNumber::TWO,
                 UFDRNumber::THREE - prop,
             ))),
+        }
+    }
+
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+        match chroma {
+            Chroma::Shade(prop) => Some((prop * 2, UFDRNumber::ALMOST_TWO)),
+            Chroma::Tint(prop) => Some((UFDRNumber::JUST_OVER_TWO, UFDRNumber::THREE - prop)),
+            Chroma::Neither(prop) => match prop {
+                Prop::ZERO => None,
+                _ => Some((UFDRNumber::TWO, UFDRNumber::TWO)),
+            },
         }
     }
 
@@ -520,18 +543,35 @@ impl HueIfce for SextantHue {
         }
     }
 
-    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<UFDRNumberRange> {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SunRange> {
         match prop {
             Prop::ZERO => None,
             Prop::ONE => {
                 let max_c_sum = Prop::ONE + self.1;
-                Some(UFDRNumberRange::from((max_c_sum, max_c_sum, max_c_sum)))
+                Some(SunRange::from((max_c_sum, max_c_sum, max_c_sum)))
             }
-            prop => Some(UFDRNumberRange::from((
+            prop => Some(SunRange::from((
                 (UFDRNumber::ONE + self.1) * prop,
                 UFDRNumber::ONE + self.1,
                 UFDRNumber::THREE - (UFDRNumber::TWO - self.1) * prop,
             ))),
+        }
+    }
+
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+        match chroma {
+            Chroma::Shade(prop) => Some((
+                (UFDRNumber::ONE + self.1) * prop,
+                UFDRNumber::ALMOST_ONE + self.1,
+            )),
+            Chroma::Tint(prop) => Some((
+                UFDRNumber::JUST_OVER_ONE + self.1,
+                UFDRNumber::THREE - (UFDRNumber::TWO - self.1) * prop,
+            )),
+            Chroma::Neither(prop) => match prop {
+                Prop::ZERO => None,
+                _ => Some((UFDRNumber::ONE + self.1, UFDRNumber::ONE + self.1)),
+            },
         }
     }
 
@@ -794,11 +834,19 @@ impl HueIfce for Hue {
         }
     }
 
-    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<UFDRNumberRange> {
+    fn sum_range_for_chroma_prop(&self, prop: Prop) -> Option<SunRange> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma_prop(prop),
             Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma_prop(prop),
             Self::Sextant(sextant_hue) => sextant_hue.sum_range_for_chroma_prop(prop),
+        }
+    }
+
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.sum_range_for_chroma(chroma),
         }
     }
 

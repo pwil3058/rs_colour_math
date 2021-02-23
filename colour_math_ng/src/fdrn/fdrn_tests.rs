@@ -2,7 +2,7 @@
 
 use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
-use crate::{fdrn::FDRNumber, UFDRNumber};
+use crate::{fdrn::FDRNumber, proportion::Prop, UFDRNumber};
 
 #[test]
 fn sqrt_2() {
@@ -102,5 +102,19 @@ fn ufdrn_div_u8() {
         println!("diff = {:#X}", result.abs_diff(&expected).0);
         assert_approx_eq!(result, expected, 0x0000000000005000);
         assert_approx_eq!(f64::from(result), &(a / *b as f64), 0.000_000_01);
+    }
+}
+
+#[test]
+fn composition() {
+    for a in &[0.001_f64] {
+        let prop = Prop::from(*a);
+        for b in &[0.001_f64] {
+            let second = Prop::from(*b);
+            let left = UFDRNumber::THREE - (UFDRNumber::TWO - second) * prop;
+            let right = UFDRNumber::THREE + second * prop - prop * 2;
+            assert!(left > right);
+            assert_approx_eq!(left, right);
+        }
     }
 }

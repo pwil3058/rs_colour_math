@@ -1,5 +1,9 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::{cmp::Ordering, convert::TryFrom};
+use std::{
+    cmp::Ordering,
+    convert::TryFrom,
+    ops::{Add, Sub},
+};
 
 use crate::{
     fdrn::UFDRNumber,
@@ -442,6 +446,56 @@ impl ColourBasics for HCV {
 
     fn hcv(&self) -> HCV {
         *self
+    }
+}
+
+impl Add<Angle> for HCV {
+    type Output = Self;
+
+    fn add(self, angle: Angle) -> Self {
+        let new_hue = self.hue + angle;
+        if let Some((min_sum, max_sum)) = new_hue.sum_range_for_chroma(self.chroma()) {
+            let new_sum = if self.sum < min_sum {
+                min_sum
+            } else if self.sum > max_sum {
+                max_sum
+            } else {
+                self.sum
+            };
+            Self {
+                hue: new_hue,
+                chroma: self.chroma,
+                sum: new_sum,
+            }
+        } else {
+            // TODO: Should greys go through rotation unchanged
+            self
+        }
+    }
+}
+
+impl Sub<Angle> for HCV {
+    type Output = Self;
+
+    fn sub(self, angle: Angle) -> Self {
+        let new_hue = self.hue - angle;
+        if let Some((min_sum, max_sum)) = new_hue.sum_range_for_chroma(self.chroma()) {
+            let new_sum = if self.sum < min_sum {
+                min_sum
+            } else if self.sum > max_sum {
+                max_sum
+            } else {
+                self.sum
+            };
+            Self {
+                hue: new_hue,
+                chroma: self.chroma,
+                sum: new_sum,
+            }
+        } else {
+            // TODO: Should greys go through rotation unchanged
+            self
+        }
     }
 }
 

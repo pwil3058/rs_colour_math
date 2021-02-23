@@ -249,7 +249,7 @@ fn max_chroma_and_sum_ranges() {
         assert!(hue.sum_range_for_chroma_prop(Prop::ZERO).is_none());
         assert_eq!(
             hue.sum_range_for_chroma_prop(Prop::ONE),
-            Some(UFDRNumberRange::from((
+            Some(SunRange::from((
                 UFDRNumber::ONE,
                 UFDRNumber::ONE,
                 UFDRNumber::ONE
@@ -268,7 +268,7 @@ fn max_chroma_and_sum_ranges() {
         assert!(hue.sum_range_for_chroma_prop(Prop::ZERO).is_none());
         assert_eq!(
             hue.sum_range_for_chroma_prop(Prop::ONE),
-            Some(UFDRNumberRange::from((
+            Some(SunRange::from((
                 UFDRNumber::TWO,
                 UFDRNumber::TWO,
                 UFDRNumber::TWO
@@ -298,7 +298,7 @@ fn max_chroma_and_sum_ranges() {
             assert!(hue.sum_range_for_chroma_prop(Prop::ZERO).is_none());
             assert_eq!(
                 hue.sum_range_for_chroma_prop(Prop::ONE),
-                Some(UFDRNumberRange::from((
+                Some(SunRange::from((
                     UFDRNumber::ONE + other,
                     UFDRNumber::ONE + other,
                     UFDRNumber::ONE + other

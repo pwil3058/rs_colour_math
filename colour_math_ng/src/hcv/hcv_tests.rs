@@ -88,3 +88,32 @@ fn warmth() {
         0x100000000000000
     )
 }
+
+#[test]
+fn hcv_add_sub_angle() {
+    for hcv in HCV::PRIMARIES
+        .iter()
+        .chain(HCV::SECONDARIES.iter())
+        .chain(HCV::IN_BETWEENS.iter())
+    {
+        for angle in &[
+            Angle::from(15),
+            Angle::from(-15),
+            Angle::from(135),
+            Angle::from(-135),
+        ] {
+            assert_approx_eq!(
+                (*hcv + *angle).hue_angle().unwrap(),
+                hcv.hue_angle().unwrap() + *angle,
+                0x100
+            );
+            assert_approx_eq!(
+                (*hcv - *angle).hue_angle().unwrap(),
+                hcv.hue_angle().unwrap() - *angle,
+                0x100
+            );
+            assert_eq!((*hcv + *angle).chroma(), hcv.chroma());
+            assert_eq!((*hcv - *angle).chroma(), hcv.chroma());
+        }
+    }
+}

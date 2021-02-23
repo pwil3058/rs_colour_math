@@ -310,16 +310,13 @@ impl Mul<Prop> for UFDRNumber {
     type Output = Self;
 
     fn mul(self, rhs: Prop) -> Self {
-        // TODO: make this multiply more robust
         if rhs.0 == u64::MAX {
             self
         } else if self.0 >= u64::MAX as u128 {
-            // NB this is being done in two parts to avoid overflow problems
-            let a = self.0 - u64::MAX as u128;
-            let b = self.0 - a;
-            let amul = (a * rhs.0 as u128) / u64::MAX as u128;
-            let bmul = (b * rhs.0 as u128) / u64::MAX as u128;
-            Self(amul + bmul)
+            let one = u64::MAX as u128;
+            let l_int = self.0 / one;
+            let l_rem = self.0 % one;
+            Self(l_int * rhs.0 as u128 + rhs.0 as u128 * l_rem / one)
         } else {
             Self((self.0 * rhs.0 as u128) / u64::MAX as u128)
         }
