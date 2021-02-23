@@ -18,7 +18,7 @@ pub use crate::{
     fdrn::UFDRNumber,
     hcv::HCV,
     hue::{angle::Angle, Hue, HueIfce},
-    proportion::{Chroma, Prop, Warmth},
+    proportion::{Chroma, Greyness, Prop, Warmth},
     rgb::RGB,
 };
 
@@ -130,6 +130,10 @@ pub trait ColourBasics {
 
     fn chroma(&self) -> Chroma;
     fn value(&self) -> Prop;
+
+    fn greyness(&self) -> Greyness {
+        self.chroma().into()
+    }
 
     fn warmth(&self) -> Warmth {
         if let Some(hue) = self.hue() {

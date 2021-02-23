@@ -115,6 +115,98 @@ impl Chroma {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum Greyness {
+    Shade(Prop),
+    Tint(Prop),
+    Neither(Prop),
+}
+
+impl Greyness {
+    pub const ZERO: Self = Self::Neither(Prop::ZERO);
+    pub const ONE: Self = Self::Neither(Prop::ONE);
+
+    pub fn is_zero(&self) -> bool {
+        self.prop() == Prop::ZERO
+    }
+
+    pub fn prop(&self) -> Prop {
+        use Greyness::*;
+        match self {
+            Shade(proportion) | Tint(proportion) | Neither(proportion) => *proportion,
+        }
+    }
+
+    pub fn abs_diff(&self, other: &Self) -> Prop {
+        self.prop().abs_diff(&other.prop())
+    }
+}
+
+impl Default for Greyness {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl PartialOrd for Greyness {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        use Greyness::*;
+        match self {
+            Shade(proportion) => match rhs {
+                Shade(other_proportion) => proportion.partial_cmp(&other_proportion),
+                _ => Some(Ordering::Less),
+            },
+            Tint(proportion) => match rhs {
+                Tint(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Shade(_) => Some(Ordering::Greater),
+                Neither(_) => Some(Ordering::Less),
+            },
+            Neither(proportion) => match rhs {
+                Neither(other_proportion) => proportion.partial_cmp(&other_proportion),
+                _ => Some(Ordering::Greater),
+            },
+        }
+    }
+}
+
+impl Ord for Greyness {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.partial_cmp(rhs).unwrap()
+    }
+}
+
+#[cfg(test)]
+impl Greyness {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+        use Greyness::*;
+        match self {
+            Shade(proportion) => match other {
+                Shade(other_proportion) | Neither(other_proportion) => {
+                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
+                }
+                Tint(_) => false,
+            },
+            Tint(proportion) => match other {
+                Shade(_) => false,
+                Tint(other_proportion) | Neither(other_proportion) => {
+                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
+                }
+            },
+            Neither(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
+        }
+    }
+}
+
+impl From<Chroma> for Greyness {
+    fn from(chroma: Chroma) -> Self {
+        match chroma {
+            Chroma::Shade(prop) => Greyness::Shade(Prop::ONE - prop),
+            Chroma::Tint(prop) => Greyness::Tint(Prop::ONE - prop),
+            Chroma::Neither(prop) => Greyness::Neither(Prop::ONE - prop),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Prop(pub(crate) u64);
 

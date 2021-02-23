@@ -56,7 +56,11 @@ fn main() {
     let win = gtk::Window::new(gtk::WindowType::Toplevel);
     win.set_geometry_from_recollections("main_window", (600, 400));
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    let attributes = vec![ScalarAttribute::Value, ScalarAttribute::Chroma];
+    let attributes = vec![
+        ScalarAttribute::Value,
+        ScalarAttribute::Chroma,
+        ScalarAttribute::Greyness,
+    ];
 
     let cads = ColourAttributeDisplayStackBuilder::new()
         .attributes(&attributes)

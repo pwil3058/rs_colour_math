@@ -3,7 +3,7 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    Chroma, ColourBasics, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
+    Chroma, ColourBasics, Greyness, Hue, HueConstants, HueIfce, Prop, RGBConstants, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -418,5 +418,123 @@ impl ColourAttributeDisplayIfce for ValueCAD {
 
     fn label_colour(&self) -> HCV {
         HCV::WHITE
+    }
+}
+
+// Greyness
+pub struct GreynessCAD {
+    greyness: Option<Greyness>,
+    target_greyness: Option<Greyness>,
+    greyness_fg_colour: HCV,
+    target_greyness_fg_colour: HCV,
+    colour_stops: Vec<(HCV, Prop)>,
+}
+
+impl GreynessCAD {
+    fn set_colour_stops(&mut self, colour: Option<&impl ColourBasics>) {
+        self.colour_stops = if let Some(colour) = colour {
+            if let Some(start_colour) = colour.hue_hcv() {
+                let end_colour = HCV::new_grey(colour.value());
+                vec![(start_colour, Prop::ZERO), (end_colour, Prop::ONE)]
+            } else {
+                let grey = colour.hcv();
+                vec![(grey, Prop::ZERO), (grey, Prop::ONE)]
+            }
+        } else {
+            Self::default_colour_stops()
+        }
+    }
+
+    fn default_colour_stops() -> Vec<(HCV, Prop)> {
+        let grey = HCV::new_grey(Prop::HALF);
+        vec![(grey, Prop::ZERO), (grey, Prop::ONE)]
+    }
+}
+
+impl ColourAttributeDisplayIfce for GreynessCAD {
+    const LABEL: &'static str = "Greyness";
+
+    fn new() -> Self {
+        let grey = HCV::new_grey(Prop::HALF);
+        Self {
+            greyness: None,
+            target_greyness: None,
+            greyness_fg_colour: HCV::BLACK,
+            target_greyness_fg_colour: HCV::BLACK,
+            colour_stops: vec![(grey, Prop::ZERO), (grey, Prop::ONE)],
+        }
+    }
+
+    fn set_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.greyness = Some(colour.greyness());
+            self.greyness_fg_colour = colour.best_foreground();
+            if let Some(target_greyness) = self.target_greyness {
+                if target_greyness == Greyness::ZERO {
+                    self.set_colour_stops(Some(colour));
+                }
+            } else {
+                self.set_colour_stops(Some(colour));
+            }
+        } else {
+            self.greyness = None;
+            self.greyness_fg_colour = HCV::BLACK;
+            if self.target_greyness.is_none() {
+                self.colour_stops = Self::default_colour_stops()
+            }
+        }
+    }
+
+    fn attr_value(&self) -> Option<Prop> {
+        if let Some(greyness) = self.greyness {
+            Some(greyness.prop())
+        } else {
+            None
+        }
+    }
+
+    fn attr_value_fg_colour(&self) -> HCV {
+        self.greyness_fg_colour
+    }
+
+    fn set_target_colour(&mut self, colour: Option<&impl ColourBasics>) {
+        if let Some(colour) = colour {
+            self.target_greyness = Some(colour.greyness());
+            self.target_greyness_fg_colour = HCV::new_grey(colour.value()).best_foreground();
+            if colour.is_grey() {
+                if let Some(greyness) = self.greyness {
+                    if greyness == Greyness::ZERO {
+                        self.set_colour_stops(Some(colour));
+                    }
+                } else {
+                    self.set_colour_stops(Some(colour));
+                }
+            } else {
+                self.set_colour_stops(Some(colour));
+            }
+        } else {
+            self.target_greyness = None;
+            self.target_greyness_fg_colour = HCV::BLACK;
+        }
+    }
+
+    fn attr_target_value(&self) -> Option<Prop> {
+        if let Some(greyness) = self.target_greyness {
+            Some(greyness.prop())
+        } else {
+            None
+        }
+    }
+
+    fn attr_target_value_fg_colour(&self) -> HCV {
+        self.target_greyness_fg_colour
+    }
+
+    fn label_colour(&self) -> HCV {
+        HCV::WHITE
+    }
+
+    fn colour_stops(&self) -> Vec<(HCV, Prop)> {
+        self.colour_stops.clone()
     }
 }

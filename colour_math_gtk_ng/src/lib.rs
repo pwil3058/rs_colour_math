@@ -20,7 +20,7 @@ pub mod attributes {
     use crate::colour::{display, ColourBasics, ScalarAttribute, RGB};
 
     pub type ChromaCAD = ColourAttributeDisplay<display::ChromaCAD>;
-    // pub type GreynessCAD = ColourAttributeDisplay<display::GreynessCAD>;
+    pub type GreynessCAD = ColourAttributeDisplay<display::GreynessCAD>;
     pub type HueCAD = ColourAttributeDisplay<display::HueCAD>;
     pub type ValueCAD = ColourAttributeDisplay<display::ValueCAD>;
     // pub type WarmthCAD = ColourAttributeDisplay<display::WarmthCAD>;
@@ -90,7 +90,7 @@ pub mod attributes {
                     ScalarAttribute::Value => ValueCAD::new(),
                     ScalarAttribute::Chroma => ChromaCAD::new(),
                     // ScalarAttribute::Warmth => WarmthCAD::new(),
-                    // ScalarAttribute::Greyness => GreynessCAD::new(),
+                    ScalarAttribute::Greyness => GreynessCAD::new(),
                     _ => ValueCAD::new(),
                 };
                 vbox.pack_start(&cad.pwo(), true, true, 0);
