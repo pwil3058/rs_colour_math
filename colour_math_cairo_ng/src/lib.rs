@@ -1,14 +1,67 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use std::cell::Cell;
+use std::{cell::Cell, ops::Add};
 
 use pw_gix::cairo;
 
 use colour_math_ng::beigui::DrawShapes;
 use colour_math_ng::{
-    beigui::{self, Draw, DrawIsosceles, Point},
+    beigui::{self, Draw, DrawIsosceles},
     ColourBasics, Prop, RGBConstants, UFDRNumber, CCI, HCV, RGB,
 };
+use std::ops::Sub;
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Add for Point {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self {
+            x: self.x.add(rhs.x),
+            y: self.y.add(rhs.y),
+        }
+    }
+}
+
+impl Sub for Point {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        Self {
+            x: self.x.sub(rhs.x),
+            y: self.y.sub(rhs.y),
+        }
+    }
+}
+
+impl From<Point> for beigui::Point {
+    fn from(point: Point) -> Self {
+        Self {
+            x: point.x.into(),
+            y: point.y.into(),
+        }
+    }
+}
+
+impl From<beigui::Point> for Point {
+    fn from(point: beigui::Point) -> Self {
+        Self {
+            x: point.x.into(),
+            y: point.y.into(),
+        }
+    }
+}
+
+impl From<(f64, f64)> for Point {
+    fn from((x, y): (f64, f64)) -> Self {
+        Self { x, y }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Size {
@@ -108,11 +161,12 @@ impl<'a> Draw for Drawer<'a> {
         self.size.into()
     }
 
-    fn draw_polygon(&self, polygon: &[Point], fill: bool) {
-        if let Some(start) = polygon.first() {
-            self.cairo_context.move_to(start.x.into(), start.y.into());
-            for point in polygon[1..].iter() {
-                self.cairo_context.line_to(point.x.into(), point.y.into());
+    fn draw_polygon(&self, polygon: &[beigui::Point], fill: bool) {
+        if let Some(istart) = polygon.first() {
+            let start: Point = (*istart).into();
+            self.cairo_context.move_to(start.x, start.y);
+            for point in polygon[1..].iter().map(|p| Point::from(*p)) {
+                self.cairo_context.line_to(point.x, point.y);
             }
             if polygon.len() > 1 {
                 self.cairo_context.close_path();
@@ -141,11 +195,12 @@ impl<'a> Draw for Drawer<'a> {
         self.cairo_context.set_line_width(width.into());
     }
 
-    fn draw_line(&self, line: &[Point]) {
-        if let Some(start) = line.first() {
-            self.cairo_context.move_to(start.x.into(), start.y.into());
-            for point in line[1..].iter() {
-                self.cairo_context.line_to(point.x.into(), point.y.into());
+    fn draw_line(&self, line: &[beigui::Point]) {
+        if let Some(istart) = line.first() {
+            let start: Point = (*istart).into();
+            self.cairo_context.move_to(start.x, start.y);
+            for point in line[1..].iter().map(|p| Point::from(*p)) {
+                self.cairo_context.line_to(point.x, point.y);
             }
             if line.len() > 1 {
                 self.stroke();
@@ -182,7 +237,12 @@ impl<'a> Draw for Drawer<'a> {
         self.cairo_context.show_text(&text);
     }
 
-    fn paint_linear_gradient(&self, posn: Point, size: beigui::Size, colour_stops: &[(HCV, Prop)]) {
+    fn paint_linear_gradient(
+        &self,
+        posn: beigui::Point,
+        size: beigui::Size,
+        colour_stops: &[(HCV, Prop)],
+    ) {
         let linear_gradient = cairo::LinearGradient::new(
             0.0,
             0.5 * f64::from(size.height),
@@ -218,7 +278,7 @@ impl<'a> DrawShapes for Drawer<'a> {
         self.cairo_context.paint();
     }
 
-    fn draw_circle(&self, centre: Point, radius: UFDRNumber, fill: bool) {
+    fn draw_circle(&self, centre: beigui::Point, radius: UFDRNumber, fill: bool) {
         const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
         self.cairo_context
             .arc(centre.x.into(), centre.y.into(), radius.into(), 0.0, TWO_PI);
@@ -230,7 +290,9 @@ impl<'a> DrawShapes for Drawer<'a> {
     }
 }
 
-impl<'a> Drawer<'a> {
+pub struct CairoCartesian;
+
+impl CairoCartesian {
     pub fn cartesian_transform_matrix(width: f64, height: f64) -> cairo::Matrix {
         let scale = if width > height {
             height / 2.15

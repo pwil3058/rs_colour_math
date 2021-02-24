@@ -1,6 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-//pub mod hue_wheel;
+pub mod hue_wheel;
 
 pub mod colour {
     pub use colour_math_ng::{

@@ -45,10 +45,13 @@ pub fn recollection_file_path() -> PathBuf {
     gui_config_dir_path().join("recollections")
 }
 
+use colour_math_gtk_ng::colour::beigui::hue_wheel::Shape;
 use colour_math_gtk_ng::{
     attributes::ColourAttributeDisplayStackBuilder,
-    colour::{ScalarAttribute, RGB},
+    colour::{ColouredShape, ScalarAttribute, RGB},
+    hue_wheel::GtkHueWheelBuilder,
 };
+use colour_math_ng::{HueConstants, Prop, HCV};
 
 fn main() {
     gtk::init().expect("nowhere to go if Gtk++ initialization fails");
@@ -69,6 +72,30 @@ fn main() {
     cads.set_colour(Some(&RGB::from([0.1, 0.4, 0.7])));
     cads.set_target_colour(Some(&RGB::from([0.7, 0.4, 0.7])));
     vbox.pack_start(&cads.pwo(), true, true, 0);
+
+    let gtk_hue_wheel = GtkHueWheelBuilder::new()
+        .attributes(&attributes)
+        .menu_item_specs(&[("add", ("Add", None, Some("Add something")).into(), 0)])
+        .build();
+    vbox.pack_start(&gtk_hue_wheel.pwo(), true, true, 0);
+    gtk_hue_wheel.add_item(ColouredShape::new(
+        &HCV::RED,
+        "Red",
+        "Pure Red",
+        Shape::Square,
+    ));
+    gtk_hue_wheel.add_item(ColouredShape::new(
+        &HCV::YELLOW,
+        "Yellow",
+        "Pure Yellow",
+        Shape::Diamond,
+    ));
+    gtk_hue_wheel.add_item(ColouredShape::new(
+        &HCV::new_grey(Prop::ONE / 2),
+        "Grey",
+        "Midle Grey",
+        Shape::Circle,
+    ));
 
     vbox.show_all();
     win.add(&vbox);

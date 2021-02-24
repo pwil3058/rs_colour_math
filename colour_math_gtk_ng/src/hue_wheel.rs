@@ -16,10 +16,9 @@ use pw_gix::{
 
 use colour_math_cairo_ng::*;
 
-use crate::colour::ColourBasics;
 use crate::{
     attributes::{AttributeSelector, AttributeSelectorBuilder},
-    colour::{ColouredShape, HueWheel, Point, ScalarAttribute},
+    colour::{ColourBasics, ColouredShape, HueWheel, ScalarAttribute},
 };
 
 type PopupCallback = Box<dyn Fn(&str)>;
@@ -40,7 +39,7 @@ pub struct GtkHueWheel {
 impl GtkHueWheel {
     fn current_transform_matrix(&self) -> cairo::Matrix {
         let origin_offset = self.origin_offset.get();
-        let mut ctm = Drawer::cartesian_transform_matrix(
+        let mut ctm = CairoCartesian::cartesian_transform_matrix(
             self.drawing_area.get_allocated_width() as f64,
             self.drawing_area.get_allocated_height() as f64,
         );
@@ -205,9 +204,13 @@ impl GtkHueWheelBuilder {
         let gtk_hue_wheel_c = Rc::clone(&gtk_hue_wheel);
         gtk_hue_wheel
             .drawing_area
-            .connect_draw(move |_, cairo_context| {
+            .connect_draw(move |da, cairo_context| {
                 cairo_context.transform(gtk_hue_wheel_c.current_transform_matrix());
-                let cartesian = Drawer::new(cairo_context);
+                let size = Size {
+                    width: da.get_allocated_width() as f64,
+                    height: da.get_allocated_height() as f64,
+                };
+                let cartesian = Drawer::new(cairo_context, size);
                 gtk_hue_wheel_c
                     .hue_wheel
                     .borrow()
@@ -258,7 +261,9 @@ impl GtkHueWheelBuilder {
                     3 => {
                         let device_point: Point = event.get_position().into();
                         if let Some(item) = gtk_hue_wheel_c.hue_wheel.borrow().item_at_point(
-                            gtk_hue_wheel_c.device_to_user(device_point.x, device_point.y),
+                            gtk_hue_wheel_c
+                                .device_to_user(device_point.x, device_point.y)
+                                .into(),
                             gtk_hue_wheel_c.attribute_selector.attribute(),
                         ) {
                             *gtk_hue_wheel_c.chosen_item.borrow_mut() = Some(item.id().to_string());
@@ -319,7 +324,7 @@ impl GtkHueWheelBuilder {
                 if let Some(text) = gtk_hue_wheel_c
                     .hue_wheel
                     .borrow()
-                    .tooltip_for_point(point, gtk_hue_wheel_c.attribute_selector.attribute())
+                    .tooltip_for_point(point.into(), gtk_hue_wheel_c.attribute_selector.attribute())
                 {
                     tooltip.set_text(Some(&text));
                     true
