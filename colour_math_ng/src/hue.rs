@@ -13,6 +13,7 @@ use crate::{
     LightLevel, Prop, RGBConstants, HCV, RGB,
 };
 
+use crate::fdrn::FDRNumber;
 use num_traits_plus::float_plus::FloatPlus;
 use std::ops::{Add, Sub};
 
@@ -530,7 +531,7 @@ impl HueIfce for SextantHue {
             _ => {
                 let second: f64 = self.1.into();
                 let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
-                let angle = Angle::asin(Prop::from(sin));
+                let angle = Angle::asin(FDRNumber::from(sin));
                 match self.0 {
                     Sextant::RedMagenta => -angle,
                     Sextant::RedYellow => angle,
@@ -797,7 +798,7 @@ impl From<Angle> for Hue {
             Angle::GREEN_CYAN => Hue::GREEN_CYAN,
             _ => {
                 fn f(angle: Angle) -> Prop {
-                    angle.sin() / (Angle::GREEN - angle).sin()
+                    (angle.sin() / (Angle::GREEN - angle).sin()).into()
                 };
                 if angle >= Angle::RED {
                     if angle < Angle::YELLOW {

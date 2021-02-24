@@ -1,5 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use std::ops::Neg;
 use std::{
     cmp::Ordering,
     fmt::{self, Debug, Formatter},
@@ -33,6 +34,12 @@ impl FDRNumber {
     // SQRT_2: 1.41421356237309504880168872420969808
     pub const SQRT_2: Self =
         Self(u64::MAX as i128 + 4142135623730950488 * u64::MAX as i128 / 10000000000000000000);
+    pub const SQRT_3: Self =
+        Self(u64::MAX as i128 + 17320508075688772 * u64::MAX as i128 / 10000000000000000);
+
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
 
     pub fn abs_diff(&self, other: &Self) -> FDRNumber {
         match self.cmp(other) {
@@ -70,6 +77,27 @@ impl FDRNumber {
     }
 }
 
+impl Div for FDRNumber {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        let val: Self = UFDRNumber::from(self.abs())
+            .div(UFDRNumber::from(rhs.abs()))
+            .into();
+        if self.0.is_negative() {
+            if rhs.0.is_negative() {
+                val
+            } else {
+                val.neg()
+            }
+        } else if rhs.0.is_negative() {
+            val.neg()
+        } else {
+            val
+        }
+    }
+}
+
 impl Div<u8> for FDRNumber {
     type Output = Self;
 
@@ -94,6 +122,35 @@ impl Sub for FDRNumber {
     }
 }
 
+impl Neg for FDRNumber {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Self(self.0.neg())
+    }
+}
+
+impl Mul for FDRNumber {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        let val: Self = UFDRNumber::from(self.abs())
+            .mul(UFDRNumber::from(rhs.abs()))
+            .into();
+        if self.0.is_negative() {
+            if rhs.0.is_negative() {
+                val
+            } else {
+                val.neg()
+            }
+        } else if rhs.0.is_negative() {
+            val.neg()
+        } else {
+            val
+        }
+    }
+}
+
 impl Mul<u8> for FDRNumber {
     type Output = Self;
 
@@ -110,6 +167,41 @@ impl From<UFDRNumber> for FDRNumber {
 
 impl_to_from_float!(f64, i128, FDRNumber);
 impl_to_from_float!(f32, i128, FDRNumber);
+
+macro_rules! impl_to_from_signed {
+    (i128) => {
+        impl From<i128> for FDRNumber {
+            fn from(signed: i128) -> Self {
+                Self(signed)
+            }
+        }
+
+        impl From<FDRNumber> for i128 {
+            fn from(arg: FDRNumber) -> Self {
+                arg.0
+            }
+        }
+    };
+    ($signed:ty) => {
+        impl From<$signed> for FDRNumber {
+            fn from(signed: $signed) -> Self {
+                Self(signed as i128 * u64::max as i128)
+            }
+        }
+
+        impl From<FDRNumber> for $signed {
+            fn from(arg: FDRNumber) -> Self {
+                (arg.0 / u64::MAX as i128) as $signed
+            }
+        }
+    };
+}
+
+impl_to_from_signed!(i8);
+impl_to_from_signed!(i16);
+impl_to_from_signed!(i32);
+impl_to_from_signed!(i64);
+impl_to_from_signed!(i128);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct UFDRNumber(pub(crate) u128);
@@ -128,6 +220,7 @@ impl UFDRNumber {
     pub(crate) const JUST_OVER_TWO: Self = Self(u64::MAX as u128 * 2 + 1);
 
     pub const SQRT_2: Self = Self(FDRNumber::SQRT_2.0 as u128);
+    pub const SQRT_3: Self = Self(FDRNumber::SQRT_3.0 as u128);
 
     pub fn is_valid(self) -> bool {
         self <= Self::THREE
@@ -189,6 +282,41 @@ impl From<i32> for UFDRNumber {
         Self(signed as u128 * u64::MAX as u128)
     }
 }
+
+macro_rules! impl_to_from_unsigned {
+    (u128) => {
+        impl From<u128> for UFDRNumber {
+            fn from(signed: u128) -> Self {
+                Self(signed)
+            }
+        }
+
+        impl From<UFDRNumber> for u128 {
+            fn from(arg: UFDRNumber) -> Self {
+                arg.0
+            }
+        }
+    };
+    ($unsigned:ty) => {
+        impl From<$unsigned> for UFDRNumber {
+            fn from(signed: $unsigned) -> Self {
+                Self(signed as u128 * u64::max as u128)
+            }
+        }
+
+        impl From<UFDRNumber> for $unsigned {
+            fn from(arg: UFDRNumber) -> Self {
+                (arg.0 / u64::MAX as u128) as $unsigned
+            }
+        }
+    };
+}
+
+impl_to_from_unsigned!(u8);
+impl_to_from_unsigned!(u16);
+impl_to_from_unsigned!(u32);
+impl_to_from_unsigned!(u64);
+impl_to_from_unsigned!(u128);
 
 impl Add for UFDRNumber {
     type Output = Self;

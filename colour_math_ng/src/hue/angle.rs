@@ -5,8 +5,7 @@ use std::{
     ops::{Add, Neg, Sub},
 };
 
-use crate::fdrn::FDRNumber;
-use crate::{HueConstants, Prop};
+use crate::{fdrn::FDRNumber, HueConstants};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Angle(i64);
@@ -20,12 +19,16 @@ impl Angle {
     pub(crate) const MIN: Self = Self(Self::DEGREE.0 * -180);
     pub(crate) const MAX: Self = Self(Self::DEGREE.0 * 180);
 
-    pub fn asin(arg: Prop) -> Self {
+    pub fn asin(arg: FDRNumber) -> Self {
         Self::from(f64::from(arg).asin().to_degrees())
     }
 
-    pub fn sin(self) -> Prop {
-        Prop::from(f64::from(self).to_radians().sin())
+    pub fn cos(self) -> FDRNumber {
+        FDRNumber::from(f64::from(self).to_radians().cos())
+    }
+
+    pub fn sin(self) -> FDRNumber {
+        FDRNumber::from(f64::from(self).to_radians().sin())
     }
 
     pub fn is_valid(self) -> bool {
@@ -218,7 +221,11 @@ mod angle_tests {
 
     #[test]
     fn trigonometry() {
-        assert_approx_eq!(Angle::from(30).sin(), Prop::from(0.5_f64), 10000);
-        assert_approx_eq!(Angle::asin(Prop::from(0.5_f64)), Angle::from(30), 10000);
+        assert_approx_eq!(Angle::from(30).sin(), FDRNumber::from(0.5_f64), 10000);
+        assert_approx_eq!(
+            Angle::asin(FDRNumber::from(0.5_f64)),
+            Angle::from(30),
+            10000
+        );
     }
 }

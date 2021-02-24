@@ -167,6 +167,11 @@ pub trait ColourBasics {
             }
         }
     }
+
+    fn pango_string(&self) -> String {
+        let rgb = self.rgb::<u8>();
+        format!("#{:02X}{:02X}{:02X}", rgb.0[0], rgb.0[1], rgb.0[2])
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]

@@ -1,14 +1,16 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
+use std::ops::{Add, Mul, Sub};
 
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    ColourBasics, Prop, HCV,
+    Angle, ColourBasics, Prop, HCV,
 };
 
 #[cfg(test)]
 mod test_beigui;
 
 pub mod attr_display;
+pub mod hue_wheel;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Point {
@@ -16,11 +18,61 @@ pub struct Point {
     pub y: FDRNumber,
 }
 
+impl Point {
+    pub fn hypot(self) -> UFDRNumber {
+        let arg = self.x * self.x + self.y * self.y;
+        UFDRNumber::from(f64::from(arg).sqrt())
+    }
+}
+
+impl Add for Point {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self {
+            x: self.x.add(rhs.x),
+            y: self.y.add(rhs.y),
+        }
+    }
+}
+
+impl Sub for Point {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        Self {
+            x: self.x.sub(rhs.x),
+            y: self.y.sub(rhs.y),
+        }
+    }
+}
+
+impl Mul<UFDRNumber> for Point {
+    type Output = Self;
+
+    fn mul(self, uscale: UFDRNumber) -> Self {
+        let scale: FDRNumber = uscale.into();
+        Self {
+            x: self.x.mul(scale),
+            y: self.y.mul(scale),
+        }
+    }
+}
+
 impl From<[FDRNumber; 2]> for Point {
     fn from(array: [FDRNumber; 2]) -> Self {
         Self {
             x: array[0],
             y: array[1],
+        }
+    }
+}
+
+impl From<(Angle, UFDRNumber)> for Point {
+    fn from((angle, radius): (Angle, UFDRNumber)) -> Self {
+        Self {
+            x: FDRNumber::from(radius) * angle.cos(),
+            y: FDRNumber::from(radius) * angle.sin(),
         }
     }
 }
@@ -152,26 +204,142 @@ pub trait DrawIsosceles: Draw {
 }
 
 pub trait DrawShapes: DrawIsosceles {
-    fn draw_diamond(&self, centre: Point, side_length: FDRNumber, fill: bool) {
+    fn set_background_colour(&self, colour: &impl ColourBasics);
+    fn draw_circle(&self, centre: Point, radius: UFDRNumber, fill: bool);
+
+    fn draw_diamond(&self, centre: Point, side_length: UFDRNumber, fill: bool) {
         let dist = side_length / 2;
         let points = vec![
             Point {
                 x: centre.x,
-                y: centre.y + dist,
+                y: centre.y + dist.into(),
             },
             Point {
-                x: centre.x + dist,
+                x: centre.x + dist.into(),
                 y: centre.y,
             },
             Point {
                 x: centre.x,
-                y: centre.y - dist,
+                y: centre.y - dist.into(),
             },
             Point {
-                x: centre.x - dist,
+                x: centre.x - dist.into(),
                 y: centre.y,
             },
         ];
         self.draw_polygon(&points, fill);
+    }
+
+    fn draw_square(&self, centre: Point, side_length: UFDRNumber, fill: bool) {
+        let half_side = side_length / 2;
+        let points = vec![
+            Point {
+                x: centre.x - half_side.into(),
+                y: centre.y - half_side.into(),
+            },
+            Point {
+                x: centre.x - half_side.into(),
+                y: centre.y + half_side.into(),
+            },
+            Point {
+                x: centre.x + half_side.into(),
+                y: centre.y + half_side.into(),
+            },
+            Point {
+                x: centre.x + half_side.into(),
+                y: centre.y - half_side.into(),
+            },
+        ];
+        self.draw_polygon(&points, fill);
+    }
+
+    fn draw_equilateral(&self, centre: Point, dirn: Dirn, side_length: UFDRNumber, fill: bool) {
+        let half_base = side_length / 2;
+        let half_height = side_length * UFDRNumber::SQRT_3 / 4;
+        let points = match dirn {
+            Dirn::Up => vec![
+                Point {
+                    x: centre.x - half_base.into(),
+                    y: centre.y - half_height.into(),
+                },
+                Point {
+                    x: centre.x,
+                    y: centre.y + half_height.into(),
+                },
+                Point {
+                    x: centre.x + half_base.into(),
+                    y: centre.y - half_height.into(),
+                },
+            ],
+            Dirn::Down => vec![
+                Point {
+                    x: centre.x - half_base.into(),
+                    y: centre.y + half_height.into(),
+                },
+                Point {
+                    x: centre.x,
+                    y: centre.y - half_height.into(),
+                },
+                Point {
+                    x: centre.x + half_base.into(),
+                    y: centre.y + half_height.into(),
+                },
+            ],
+            Dirn::Right => vec![
+                Point {
+                    x: centre.x - half_height.into(),
+                    y: centre.y - half_base.into(),
+                },
+                Point {
+                    x: centre.x - half_height.into(),
+                    y: centre.y + half_base.into(),
+                },
+                Point {
+                    x: centre.x + half_height.into(),
+                    y: centre.y,
+                },
+            ],
+            Dirn::Left => vec![
+                Point {
+                    x: centre.x + half_height.into(),
+                    y: centre.y - half_base.into(),
+                },
+                Point {
+                    x: centre.x + half_height.into(),
+                    y: centre.y + half_base.into(),
+                },
+                Point {
+                    x: centre.x - half_height.into(),
+                    y: centre.y,
+                },
+            ],
+        };
+        self.draw_polygon(&points, fill);
+    }
+
+    fn draw_plus_sign(&self, centre: Point, side_length: UFDRNumber) {
+        let half_side = side_length / 2;
+        let points = vec![
+            Point {
+                x: centre.x,
+                y: centre.y - half_side.into(),
+            },
+            Point {
+                x: centre.x,
+                y: centre.y + half_side.into(),
+            },
+        ];
+        self.draw_line(&points);
+        let points = vec![
+            Point {
+                x: centre.x - half_side.into(),
+                y: centre.y,
+            },
+            Point {
+                x: centre.x + half_side.into(),
+                y: centre.y,
+            },
+        ];
+        self.draw_line(&points);
     }
 }
