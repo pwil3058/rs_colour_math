@@ -250,14 +250,16 @@ pub trait Graticule {
 
     fn draw_spokes(start_ring: UFDRNumber, zoom: &Zoom, draw_shapes: &impl DrawShapes) {
         draw_shapes.set_line_width(UFDRNumber::from(0.015));
-        let mut hue = Hue::RED;
-        for _ in 0..13 {
+        for hue in Hue::PRIMARIES
+            .iter()
+            .chain(Hue::SECONDARIES.iter())
+            .chain(Hue::IN_BETWEENS.iter())
+        {
             draw_shapes.set_line_colour(&hue.max_chroma_hcv());
             let angle = hue.angle();
             let start: Point = (angle, start_ring).into();
             let end: Point = (angle, UFDRNumber::ONE).into();
             draw_shapes.draw_line(&[start * zoom.scale(), end * zoom.scale()]);
-            hue = hue + Angle::from(30);
         }
     }
 
