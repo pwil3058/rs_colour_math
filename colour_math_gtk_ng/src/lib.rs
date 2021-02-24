@@ -2,7 +2,7 @@
 
 pub mod colour {
     pub use colour_math_ng::{
-        beigui::{self, display},
+        beigui::{self, attr_display},
         ColourBasics, ScalarAttribute, RGB,
     };
 }
@@ -17,13 +17,13 @@ pub mod attributes {
 
     use colour_math_cairo_ng::{Drawer, Size};
 
-    use crate::colour::{display, ColourBasics, ScalarAttribute, RGB};
+    use crate::colour::{attr_display, ColourBasics, ScalarAttribute, RGB};
 
-    pub type ChromaCAD = ColourAttributeDisplay<display::ChromaCAD>;
-    pub type GreynessCAD = ColourAttributeDisplay<display::GreynessCAD>;
-    pub type HueCAD = ColourAttributeDisplay<display::HueCAD>;
-    pub type ValueCAD = ColourAttributeDisplay<display::ValueCAD>;
-    pub type WarmthCAD = ColourAttributeDisplay<display::WarmthCAD>;
+    pub type ChromaCAD = ColourAttributeDisplay<attr_display::ChromaCAD>;
+    pub type GreynessCAD = ColourAttributeDisplay<attr_display::GreynessCAD>;
+    pub type HueCAD = ColourAttributeDisplay<attr_display::HueCAD>;
+    pub type ValueCAD = ColourAttributeDisplay<attr_display::ValueCAD>;
+    pub type WarmthCAD = ColourAttributeDisplay<attr_display::WarmthCAD>;
 
     pub trait DynColourAttributeDisplay: PackableWidgetObject<PWT = gtk::DrawingArea> {
         fn set_rgb(&self, rgb: Option<&RGB<f64>>);
@@ -100,14 +100,14 @@ pub mod attributes {
     }
 
     #[derive(PWO, Wrapper)]
-    pub struct ColourAttributeDisplay<A: display::ColourAttributeDisplayIfce> {
+    pub struct ColourAttributeDisplay<A: attr_display::ColourAttributeDisplayIfce> {
         drawing_area: gtk::DrawingArea,
         attribute: RefCell<A>,
     }
 
     impl<A> ColourAttributeDisplay<A>
     where
-        A: display::ColourAttributeDisplayIfce + 'static,
+        A: attr_display::ColourAttributeDisplayIfce + 'static,
     {
         pub fn new() -> Rc<Self> {
             let cad = Rc::new(Self {
@@ -131,7 +131,7 @@ pub mod attributes {
 
     impl<A> DynColourAttributeDisplay for ColourAttributeDisplay<A>
     where
-        A: display::ColourAttributeDisplayIfce + 'static,
+        A: attr_display::ColourAttributeDisplayIfce + 'static,
     {
         fn set_rgb(&self, rgb: Option<&RGB<f64>>) {
             self.attribute.borrow_mut().set_colour(rgb);

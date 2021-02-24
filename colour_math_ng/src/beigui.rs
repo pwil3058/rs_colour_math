@@ -8,7 +8,7 @@ use crate::{
 #[cfg(test)]
 mod test_beigui;
 
-pub mod display;
+pub mod attr_display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Point {
