@@ -1,17 +1,26 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+//pub mod hue_wheel;
+
 pub mod colour {
     pub use colour_math_ng::{
-        beigui::{self, attr_display},
+        beigui::{
+            self, attr_display,
+            hue_wheel::{ColouredShape, HueWheel},
+            Point,
+        },
         ColourBasics, ScalarAttribute, RGB,
     };
 }
 
 pub mod attributes {
-    use std::{cell::RefCell, rc::Rc};
+    use std::{
+        cell::{Cell, RefCell},
+        rc::Rc,
+    };
 
     use pw_gix::{
-        gtk::{self, BoxExt, WidgetExt},
+        gtk::{self, BoxExt, RadioButtonExt, ToggleButtonExt, WidgetExt},
         wrapper::*,
     };
 
@@ -141,6 +150,91 @@ pub mod attributes {
         fn set_target_rgb(&self, rgb: Option<&RGB<f64>>) {
             self.attribute.borrow_mut().set_target_colour(rgb);
             self.drawing_area.queue_draw();
+        }
+    }
+
+    type SelectionCallback = Box<dyn Fn(ScalarAttribute)>;
+
+    #[derive(PWO)]
+    pub struct AttributeSelector {
+        gtk_box: gtk::Box,
+        attribute: Cell<ScalarAttribute>,
+        callbacks: RefCell<Vec<SelectionCallback>>,
+    }
+
+    impl AttributeSelector {
+        pub fn attribute(&self) -> ScalarAttribute {
+            self.attribute.get()
+        }
+
+        pub fn connect_changed<F: Fn(ScalarAttribute) + 'static>(&self, callback: F) {
+            self.callbacks.borrow_mut().push(Box::new(callback))
+        }
+
+        fn notify_changed(&self, attr: ScalarAttribute) {
+            self.attribute.set(attr);
+            for callback in self.callbacks.borrow().iter() {
+                callback(attr);
+            }
+        }
+    }
+
+    pub struct AttributeSelectorBuilder {
+        attributes: Vec<ScalarAttribute>,
+        orientation: gtk::Orientation,
+    }
+
+    impl Default for AttributeSelectorBuilder {
+        fn default() -> Self {
+            Self {
+                attributes: vec![],
+                orientation: gtk::Orientation::Horizontal,
+            }
+        }
+    }
+
+    impl AttributeSelectorBuilder {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn attributes(&mut self, attributes: &[ScalarAttribute]) -> &mut Self {
+            self.attributes = attributes.to_vec();
+            self
+        }
+
+        pub fn orientation(&mut self, orientation: gtk::Orientation) -> &mut Self {
+            self.orientation = orientation;
+            self
+        }
+
+        pub fn build(&self) -> Rc<AttributeSelector> {
+            let asrb = Rc::new(AttributeSelector {
+                gtk_box: gtk::Box::new(self.orientation, 0),
+                attribute: Cell::new(*self.attributes.first().expect("programmer error")),
+                callbacks: RefCell::new(vec![]),
+            });
+
+            let mut first: Option<gtk::RadioButton> = None;
+            for attr in self.attributes.iter() {
+                let button = gtk::RadioButton::with_label(&attr.to_string());
+                asrb.gtk_box.pack_start(&button, false, false, 0);
+                if let Some(ref first) = first {
+                    button.join_group(Some(first))
+                } else {
+                    first = Some(button.clone())
+                }
+                let asrb_c = Rc::clone(&asrb);
+                let attr = *attr;
+                button.connect_toggled(move |button| {
+                    let its_us = button.get_active();
+                    if its_us {
+                        asrb_c.notify_changed(attr);
+                    }
+                });
+            }
+
+            asrb
         }
     }
 }

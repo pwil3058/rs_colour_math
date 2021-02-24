@@ -4,6 +4,7 @@ use std::cell::Cell;
 
 use pw_gix::cairo;
 
+use colour_math_ng::beigui::DrawShapes;
 use colour_math_ng::{
     beigui::{self, Draw, DrawIsosceles, Point},
     ColourBasics, Prop, RGBConstants, UFDRNumber, CCI, HCV, RGB,
@@ -209,3 +210,33 @@ impl<'a> Draw for Drawer<'a> {
 }
 
 impl<'a> DrawIsosceles for Drawer<'a> {}
+
+impl<'a> DrawShapes for Drawer<'a> {
+    fn set_background_colour(&self, colour: &impl ColourBasics) {
+        self.cairo_context
+            .set_source_colour_rgb(&colour.rgb::<f64>());
+        self.cairo_context.paint();
+    }
+
+    fn draw_circle(&self, centre: Point, radius: UFDRNumber, fill: bool) {
+        const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
+        self.cairo_context
+            .arc(centre.x.into(), centre.y.into(), radius.into(), 0.0, TWO_PI);
+        if fill {
+            self.fill();
+        } else {
+            self.stroke();
+        }
+    }
+}
+
+impl<'a> Drawer<'a> {
+    pub fn cartesian_transform_matrix(width: f64, height: f64) -> cairo::Matrix {
+        let scale = if width > height {
+            height / 2.15
+        } else {
+            width / 2.15
+        };
+        cairo::Matrix::new(scale, 0.0, 0.0, -scale, width / 2.0, height / 2.0)
+    }
+}
