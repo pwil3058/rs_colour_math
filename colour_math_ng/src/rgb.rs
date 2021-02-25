@@ -11,7 +11,8 @@ use crate::{
     fdrn::UFDRNumber,
     hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
     proportion::Warmth,
-    Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, CCI, HCV,
+    Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, UnsignedLightLevel,
+    CCI, HCV,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -64,6 +65,10 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
         } else {
             RGB::<T>::new_grey(self.value())
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.0.iter()
     }
 }
 
@@ -179,26 +184,17 @@ impl<T: LightLevel + Float> RGB<T> {
     }
 }
 
-macro_rules! impl_from_unsigned_array {
-    ($unsigned:ty) => {
-        impl From<[$unsigned; 3]> for RGB<$unsigned> {
-            fn from(array: [$unsigned; 3]) -> Self {
-                Self(array)
-            }
-        }
-
-        impl From<RGB<$unsigned>> for [$unsigned; 3] {
-            fn from(rgb: RGB<$unsigned>) -> Self {
-                rgb.0
-            }
-        }
-    };
+impl<U: UnsignedLightLevel> From<[U; 3]> for RGB<U> {
+    fn from(array: [U; 3]) -> Self {
+        Self(array)
+    }
 }
 
-impl_from_unsigned_array!(u8);
-impl_from_unsigned_array!(u16);
-impl_from_unsigned_array!(u32);
-impl_from_unsigned_array!(u64);
+impl<U: UnsignedLightLevel> From<RGB<U>> for [U; 3] {
+    fn from(rgb: RGB<U>) -> Self {
+        rgb.0
+    }
+}
 
 macro_rules! impl_from_float_array {
     ($float:ty) => {

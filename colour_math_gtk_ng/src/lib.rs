@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 pub mod hue_wheel;
+pub mod rgb_entry;
 
 pub mod colour {
     pub use colour_math_ng::{
@@ -9,8 +10,94 @@ pub mod colour {
             hue_wheel::{ColouredShape, HueWheel},
             Point,
         },
-        ColourBasics, ScalarAttribute, RGB,
+        ColourBasics, HueConstants, LightLevel, Prop, ScalarAttribute, UnsignedLightLevel, CCI,
+        HCV, RGB,
     };
+    use pw_gix::gdk;
+
+    pub trait GdkRGBA: ColourBasics {
+        fn rgba(&self) -> gdk::RGBA {
+            let rgb = self.rgb::<f64>();
+            gdk::RGBA {
+                red: rgb[CCI::Red],
+                green: rgb[CCI::Green],
+                blue: rgb[CCI::Blue],
+                alpha: 1.0,
+            }
+        }
+    }
+
+    impl<L: LightLevel> GdkRGBA for RGB<L> {}
+    impl GdkRGBA for HCV {}
+}
+
+pub mod coloured {
+    use pw_gix::gtk::{self, prelude::*};
+
+    use crate::colour::*;
+
+    #[allow(deprecated)]
+    pub trait Colourable: gtk::WidgetExt {
+        fn set_widget_colour(&self, colour: &impl GdkRGBA) {
+            let bg_rgba = colour.rgba();
+            let fg_rgba = colour.best_foreground().rgba();
+            self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
+            self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
+        }
+
+        fn set_widget_colour_rgb(&self, rgb: &RGB<f64>) {
+            let bg_rgba = rgb.rgba();
+            let fg_rgba = rgb.best_foreground().rgba();
+            self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
+            self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
+        }
+    }
+
+    #[allow(deprecated)]
+    impl Colourable for gtk::Button {
+        fn set_widget_colour(&self, colour: &impl GdkRGBA) {
+            let bg_rgba = colour.rgba();
+            let fg_rgba = colour.best_foreground().rgba();
+            self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
+            self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
+            for child in self.get_children().iter() {
+                child.set_widget_colour(colour);
+            }
+        }
+
+        fn set_widget_colour_rgb(&self, rgb: &RGB<f64>) {
+            let bg_rgba = rgb.rgba();
+            let fg_rgba = rgb.best_foreground().rgba();
+            self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
+            self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
+            for child in self.get_children().iter() {
+                child.set_widget_colour_rgb(rgb);
+            }
+        }
+    }
+
+    impl Colourable for gtk::Bin {}
+    impl Colourable for gtk::Box {}
+    impl Colourable for gtk::ButtonBox {}
+    impl Colourable for gtk::CheckButton {}
+    impl Colourable for gtk::ComboBox {}
+    impl Colourable for gtk::ComboBoxText {}
+    impl Colourable for gtk::Container {}
+    impl Colourable for gtk::Entry {}
+    impl Colourable for gtk::EventBox {}
+    impl Colourable for gtk::FlowBox {}
+    impl Colourable for gtk::Frame {}
+    impl Colourable for gtk::Grid {}
+    impl Colourable for gtk::Label {}
+    impl Colourable for gtk::LinkButton {}
+    impl Colourable for gtk::MenuBar {}
+    impl Colourable for gtk::RadioButton {}
+    impl Colourable for gtk::Scrollbar {}
+    impl Colourable for gtk::SpinButton {}
+    impl Colourable for gtk::ToggleButton {}
+    impl Colourable for gtk::ToolButton {}
+    impl Colourable for gtk::Toolbar {}
+    impl Colourable for gtk::Widget {}
 }
 
 pub mod attributes {

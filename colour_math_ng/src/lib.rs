@@ -2,8 +2,9 @@
 #[macro_use]
 extern crate serde_derive;
 
-use std::fmt::Debug;
+use std::fmt::{Debug, LowerExp, LowerHex, UpperExp, UpperHex};
 
+use num_traits::{Signed, Unsigned};
 use num_traits_plus::float_plus::*;
 
 pub mod beigui;
@@ -29,12 +30,25 @@ pub enum CCI {
     Blue,
 }
 
+impl From<usize> for CCI {
+    fn from(index: usize) -> Self {
+        match index {
+            0 => CCI::Red,
+            1 => CCI::Green,
+            2 => CCI::Blue,
+            _ => panic!("Illegal usize -> CCI"),
+        }
+    }
+}
+
 pub trait Float: FloatPlus + std::iter::Sum + FloatApproxEq<Self> {}
 
 impl Float for f32 {}
 impl Float for f64 {}
 
-pub trait LightLevel: Clone + Copy + From<Prop> + Into<Prop> + PartialEq + Debug {
+pub trait LightLevel:
+    Clone + Copy + From<Prop> + Into<Prop> + PartialEq + Debug + Default + PartialOrd
+{
     const ZERO: Self;
     const ONE: Self;
     const HALF: Self;
@@ -74,6 +88,18 @@ impl LightLevel for u64 {
     const ONE: Self = u64::MAX;
     const HALF: Self = u64::MAX / 2;
 }
+
+pub trait FloatLightLevel: LightLevel + Signed + Float + LowerExp + UpperExp {}
+
+impl FloatLightLevel for f32 {}
+impl FloatLightLevel for f64 {}
+
+pub trait UnsignedLightLevel: LightLevel + Unsigned + Ord + Eq + UpperHex + LowerHex {}
+
+impl UnsignedLightLevel for u8 {}
+impl UnsignedLightLevel for u16 {}
+impl UnsignedLightLevel for u32 {}
+impl UnsignedLightLevel for u64 {}
 
 pub trait HueConstants: Sized + Copy {
     const RED: Self;
