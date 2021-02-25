@@ -50,6 +50,7 @@ use colour_math_gtk_ng::{
     attributes::ColourAttributeDisplayStackBuilder,
     colour::{ColouredShape, ScalarAttribute, RGB},
     hue_wheel::GtkHueWheelBuilder,
+    manipulator::ColourManipulatorGUIBuilder,
     rgb_entry::RGBHexEntryBuilder,
 };
 use colour_math_ng::{HueConstants, Prop, HCV};
@@ -82,6 +83,13 @@ fn main() {
     let cads_c = Rc::clone(&cads);
     rgb_hex_entry.connect_colour_changed(move |c| cads_c.set_colour(Some(&c)));
     vbox.pack_start(&rgb_hex_entry.pwo(), false, false, 0);
+
+    let colour_manipulator = ColourManipulatorGUIBuilder::new().build();
+    let hex_entry_c = Rc::clone(&rgb_hex_entry);
+    colour_manipulator.connect_changed(move |c| hex_entry_c.set_colour(&c));
+    let cads_c = Rc::clone(&cads);
+    colour_manipulator.connect_changed(move |c| cads_c.set_colour(Some(&c)));
+    vbox.pack_start(&colour_manipulator.pwo(), true, true, 0);
 
     let gtk_hue_wheel = GtkHueWheelBuilder::new()
         .attributes(&attributes)

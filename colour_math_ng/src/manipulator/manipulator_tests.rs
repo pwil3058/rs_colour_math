@@ -316,7 +316,8 @@ fn rotate_rgb_favouring_chroma() {
     ]
     .iter()
     {
-        manipulator.set_colour(&(*array).into());
+        let rgb = RGB::from(*array);
+        manipulator.set_colour(&rgb);
         for delta in deltas.iter() {
             let cur_chroma = manipulator.hcv.chroma;
             let cur_sum = manipulator.hcv.sum;
@@ -396,7 +397,8 @@ fn rotate_rgb_favouring_value() {
     ]
     .iter()
     {
-        manipulator.set_colour(&(*array).into());
+        let rgb = RGB::from(*array);
+        manipulator.set_colour(&rgb);
         for delta in deltas.iter() {
             let cur_chroma = manipulator.hcv.chroma;
             let cur_sum = manipulator.hcv.sum;

@@ -4,7 +4,7 @@ use std::{
     convert::TryInto,
     convert::{From, TryFrom},
     ops::Index,
-    ops::Mul,
+    ops::{Add, Mul},
 };
 
 use crate::{
@@ -218,6 +218,22 @@ impl<F: Float + LightLevel + From<Prop>> Mul<Prop> for RGB<F> {
     fn mul(self, scalar: Prop) -> Self {
         let [red, green, blue] = <[Prop; 3]>::from(self);
         let array: [Prop; 3] = [red * scalar, green * scalar, blue * scalar];
+        Self::from(array)
+    }
+}
+
+impl<L: LightLevel + From<Prop>> Add<RGB<L>> for RGB<L> {
+    // TODO: get rid of RGB addition
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        let [red, green, blue] = <[Prop; 3]>::from(self);
+        let [rhs_red, rhs_green, rhs_blue] = <[Prop; 3]>::from(rhs);
+        let array: [Prop; 3] = [
+            (red + rhs_red).into(),
+            (green + rhs_green).into(),
+            (blue + rhs_blue).into(),
+        ];
         Self::from(array)
     }
 }

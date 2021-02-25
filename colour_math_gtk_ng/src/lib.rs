@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 pub mod hue_wheel;
+pub mod manipulator;
 pub mod rgb_entry;
 
 pub mod colour {
@@ -10,8 +11,9 @@ pub mod colour {
             hue_wheel::{ColouredShape, HueWheel},
             Point,
         },
-        ColourBasics, HueConstants, LightLevel, Prop, ScalarAttribute, UnsignedLightLevel, CCI,
-        HCV, RGB,
+        manipulator::{ColourManipulator, ColourManipulatorBuilder},
+        Angle, ColourBasics, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute,
+        UnsignedLightLevel, CCI, HCV, RGB,
     };
     use pw_gix::gdk;
 

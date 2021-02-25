@@ -23,8 +23,8 @@ impl ColourManipulator {
         self.hcv
     }
 
-    pub fn set_colour<L: LightLevel>(&mut self, rgb: &RGB<L>) {
-        self.hcv = rgb.into()
+    pub fn set_colour(&mut self, colour: &impl ColourBasics) {
+        self.hcv = colour.hcv()
     }
 
     pub fn clamped(&self) -> bool {
