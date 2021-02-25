@@ -114,7 +114,9 @@ fn main() {
         Shape::Circle,
     ));
 
-    let colour_editor = ColourEditorBuilder::new().attributes(&attributes).build();
+    let colour_editor = ColourEditorBuilder::new()
+        .attributes(&attributes)
+        .build::<u16>();
     let cads_c = Rc::clone(&cads);
     colour_editor.connect_changed(move |c| cads_c.set_colour(Some(c)));
     vbox.pack_start(&colour_editor.pwo(), true, true, 0);

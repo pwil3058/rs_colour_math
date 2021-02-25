@@ -10,22 +10,22 @@ use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
     colour::{ColourBasics, LightLevel, Prop, ScalarAttribute, HCV, RGB},
     manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
-    rgb_entry::{RGBHexEntry, RGBHexEntryBuilder},
+    rgb_entry::{Hexable, RGBHexEntry, RGBHexEntryBuilder},
 };
 
 type ChangeCallback = Box<dyn Fn(&HCV)>;
 
 #[derive(PWO, Wrapper)]
-pub struct ColourEditor {
+pub struct ColourEditor<U: Hexable> {
     vbox: gtk::Box,
     colour_manipulator: Rc<ColourManipulatorGUI>,
     cads: Rc<ColourAttributeDisplayStack>,
-    rgb_entry: Rc<RGBHexEntry<u8>>,
+    rgb_entry: Rc<RGBHexEntry<U>>,
     change_callbacks: RefCell<Vec<ChangeCallback>>,
     default_colour: HCV,
 }
 
-impl ColourEditor {
+impl<U: Hexable> ColourEditor<U> {
     pub fn rgb<L: LightLevel>(&self) -> RGB<L> {
         self.colour_manipulator.rgb()
     }
@@ -83,11 +83,11 @@ impl ColourEditorBuilder {
         self
     }
 
-    pub fn build(&self) -> Rc<ColourEditor> {
+    pub fn build<U: Hexable>(&self) -> Rc<ColourEditor<U>> {
         let cads = ColourAttributeDisplayStackBuilder::new()
             .attributes(&self.attributes)
             .build();
-        let rgb_entry = RGBHexEntryBuilder::<u8>::new().editable(true).build();
+        let rgb_entry = RGBHexEntryBuilder::<U>::new().editable(true).build();
         let colour_manipulator = ColourManipulatorGUIBuilder::new()
             .clamped(false)
             .extra_buttons(&self.extra_buttons)
@@ -102,7 +102,7 @@ impl ColourEditorBuilder {
             })
             .build();
 
-        let colour_editor = Rc::new(ColourEditor {
+        let colour_editor = Rc::new(ColourEditor::<U> {
             vbox: gtk::Box::new(gtk::Orientation::Vertical, 0),
             colour_manipulator,
             cads,
