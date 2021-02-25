@@ -50,8 +50,10 @@ use colour_math_gtk_ng::{
     attributes::ColourAttributeDisplayStackBuilder,
     colour::{ColouredShape, ScalarAttribute, RGB},
     hue_wheel::GtkHueWheelBuilder,
+    rgb_entry::RGBHexEntryBuilder,
 };
 use colour_math_ng::{HueConstants, Prop, HCV};
+use std::rc::Rc;
 
 fn main() {
     gtk::init().expect("nowhere to go if Gtk++ initialization fails");
@@ -72,6 +74,14 @@ fn main() {
     cads.set_colour(Some(&RGB::from([0.1, 0.4, 0.7])));
     cads.set_target_colour(Some(&RGB::from([0.7, 0.4, 0.7])));
     vbox.pack_start(&cads.pwo(), true, true, 0);
+
+    let rgb_hex_entry = RGBHexEntryBuilder::<u16>::new()
+        .initial_colour(&RGB::from([0.1, 0.4, 0.7]))
+        .editable(true)
+        .build();
+    let cads_c = Rc::clone(&cads);
+    rgb_hex_entry.connect_colour_changed(move |c| cads_c.set_colour(Some(&c)));
+    vbox.pack_start(&rgb_hex_entry.pwo(), false, false, 0);
 
     let gtk_hue_wheel = GtkHueWheelBuilder::new()
         .attributes(&attributes)

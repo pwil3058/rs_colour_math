@@ -175,7 +175,7 @@ pub mod attributes {
             self
         }
 
-        pub fn build(&self) -> ColourAttributeDisplayStack {
+        pub fn build(&self) -> Rc<ColourAttributeDisplayStack> {
             let vbox = gtk::Box::new(gtk::Orientation::Vertical, 1);
             let mut cads = vec![];
             let hue_cad: Rc<dyn DynColourAttributeDisplay> = HueCAD::new();
@@ -191,7 +191,7 @@ pub mod attributes {
                 vbox.pack_start(&cad.pwo(), true, true, 0);
                 cads.push(cad);
             }
-            ColourAttributeDisplayStack { vbox, cads }
+            Rc::new(ColourAttributeDisplayStack { vbox, cads })
         }
     }
 

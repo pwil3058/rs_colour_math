@@ -33,7 +33,7 @@ type BoxedChangeCallback<U> = Box<dyn Fn(U)>;
 pub struct RGBHexEntry<U: Hexable> {
     hbox: gtk::Box,
     entries: [Rc<HexEntry<U>>; 3],
-    change_callbacks: RefCell<Vec<BoxedChangeCallback<RGB<U>>>>,
+    colour_change_callbacks: RefCell<Vec<BoxedChangeCallback<HCV>>>,
 }
 
 impl<U: Hexable> RGBHexEntry<U> {
@@ -56,14 +56,16 @@ impl<U: Hexable> RGBHexEntry<U> {
         }
     }
 
-    pub fn connect_value_changed<F: 'static + Fn(RGB<U>)>(&self, callback: F) {
-        self.change_callbacks.borrow_mut().push(Box::new(callback))
+    pub fn connect_colour_changed<F: 'static + Fn(HCV)>(&self, callback: F) {
+        self.colour_change_callbacks
+            .borrow_mut()
+            .push(Box::new(callback))
     }
 
-    fn inform_value_changed(&self) {
-        let urgb = self.rgb();
-        for callback in self.change_callbacks.borrow().iter() {
-            callback(urgb)
+    fn inform_colour_changed(&self) {
+        let hcv = self.rgb().hcv();
+        for callback in self.colour_change_callbacks.borrow().iter() {
+            callback(hcv)
         }
     }
 }
@@ -116,12 +118,12 @@ impl<U: Hexable> RGBHexEntryBuilder<U> {
         let rgb_hex_entry = Rc::new(RGBHexEntry {
             hbox,
             entries,
-            change_callbacks: RefCell::new(vec![]),
+            colour_change_callbacks: RefCell::new(vec![]),
         });
 
         for entry in rgb_hex_entry.entries.iter() {
             let rgb_hex_entry_c = Rc::clone(&rgb_hex_entry);
-            entry.connect_value_changed(move |_| rgb_hex_entry_c.inform_value_changed());
+            entry.connect_value_changed(move |_| rgb_hex_entry_c.inform_colour_changed());
         }
 
         rgb_hex_entry
