@@ -3,14 +3,15 @@
 use std::{
     env,
     path::{Path, PathBuf},
+    rc::Rc,
 };
 
 use pw_pathux::expand_home_dir_or_mine;
 
 use pw_gix::{
-    gtk::{self, prelude::*},
+    gtk::{self, prelude::*, MessageDialogBuilder},
     gtkx::window::RememberGeometry,
-    recollections,
+    recollections, sample,
     wrapper::*,
 };
 
@@ -45,15 +46,14 @@ pub fn recollection_file_path() -> PathBuf {
     gui_config_dir_path().join("recollections")
 }
 
-use colour_math_gtk_ng::colour::beigui::hue_wheel::Shape;
 use colour_math_gtk_ng::{
     attributes::ColourAttributeDisplayStackBuilder,
-    colour::{ColouredShape, ScalarAttribute, RGB},
+    colour::{
+        beigui::hue_wheel::Shape, ColouredShape, HueConstants, Prop, ScalarAttribute, HCV, RGB,
+    },
     colour_edit::ColourEditorBuilder,
     hue_wheel::GtkHueWheelBuilder,
 };
-use colour_math_ng::{HueConstants, Prop, HCV};
-use std::rc::Rc;
 
 fn main() {
     gtk::init().expect("nowhere to go if Gtk++ initialization fails");
@@ -61,6 +61,24 @@ fn main() {
     let win = gtk::Window::new(gtk::WindowType::Toplevel);
     win.set_geometry_from_recollections("main_window", (600, 400));
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+
+    if sample::screen_sampling_available() {
+        let btn = gtk::Button::with_label("Take Sample");
+        btn.set_tooltip_text(Some("Take a sample of a portion of the screen"));
+        let win_c = win.clone();
+        btn.connect_clicked(move |_| {
+            if let Err(err) = sample::take_screen_sample() {
+                let msg = format!("Failure: {:?}", err);
+                let dialog = MessageDialogBuilder::new()
+                    .parent(&win_c)
+                    .text(&msg)
+                    .build();
+                dialog.show()
+            }
+        });
+        vbox.pack_start(&btn, false, false, 0);
+    }
+
     let attributes = vec![
         ScalarAttribute::Value,
         ScalarAttribute::Chroma,
