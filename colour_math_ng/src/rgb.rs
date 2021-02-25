@@ -11,8 +11,7 @@ use crate::{
     fdrn::UFDRNumber,
     hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
     proportion::Warmth,
-    Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, UnsignedLightLevel,
-    CCI, HCV,
+    Chroma, ColourBasics, Float, HueConstants, LightLevel, Prop, RGBConstants, CCI, HCV,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -48,8 +47,8 @@ impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
     }
 
     pub fn new_warmth_rgb(warmth: Warmth) -> Self {
-        // TODO: fix generation of warmth RGB
-        Self::from([warmth.into(), warmth.into(), warmth.into()])
+        let prop: Prop = warmth.into();
+        Self::from([prop, Prop::ONE - prop, Prop::ONE - prop])
     }
 }
 
@@ -184,37 +183,18 @@ impl<T: LightLevel + Float> RGB<T> {
     }
 }
 
-impl<U: UnsignedLightLevel> From<[U; 3]> for RGB<U> {
-    fn from(array: [U; 3]) -> Self {
+impl<L: LightLevel> From<[L; 3]> for RGB<L> {
+    fn from(array: [L; 3]) -> Self {
+        debug_assert!(array.iter().all(|a| *a >= L::ZERO && *a <= L::ONE));
         Self(array)
     }
 }
 
-impl<U: UnsignedLightLevel> From<RGB<U>> for [U; 3] {
-    fn from(rgb: RGB<U>) -> Self {
+impl<L: LightLevel> From<RGB<L>> for [L; 3] {
+    fn from(rgb: RGB<L>) -> Self {
         rgb.0
     }
 }
-
-macro_rules! impl_from_float_array {
-    ($float:ty) => {
-        impl From<[$float; 3]> for RGB<$float> {
-            fn from(array: [$float; 3]) -> Self {
-                debug_assert!(array.iter().all(|a| *a >= 0.0 && *a <= 1.0));
-                Self(array)
-            }
-        }
-
-        impl From<RGB<$float>> for [$float; 3] {
-            fn from(rgb: RGB<$float>) -> Self {
-                rgb.0
-            }
-        }
-    };
-}
-
-impl_from_float_array!(f32);
-impl_from_float_array!(f64);
 
 impl<T: LightLevel + From<Prop>> From<[Prop; 3]> for RGB<T> {
     fn from(array: [Prop; 3]) -> Self {
