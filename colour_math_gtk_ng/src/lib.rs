@@ -8,7 +8,6 @@ pub mod rgb_entry;
 pub use colour_math_cairo_ng;
 
 pub mod colour {
-    use colour_math_ng::ColourAttributes;
     pub use colour_math_ng::{
         beigui::{
             self, attr_display,
@@ -16,12 +15,12 @@ pub mod colour {
             Point,
         },
         manipulator::{ColourManipulator, ColourManipulatorBuilder},
-        Angle, ColourBasics, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute,
-        UnsignedLightLevel, CCI, HCV, RGB,
+        Angle, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute, UnsignedLightLevel,
+        CCI, HCV, RGB,
     };
     use pw_gix::gdk;
 
-    pub trait GdkColour: ColourBasics + ColourAttributes {
+    pub trait GdkColour: colour_math_ng::ColourBasics + colour_math_ng::ColourAttributes {
         fn gdk_rgba(&self) -> gdk::RGBA {
             let rgb = self.rgb::<f64>();
             gdk::RGBA {
@@ -102,7 +101,7 @@ pub mod attributes {
 
     use colour_math_cairo_ng::{Drawer, Size};
 
-    use crate::colour::{attr_display, ColourBasics, ScalarAttribute, RGB};
+    use crate::colour::{attr_display, GdkColour, ScalarAttribute, RGB};
 
     pub type ChromaCAD = ColourAttributeDisplay<attr_display::ChromaCAD>;
     pub type GreynessCAD = ColourAttributeDisplay<attr_display::GreynessCAD>;
@@ -122,7 +121,7 @@ pub mod attributes {
     }
 
     impl ColourAttributeDisplayStack {
-        pub fn set_colour(&self, colour: Option<&impl ColourBasics>) {
+        pub fn set_colour(&self, colour: Option<&impl GdkColour>) {
             for cad in self.cads.iter() {
                 if let Some(colour) = colour {
                     cad.set_rgb(Some(&colour.rgb()));
@@ -132,7 +131,7 @@ pub mod attributes {
             }
         }
 
-        pub fn set_target_colour(&self, colour: Option<&impl ColourBasics>) {
+        pub fn set_target_colour(&self, colour: Option<&impl GdkColour>) {
             for cad in self.cads.iter() {
                 if let Some(colour) = colour {
                     cad.set_target_rgb(Some(&colour.rgb()));

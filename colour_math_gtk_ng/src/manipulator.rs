@@ -15,7 +15,7 @@ use colour_math_cairo_ng::Point;
 
 use crate::{
     colour::{
-        Angle, ColourBasics, ColourManipulator, ColourManipulatorBuilder, LightLevel, Prop,
+        Angle, ColourManipulator, ColourManipulatorBuilder, GdkColour, LightLevel, Prop,
         RGBConstants, CCI, HCV, RGB,
     },
     coloured::Colourable,
@@ -102,20 +102,15 @@ pub struct ColourManipulatorGUI {
 }
 
 impl ColourManipulatorGUI {
-    pub fn set_colour(&self, colour: &impl ColourBasics) {
+    pub fn set_colour(&self, colour: &impl GdkColour) {
         self.colour_manipulator.borrow_mut().set_colour(colour);
         let rgb = colour.rgb::<f64>();
         self.incr_value_btn
             .set_widget_colour(&(rgb * 0.8.into() + RGB::WHITE * 0.2.into()));
         self.decr_value_btn.set_widget_colour(&(rgb * 0.8.into()));
-        if rgb.is_grey() {
-            self.incr_chroma_btn.set_widget_colour(&rgb);
-            self.decr_chroma_btn.set_widget_colour(&rgb);
-            self.hue_left_btn.set_widget_colour(&rgb);
-            self.hue_right_btn.set_widget_colour(&rgb);
-        } else {
-            let low_chroma_rgb = rgb * 0.8.into() + rgb.monochrome_rgb() * 0.2.into();
-            let high_chroma_rgb = rgb * 0.8.into() + rgb.max_chroma_rgb() * 0.2.into();
+        if let Some(hue_rgb) = colour.hue_rgb() {
+            let low_chroma_rgb = rgb * 0.8.into() + colour.monochrome_rgb() * 0.2.into();
+            let high_chroma_rgb = rgb * 0.8.into() + hue_rgb * 0.2.into();
             self.incr_chroma_btn.set_widget_colour(&high_chroma_rgb);
             self.decr_chroma_btn.set_widget_colour(&low_chroma_rgb);
 
@@ -124,11 +119,16 @@ impl ColourManipulatorGUI {
                 .set_widget_colour(&(colour.hcv() + angle_offset));
             self.hue_right_btn
                 .set_widget_colour(&(colour.hcv() - angle_offset));
+        } else {
+            self.incr_chroma_btn.set_widget_colour(&rgb);
+            self.decr_chroma_btn.set_widget_colour(&rgb);
+            self.hue_left_btn.set_widget_colour(&rgb);
+            self.hue_right_btn.set_widget_colour(&rgb);
         }
         self.drawing_area.queue_draw();
     }
 
-    fn set_colour_and_inform(&self, colour: &impl ColourBasics) {
+    fn set_colour_and_inform(&self, colour: &impl GdkColour) {
         self.set_colour(colour);
         for callback in self.change_callbacks.borrow().iter() {
             callback(colour.hcv())

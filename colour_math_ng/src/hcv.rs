@@ -393,6 +393,12 @@ impl<L: LightLevel> From<&RGB<L>> for HCV {
     }
 }
 
+impl<L: LightLevel> From<RGB<L>> for HCV {
+    fn from(rgb: RGB<L>) -> Self {
+        HCV::from(&rgb)
+    }
+}
+
 impl<L: LightLevel> From<&HCV> for RGB<L> {
     fn from(hcv: &HCV) -> Self {
         hcv.rgb::<L>()

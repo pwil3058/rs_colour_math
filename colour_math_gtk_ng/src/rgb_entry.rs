@@ -13,7 +13,7 @@ use pw_gix::{
 use num_traits_plus::NumberConstants;
 
 use crate::{
-    colour::{ColourBasics, HueConstants, UnsignedLightLevel, HCV, RGB},
+    colour::{GdkColour, HueConstants, UnsignedLightLevel, HCV, RGB},
     coloured::Colourable,
 };
 
@@ -43,10 +43,10 @@ impl<U: Hexable> RGBHexEntry<U> {
     }
 
     pub fn hcv(&self) -> HCV {
-        self.rgb().hcv()
+        self.rgb().into()
     }
 
-    pub fn set_colour(&self, colour: &impl ColourBasics) {
+    pub fn set_colour(&self, colour: &impl GdkColour) {
         self.set_rgb(&colour.rgb::<U>())
     }
 
@@ -63,7 +63,7 @@ impl<U: Hexable> RGBHexEntry<U> {
     }
 
     fn inform_colour_changed(&self) {
-        let hcv = self.rgb().hcv();
+        let hcv: HCV = self.rgb().into();
         for callback in self.colour_change_callbacks.borrow().iter() {
             callback(hcv)
         }
@@ -86,7 +86,7 @@ impl<U: Hexable> RGBHexEntryBuilder<U> {
         self
     }
 
-    pub fn initial_colour(&mut self, initial_colour: &impl ColourBasics) -> &mut Self {
+    pub fn initial_colour(&mut self, initial_colour: &impl GdkColour) -> &mut Self {
         self.initial_rgb = initial_colour.rgb::<U>();
         self
     }

@@ -200,6 +200,18 @@ impl<L: LightLevel> From<RGB<L>> for [L; 3] {
     }
 }
 
+impl<L: LightLevel> From<&[L; 3]> for RGB<L> {
+    fn from(array: &[L; 3]) -> Self {
+        Self::from(*array)
+    }
+}
+
+impl<L: LightLevel> From<&RGB<L>> for [L; 3] {
+    fn from(rgb: &RGB<L>) -> Self {
+        Self::from(*rgb)
+    }
+}
+
 impl<T: LightLevel + From<Prop>> From<[Prop; 3]> for RGB<T> {
     fn from(array: [Prop; 3]) -> Self {
         let red: T = array[0].into();
@@ -212,6 +224,18 @@ impl<T: LightLevel + From<Prop>> From<[Prop; 3]> for RGB<T> {
 impl<T: LightLevel + Into<Prop>> From<RGB<T>> for [Prop; 3] {
     fn from(rgb: RGB<T>) -> Self {
         [rgb.0[0].into(), rgb.0[1].into(), rgb.0[2].into()]
+    }
+}
+
+impl<T: LightLevel + From<Prop>> From<&[Prop; 3]> for RGB<T> {
+    fn from(array: &[Prop; 3]) -> Self {
+        Self::from(*array)
+    }
+}
+
+impl<T: LightLevel + From<Prop>> From<&RGB<T>> for [Prop; 3] {
+    fn from(rgb: &RGB<T>) -> Self {
+        Self::from(*rgb)
     }
 }
 

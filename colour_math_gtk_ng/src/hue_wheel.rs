@@ -18,7 +18,7 @@ use colour_math_cairo_ng::*;
 
 use crate::{
     attributes::{AttributeSelector, AttributeSelectorBuilder},
-    colour::{ColourBasics, ColouredShape, HueWheel, ScalarAttribute},
+    colour::{ColouredShape, GdkColour, HueWheel, ScalarAttribute},
 };
 
 type PopupCallback = Box<dyn Fn(&str)>;
@@ -79,7 +79,7 @@ impl GtkHueWheel {
         self.drawing_area.queue_draw();
     }
 
-    pub fn set_target_colour(&self, colour: Option<&impl ColourBasics>) {
+    pub fn set_target_colour(&self, colour: Option<&impl GdkColour>) {
         self.hue_wheel.borrow_mut().set_target_colour(colour);
     }
 
