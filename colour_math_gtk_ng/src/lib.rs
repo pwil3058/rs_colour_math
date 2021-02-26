@@ -16,6 +16,7 @@ pub mod colour {
         Angle, ColourBasics, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute,
         UnsignedLightLevel, CCI, HCV, RGB,
     };
+    pub use colour_math_cairo_ng;
     use pw_gix::gdk;
 
     pub trait GdkRGBA: ColourBasics {
