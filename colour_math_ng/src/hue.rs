@@ -9,8 +9,8 @@ use std::{
 pub mod angle;
 
 use crate::{
-    fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, ChromaOneRGB, HueConstants,
-    LightLevel, Prop, RGBConstants, HCV, RGB,
+    fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, HueConstants, LightLevel,
+    Prop, RGBConstants, HCV, RGB,
 };
 
 use crate::fdrn::FDRNumber;
@@ -135,17 +135,6 @@ impl RGBHue {
             Red => [components.0, components.1, components.1].into(),
             Green => [components.1, components.0, components.1].into(),
             Blue => [components.1, components.1, components.0].into(),
-        }
-    }
-}
-
-impl ChromaOneRGB for RGBHue {
-    /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
-    fn chroma_one_rgb<T: LightLevel>(&self) -> RGB<T> {
-        match self {
-            RGBHue::Red => RGB::RED,
-            RGBHue::Green => RGB::GREEN,
-            RGBHue::Blue => RGB::BLUE,
         }
     }
 }

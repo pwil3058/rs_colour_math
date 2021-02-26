@@ -241,8 +241,3 @@ pub trait ColourAttributes: ColourBasics {
 
 impl ColourAttributes for HCV {}
 impl<L: LightLevel> ColourAttributes for RGB<L> {}
-
-pub trait ChromaOneRGB {
-    /// RGB wih chroma of 1.0 chroma and with its hue (value may change op or down)
-    fn chroma_one_rgb<T: LightLevel>(&self) -> RGB<T>;
-}
