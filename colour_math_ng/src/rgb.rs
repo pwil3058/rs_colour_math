@@ -5,7 +5,11 @@ use std::{
     convert::{From, TryFrom},
     ops::Index,
     ops::{Add, Mul},
+    str::FromStr,
 };
+
+use lazy_static::lazy_static;
+use regex::Regex;
 
 use crate::{
     fdrn::UFDRNumber,
@@ -235,5 +239,64 @@ impl<L: LightLevel + From<Prop>> Add<RGB<L>> for RGB<L> {
             (blue + rhs_blue).into(),
         ];
         Self::from(array)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RGBError {
+    MalformedText(String),
+}
+
+impl std::fmt::Display for RGBError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RGBError::MalformedText(string) => write!(f, "Malformed text: {}", string),
+        }
+    }
+}
+
+impl std::error::Error for RGBError {}
+
+impl From<std::num::ParseIntError> for RGBError {
+    fn from(error: std::num::ParseIntError) -> Self {
+        RGBError::MalformedText(format!("{}", error))
+    }
+}
+
+lazy_static! {
+    pub static ref RGB16_RE: Regex = Regex::new(
+        r#"RGB(16)?\((red=)?0x(?P<red>[a-fA-F0-9]{4}), (green=)?0x(?P<green>[a-fA-F0-9]{4}), (blue=)?0x(?P<blue>[a-fA-F0-9]{4})\)"#
+    ).unwrap();
+    pub static ref RGB16_BASE_10_RE: Regex = Regex::new(
+        r#"RGB(16)?\((red=)?(?P<red>\d{1,5}), (green=)?(?P<green>\d{1,5}), (blue=)?(?P<blue>\d{1,5})\)"#
+    ).unwrap();
+    pub static ref RGB8_RE: Regex = Regex::new(
+        r#"RGB(8)?\((red=)?0x(?P<red>[a-fA-F0-9]{2}), (green=)?0x(?P<green>[a-fA-F0-9]{2}), (blue=)?0x(?P<blue>[a-fA-F0-9]{2})\)"#
+    ).unwrap();
+    pub static ref RGB8_BASE_10_RE: Regex = Regex::new(
+        r#"RGB(8)?\((red=)?(?P<red>\d{1,3}), (green=)?(?P<green>\d{1,3}), (blue=)?(?P<blue>\d{1,3})\)"#
+    ).unwrap();
+    pub static ref RGB_PANGO_RE: Regex = Regex::new(
+        r#"#(?P<red>[a-fA-F0-9][a-fA-F0-9])(?P<green>[a-fA-F0-9][a-fA-F0-9])(?P<blue>[a-fA-F0-9][a-fA-F0-9])"#
+    ).unwrap();
+}
+
+impl FromStr for RGB<u16> {
+    type Err = RGBError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        if let Some(captures) = RGB16_RE.captures(string) {
+            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 16)?;
+            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 16)?;
+            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 16)?;
+            Ok([red, green, blue].into())
+        } else if let Some(captures) = RGB16_BASE_10_RE.captures(string) {
+            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 10)?;
+            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 10)?;
+            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 10)?;
+            Ok([red, green, blue].into())
+        } else {
+            Err(RGBError::MalformedText(string.to_string()))
+        }
     }
 }
