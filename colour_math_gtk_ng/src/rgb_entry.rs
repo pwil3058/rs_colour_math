@@ -96,9 +96,9 @@ impl<U: Hexable> RGBHexEntryBuilder<U> {
 
         let mut v: Vec<Rc<HexEntry<U>>> = vec![];
         for (index, (label, rgb)) in [
-            ("Red:", RGB::RED),
-            ("Green:", RGB::GREEN),
-            ("Blue:", RGB::BLUE),
+            ("Red:", RGB::<U>::RED),
+            ("Green:", RGB::<U>::GREEN),
+            ("Blue:", RGB::<U>::BLUE),
         ]
         .iter()
         .enumerate()
@@ -108,7 +108,7 @@ impl<U: Hexable> RGBHexEntryBuilder<U> {
                 .initial_value(self.initial_rgb[index.into()])
                 .build();
             let label = gtk::Label::new(Some(label));
-            label.set_widget_colour_rgb(rgb);
+            label.set_widget_colour(rgb);
             hbox.pack_start(&label, true, true, 0);
             hbox.pack_start(&entry.pwo(), false, false, 0);
             v.push(entry);

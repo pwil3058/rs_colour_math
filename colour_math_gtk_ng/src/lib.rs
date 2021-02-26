@@ -49,13 +49,6 @@ pub mod coloured {
             self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
             self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
         }
-
-        fn set_widget_colour_rgb(&self, rgb: &RGB<f64>) {
-            let bg_rgba = rgb.rgba();
-            let fg_rgba = rgb.best_foreground().rgba();
-            self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
-            self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
-        }
     }
 
     #[allow(deprecated)]
@@ -67,16 +60,6 @@ pub mod coloured {
             self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
             for child in self.get_children().iter() {
                 child.set_widget_colour(colour);
-            }
-        }
-
-        fn set_widget_colour_rgb(&self, rgb: &RGB<f64>) {
-            let bg_rgba = rgb.rgba();
-            let fg_rgba = rgb.best_foreground().rgba();
-            self.override_background_color(gtk::StateFlags::empty(), Some(&bg_rgba));
-            self.override_color(gtk::StateFlags::empty(), Some(&fg_rgba));
-            for child in self.get_children().iter() {
-                child.set_widget_colour_rgb(rgb);
             }
         }
     }

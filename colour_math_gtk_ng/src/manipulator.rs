@@ -106,19 +106,18 @@ impl ColourManipulatorGUI {
         self.colour_manipulator.borrow_mut().set_colour(colour);
         let rgb = colour.rgb::<f64>();
         self.incr_value_btn
-            .set_widget_colour_rgb(&(rgb * 0.8.into() + RGB::WHITE * 0.2.into()));
-        self.decr_value_btn
-            .set_widget_colour_rgb(&(rgb * 0.8.into()));
+            .set_widget_colour(&(rgb * 0.8.into() + RGB::WHITE * 0.2.into()));
+        self.decr_value_btn.set_widget_colour(&(rgb * 0.8.into()));
         if rgb.is_grey() {
-            self.incr_chroma_btn.set_widget_colour_rgb(&rgb);
-            self.decr_chroma_btn.set_widget_colour_rgb(&rgb);
-            self.hue_left_btn.set_widget_colour_rgb(&rgb);
-            self.hue_right_btn.set_widget_colour_rgb(&rgb);
+            self.incr_chroma_btn.set_widget_colour(&rgb);
+            self.decr_chroma_btn.set_widget_colour(&rgb);
+            self.hue_left_btn.set_widget_colour(&rgb);
+            self.hue_right_btn.set_widget_colour(&rgb);
         } else {
             let low_chroma_rgb = rgb * 0.8.into() + rgb.monochrome_rgb() * 0.2.into();
             let high_chroma_rgb = rgb * 0.8.into() + rgb.max_chroma_rgb() * 0.2.into();
-            self.incr_chroma_btn.set_widget_colour_rgb(&high_chroma_rgb);
-            self.decr_chroma_btn.set_widget_colour_rgb(&low_chroma_rgb);
+            self.incr_chroma_btn.set_widget_colour(&high_chroma_rgb);
+            self.decr_chroma_btn.set_widget_colour(&low_chroma_rgb);
 
             let angle_offset = Angle::from(30);
             self.hue_left_btn
