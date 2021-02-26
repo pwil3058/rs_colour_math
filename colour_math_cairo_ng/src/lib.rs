@@ -115,6 +115,11 @@ impl From<beigui::TextPosn> for TextPosn {
 }
 
 pub trait CairoSetColour {
+    fn set_source_colour(&self, colour: &impl ColourBasics) {
+        let rgb = colour.rgb::<f64>();
+        self.set_source_colour_rgb(&rgb);
+    }
+
     fn set_source_colour_rgb(&self, rgb: &RGB<f64>);
 }
 
