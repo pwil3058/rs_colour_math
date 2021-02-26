@@ -8,7 +8,7 @@ use std::{cmp::PartialEq, fmt::Debug};
 use num_traits_plus;
 use num_traits_plus::float_plus::*;
 
-use normalised_angles::{Degrees, DegreesConst, RadiansConst};
+pub use normalised_angles::{Degrees, DegreesConst, RadiansConst};
 
 pub mod attributes;
 pub mod chroma;
