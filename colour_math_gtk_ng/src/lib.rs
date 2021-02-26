@@ -5,6 +5,8 @@ pub mod hue_wheel;
 pub mod manipulator;
 pub mod rgb_entry;
 
+pub use colour_math_cairo_ng;
+
 pub mod colour {
     pub use colour_math_ng::{
         beigui::{
@@ -16,7 +18,6 @@ pub mod colour {
         Angle, ColourBasics, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute,
         UnsignedLightLevel, CCI, HCV, RGB,
     };
-    pub use colour_math_cairo_ng;
     use pw_gix::gdk;
 
     pub trait GdkRGBA: ColourBasics {
