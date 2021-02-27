@@ -241,3 +241,16 @@ pub trait ColourAttributes: ColourBasics {
 
 impl ColourAttributes for HCV {}
 impl<L: LightLevel> ColourAttributes for RGB<L> {}
+
+pub trait ManipulatedColour: ColourBasics {
+    fn lightened(&self, prop: Prop) -> Self;
+    fn darkened(&self, prop: Prop) -> Self;
+    fn saturated(&self, prop: Prop) -> Self;
+    fn greyed(&self, prop: Prop) -> Self;
+    fn rotated(&self, angle: Angle) -> Self;
+}
+
+pub trait ColourIfce: ColourBasics + ColourAttributes + ManipulatedColour {}
+
+impl ColourIfce for HCV {}
+impl<L: LightLevel> ColourIfce for RGB<L> {}

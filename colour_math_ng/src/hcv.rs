@@ -10,7 +10,8 @@ use crate::{
     hue::{HueIfce, SumOrdering},
     proportion::Warmth,
     rgb::RGB,
-    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants,
+    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, ManipulatedColour, Prop,
+    RGBConstants,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -399,6 +400,12 @@ impl<L: LightLevel> From<RGB<L>> for HCV {
     }
 }
 
+impl<L: LightLevel> From<HCV> for RGB<L> {
+    fn from(hcv: HCV) -> Self {
+        hcv.rgb::<L>()
+    }
+}
+
 impl<L: LightLevel> From<&HCV> for RGB<L> {
     fn from(hcv: &HCV) -> Self {
         hcv.rgb::<L>()
@@ -452,6 +459,77 @@ impl ColourBasics for HCV {
 
     fn hcv(&self) -> HCV {
         *self
+    }
+}
+
+impl ManipulatedColour for HCV {
+    fn lightened(&self, prop: Prop) -> Self {
+        let rgb = RGB::<u64>::from(self).lightened(prop);
+        HCV::from(rgb)
+    }
+
+    fn darkened(&self, prop: Prop) -> Self {
+        let rgb = RGB::<u64>::from(self).darkened(prop);
+        HCV::from(rgb)
+    }
+    fn saturated(&self, prop: Prop) -> Self {
+        let new_chroma = match self.chroma {
+            Chroma::Shade(c_prop) => Chroma::Shade((c_prop - c_prop * prop + prop).into()),
+            Chroma::Tint(c_prop) => Chroma::Tint((c_prop - c_prop * prop + prop).into()),
+            Chroma::Neither(c_prop) => match prop {
+                Prop::ONE => Chroma::ONE,
+                Prop::ZERO => Chroma::from((prop, self.hue, self.sum)),
+                prop => Chroma::Neither((c_prop - c_prop * prop + prop).into()),
+            },
+        };
+        let new_sum = if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(new_chroma) {
+            if self.sum < min_sum {
+                min_sum
+            } else if self.sum > max_sum {
+                max_sum
+            } else {
+                self.sum
+            }
+        } else {
+            self.sum
+        };
+        Self {
+            hue: self.hue,
+            chroma: new_chroma,
+            sum: new_sum,
+        }
+    }
+
+    fn greyed(&self, prop: Prop) -> Self {
+        let new_chroma = match self.chroma {
+            Chroma::Shade(c_prop) => Chroma::Shade((c_prop - c_prop * prop).into()),
+            Chroma::Tint(c_prop) => Chroma::Tint((c_prop - c_prop * prop).into()),
+            Chroma::Neither(c_prop) => match prop {
+                Prop::ZERO => Chroma::ZERO,
+                Prop::ONE => Chroma::from((Prop::ONE - prop, self.hue, self.sum)),
+                prop => Chroma::Neither((c_prop - c_prop * prop).into()),
+            },
+        };
+        let new_sum = if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(new_chroma) {
+            if self.sum < min_sum {
+                min_sum
+            } else if self.sum > max_sum {
+                max_sum
+            } else {
+                self.sum
+            }
+        } else {
+            self.sum
+        };
+        Self {
+            hue: self.hue,
+            chroma: new_chroma,
+            sum: new_sum,
+        }
+    }
+
+    fn rotated(&self, angle: Angle) -> Self {
+        *self + angle
     }
 }
 
