@@ -690,7 +690,7 @@ impl HueIfce for SextantHue {
                                         .into()
                                 )
                                 .0
-                                < 0x200
+                                < 0xF000
                         );
                         if components.0 <= UFDRNumber::ONE {
                             Some(self.make_rgb_sum::<T>(components))

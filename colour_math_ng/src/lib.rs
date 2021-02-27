@@ -248,6 +248,7 @@ impl ColourIfce for HCV {}
 impl<L: LightLevel> ColourIfce for RGB<L> {}
 
 pub trait ManipulatedColour: ColourBasics {
+    // TODO: modify Manipulated colour to make it more widely applicable
     fn lightened(&self, prop: Prop) -> Self;
     fn darkened(&self, prop: Prop) -> Self;
     fn saturated(&self, prop: Prop) -> Self;
