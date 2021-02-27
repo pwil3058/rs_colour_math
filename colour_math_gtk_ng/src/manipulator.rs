@@ -15,8 +15,8 @@ use colour_math_cairo_ng::Point;
 
 use crate::{
     colour::{
-        Angle, ColourManipulator, ColourManipulatorBuilder, GdkColour, LightLevel, Prop,
-        RGBConstants, CCI, HCV, RGB,
+        Angle, ColourManipulator, ColourManipulatorBuilder, LightLevel, ManipGdkColour, Prop, CCI,
+        HCV, RGB,
     },
     coloured::Colourable,
 };
@@ -102,7 +102,7 @@ pub struct ColourManipulatorGUI {
 }
 
 impl ColourManipulatorGUI {
-    pub fn set_colour(&self, colour: &impl GdkColour) {
+    pub fn set_colour(&self, colour: &impl ManipGdkColour) {
         self.colour_manipulator.borrow_mut().set_colour(colour);
         let offset: Prop = (Prop::ONE / 10 * 2).into();
         self.incr_value_btn
@@ -113,7 +113,7 @@ impl ColourManipulatorGUI {
             .set_widget_colour(&colour.greyed(offset));
         self.incr_chroma_btn
             .set_widget_colour(&colour.saturated(offset));
-        let angle_offset = Angle::from(15);
+        let angle_offset = Angle::from(45);
         self.hue_left_btn
             .set_widget_colour(&colour.rotated(angle_offset));
         self.hue_right_btn
@@ -121,7 +121,7 @@ impl ColourManipulatorGUI {
         self.drawing_area.queue_draw();
     }
 
-    fn set_colour_and_inform(&self, colour: &impl GdkColour) {
+    fn set_colour_and_inform(&self, colour: &impl ManipGdkColour) {
         self.set_colour(colour);
         for callback in self.change_callbacks.borrow().iter() {
             callback(colour.hcv())

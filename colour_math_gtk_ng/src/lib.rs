@@ -8,6 +8,7 @@ pub mod rgb_entry;
 pub use colour_math_cairo_ng;
 
 pub mod colour {
+    use colour_math_ng::ManipulatedColour;
     pub use colour_math_ng::{
         beigui::{
             self, attr_display,
@@ -34,6 +35,11 @@ pub mod colour {
 
     impl<L: LightLevel> GdkColour for RGB<L> {}
     impl GdkColour for HCV {}
+
+    pub trait ManipGdkColour: GdkColour + ManipulatedColour {}
+
+    impl<L: LightLevel> ManipGdkColour for RGB<L> {}
+    impl ManipGdkColour for HCV {}
 }
 
 pub mod coloured {

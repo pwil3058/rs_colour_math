@@ -8,7 +8,7 @@ use pw_gix::{
 
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
-    colour::{GdkColour, LightLevel, Prop, ScalarAttribute, HCV, RGB},
+    colour::{GdkColour, LightLevel, ManipGdkColour, Prop, ScalarAttribute, HCV, RGB},
     manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
     rgb_entry::{Hexable, RGBHexEntry, RGBHexEntryBuilder},
 };
@@ -34,7 +34,7 @@ impl<U: Hexable> ColourEditor<U> {
         self.colour_manipulator.hcv()
     }
 
-    pub fn set_colour(&self, colour: &impl GdkColour) {
+    pub fn set_colour(&self, colour: &impl ManipGdkColour) {
         self.rgb_entry.set_colour(colour);
         self.colour_manipulator.set_colour(colour);
         self.cads.set_colour(Some(colour));
