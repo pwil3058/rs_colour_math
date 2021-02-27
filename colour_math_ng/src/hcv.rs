@@ -5,6 +5,7 @@ use std::{
     ops::{Add, Sub},
 };
 
+use crate::hue::{CMYHue, RGBHue, Sextant};
 use crate::{
     fdrn::UFDRNumber,
     hue::{HueIfce, SumOrdering},
@@ -376,21 +377,71 @@ impl RGBConstants for HCV {
     };
 }
 
-impl<L: LightLevel> From<&RGB<L>> for HCV {
-    fn from(rgb: &RGB<L>) -> Self {
-        if let Ok(hue) = Hue::try_from(rgb) {
-            Self {
-                hue: hue,
-                chroma: rgb.chroma(),
-                sum: rgb.sum(),
-            }
+fn sum_and_chroma((hue, [red, green, blue]): (Hue, [Prop; 3])) -> (UFDRNumber, Chroma) {
+    let sum = red + green + blue;
+    let prop = match hue {
+        Hue::Primary(RGBHue::Red) => red - blue,
+        Hue::Primary(RGBHue::Green) => green - red,
+        Hue::Primary(RGBHue::Blue) => blue - green,
+        Hue::Secondary(CMYHue::Cyan) => blue - red,
+        Hue::Secondary(CMYHue::Magenta) => red - green,
+        Hue::Secondary(CMYHue::Yellow) => green - blue,
+        Hue::Sextant(sextant_hue) => match sextant_hue.sextant() {
+            Sextant::RedYellow => red - blue,
+            Sextant::RedMagenta => red - green,
+            Sextant::GreenYellow => green - blue,
+            Sextant::GreenCyan => green - red,
+            Sextant::BlueCyan => blue - red,
+            Sextant::BlueMagenta => blue - green,
+        },
+    };
+    let chroma = match prop {
+        Prop::ZERO => Chroma::ZERO,
+        Prop::ONE => Chroma::ONE,
+        prop => match sum.cmp(&hue.sum_for_max_chroma()) {
+            Ordering::Greater => Chroma::Tint(prop),
+            Ordering::Less => Chroma::Shade(prop),
+            Ordering::Equal => Chroma::Neither(prop),
+        },
+    };
+    (sum, chroma)
+}
+
+impl From<[Prop; 3]> for HCV {
+    fn from(array: [Prop; 3]) -> Self {
+        if let Ok(hue) = Hue::try_from(array) {
+            let (sum, chroma) = sum_and_chroma((hue, array));
+            Self { hue, chroma, sum }
         } else {
             Self {
                 hue: Hue::default(),
                 chroma: Chroma::ZERO,
-                sum: rgb.sum(),
+                sum: array[0] + array[1] + array[2],
             }
         }
+    }
+}
+
+impl From<&[Prop; 3]> for HCV {
+    fn from(array: &[Prop; 3]) -> Self {
+        HCV::from(*array)
+    }
+}
+
+impl From<HCV> for [Prop; 3] {
+    fn from(hcv: HCV) -> Self {
+        if hcv.chroma == Chroma::ZERO {
+            let value: Prop = (hcv.sum / 3).into();
+            [value, value, value]
+        } else {
+            [Prop::ONE, Prop::ONE, Prop::ONE]
+        }
+    }
+}
+
+impl<L: LightLevel> From<&RGB<L>> for HCV {
+    fn from(rgb: &RGB<L>) -> Self {
+        Self::from(<[Prop; 3]>::from(*rgb))
     }
 }
 

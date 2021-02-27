@@ -137,6 +137,28 @@ impl RGBHue {
             Blue => [components.1, components.1, components.0].into(),
         }
     }
+
+    // pub(crate) fn array_for_sum_and_chroma(
+    //     &self,
+    //     sum: UFDRNumber,
+    //     chroma: Chroma,
+    // ) -> Option<[Prop; 3]> {
+    //     debug_assert!(sum <= UFDRNumber::THREE);
+    //     let max_chroma_sum = UFDRNumber::ONE;
+    //     let (first, other) = match chroma {
+    //         Chroma::ZERO => return None,
+    //         Chroma::Neither(c_prop) => {
+    //             if sum == max_chroma_sum {
+    //                 let other = sum - c_prop;
+    //                 (other + c_prop, other)
+    //             } else {
+    //                 return None;
+    //             }
+    //         }
+    //         _ => (UFDRNumber::ZERO, UFDRNumber::ZERO),
+    //     };
+    //     None
+    // }
 }
 
 impl HueIfce for RGBHue {
@@ -508,6 +530,28 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     }
 }
 
+impl From<(Sextant, [Prop; 3])> for SextantHue {
+    fn from(arg: (Sextant, [Prop; 3])) -> Self {
+        use Sextant::*;
+        let [red, green, blue] = arg.1;
+        let other = match arg.0 {
+            RedMagenta => (blue - green) / (red - green),
+            RedYellow => (green - blue) / (red - blue),
+            GreenYellow => (red - blue) / (green - blue),
+            GreenCyan => (blue - red) / (green - red),
+            BlueCyan => (green - red) / (blue - red),
+            BlueMagenta => (red - green) / (blue - green),
+        };
+        Self(arg.0, other)
+    }
+}
+
+impl From<(Sextant, &[Prop; 3])> for SextantHue {
+    fn from(arg: (Sextant, &[Prop; 3])) -> Self {
+        Self::from((arg.0, *arg.1))
+    }
+}
+
 impl HueIfce for SextantHue {
     fn angle(&self) -> Angle {
         match self {
@@ -733,6 +777,48 @@ impl HueConstants for Hue {
 impl Default for Hue {
     fn default() -> Self {
         Self::RED
+    }
+}
+
+impl TryFrom<[Prop; 3]> for Hue {
+    type Error = &'static str;
+
+    fn try_from(array: [Prop; 3]) -> Result<Self, Self::Error> {
+        use Sextant::*;
+        let [red, green, blue] = array;
+        match red.cmp(&green) {
+            Ordering::Greater => match green.cmp(&blue) {
+                Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedYellow, array)))),
+                Ordering::Less => match red.cmp(&blue) {
+                    Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedMagenta, array)))),
+                    Ordering::Less => Ok(Hue::Sextant(SextantHue::from((BlueMagenta, array)))),
+                    Ordering::Equal => Ok(Hue::Secondary(CMYHue::Magenta)),
+                },
+                Ordering::Equal => Ok(Hue::Primary(RGBHue::Red)),
+            },
+            Ordering::Less => match red.cmp(&blue) {
+                Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((GreenYellow, array)))),
+                Ordering::Less => match green.cmp(&blue) {
+                    Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((GreenCyan, array)))),
+                    Ordering::Less => Ok(Hue::Sextant(SextantHue::from((BlueCyan, array)))),
+                    Ordering::Equal => Ok(Hue::Secondary(CMYHue::Cyan)),
+                },
+                Ordering::Equal => Ok(Hue::Primary(RGBHue::Green)),
+            },
+            Ordering::Equal => match red.cmp(&blue) {
+                Ordering::Greater => Ok(Hue::Secondary(CMYHue::Yellow)),
+                Ordering::Less => Ok(Hue::Primary(RGBHue::Blue)),
+                Ordering::Equal => Err("RGB is grey and hs no hue"),
+            },
+        }
+    }
+}
+
+impl TryFrom<&[Prop; 3]> for Hue {
+    type Error = &'static str;
+
+    fn try_from(array: &[Prop; 3]) -> Result<Self, Self::Error> {
+        Self::try_from(*array)
     }
 }
 
