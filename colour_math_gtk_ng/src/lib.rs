@@ -20,7 +20,7 @@ pub mod colour {
     };
     use pw_gix::gdk;
 
-    pub trait GdkColour: colour_math_ng::ColourBasics + colour_math_ng::ColourAttributes {
+    pub trait GdkColour: colour_math_ng::ColourIfce {
         fn gdk_rgba(&self) -> gdk::RGBA {
             let rgb = self.rgb::<f64>();
             gdk::RGBA {

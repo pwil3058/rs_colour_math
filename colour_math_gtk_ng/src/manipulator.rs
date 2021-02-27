@@ -104,27 +104,20 @@ pub struct ColourManipulatorGUI {
 impl ColourManipulatorGUI {
     pub fn set_colour(&self, colour: &impl GdkColour) {
         self.colour_manipulator.borrow_mut().set_colour(colour);
-        let rgb = colour.rgb::<f64>();
+        let offset: Prop = (Prop::ONE / 10 * 2).into();
         self.incr_value_btn
-            .set_widget_colour(&(rgb * 0.8.into() + RGB::WHITE * 0.2.into()));
-        self.decr_value_btn.set_widget_colour(&(rgb * 0.8.into()));
-        if let Some(hue_rgb) = colour.hue_rgb() {
-            let low_chroma_rgb = rgb * 0.8.into() + colour.monochrome_rgb() * 0.2.into();
-            let high_chroma_rgb = rgb * 0.8.into() + hue_rgb * 0.2.into();
-            self.incr_chroma_btn.set_widget_colour(&high_chroma_rgb);
-            self.decr_chroma_btn.set_widget_colour(&low_chroma_rgb);
-
-            let angle_offset = Angle::from(30);
-            self.hue_left_btn
-                .set_widget_colour(&(colour.hcv() + angle_offset));
-            self.hue_right_btn
-                .set_widget_colour(&(colour.hcv() - angle_offset));
-        } else {
-            self.incr_chroma_btn.set_widget_colour(&rgb);
-            self.decr_chroma_btn.set_widget_colour(&rgb);
-            self.hue_left_btn.set_widget_colour(&rgb);
-            self.hue_right_btn.set_widget_colour(&rgb);
-        }
+            .set_widget_colour(&colour.lightened(offset));
+        self.decr_value_btn
+            .set_widget_colour(&colour.darkened(offset));
+        self.decr_chroma_btn
+            .set_widget_colour(&colour.greyed(offset));
+        self.incr_chroma_btn
+            .set_widget_colour(&colour.saturated(offset));
+        let angle_offset = Angle::from(15);
+        self.hue_left_btn
+            .set_widget_colour(&colour.rotated(angle_offset));
+        self.hue_right_btn
+            .set_widget_colour(&colour.rotated(-angle_offset));
         self.drawing_area.queue_draw();
     }
 
