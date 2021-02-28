@@ -7,12 +7,8 @@ use std::{
 
 use crate::hue::{CMYHue, RGBHue, Sextant};
 use crate::{
-    fdrn::UFDRNumber,
-    hue::{HueIfce, SumOrdering},
-    proportion::Warmth,
-    rgb::RGB,
-    Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, ManipulatedColour, Prop,
-    RGBConstants,
+    fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
+    HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,7 +35,7 @@ pub enum Outcome {
 
 #[derive(Debug, Clone, Copy, Eq, Ord, Default, Serialize, Deserialize)]
 pub struct HCV {
-    hue: Hue,
+    pub(crate) hue: Hue,
     pub(crate) chroma: Chroma,
     pub(crate) sum: UFDRNumber,
 }
@@ -112,8 +108,19 @@ impl HCV {
 
     pub(crate) fn is_valid(&self) -> bool {
         if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(self.chroma) {
-            self.sum >= min_sum && self.sum <= max_sum
+            if self.sum >= min_sum && self.sum <= max_sum || min_sum == max_sum {
+                true
+            } else {
+                println!(
+                    "bad sum {:#X} : {:?} {:?}",
+                    self.sum.0,
+                    self.sum.is_hue_valid(),
+                    false
+                );
+                false
+            }
         } else {
+            println!("bad grey");
             match self.chroma {
                 Chroma::ZERO => self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0,
                 _ => false,
@@ -145,109 +152,11 @@ impl HCV {
         }
     }
 
-    pub fn set_hue(&mut self, hue: Hue, policy: SetHue) {
-        if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
-            match range.compare_sum(self.sum) {
-                SumOrdering::TooSmall(shortfall) => match policy {
-                    SetHue::FavourChroma => self.sum = self.sum + shortfall,
-                    SetHue::FavourValue => {
-                        if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
-                            self.chroma = chroma
-                        } else {
-                            self.sum = self.sum + shortfall
-                        }
-                    }
-                },
-                SumOrdering::TooBig(overs) => match policy {
-                    SetHue::FavourChroma => self.sum = self.sum - overs,
-                    SetHue::FavourValue => {
-                        if let Some(chroma) = hue.max_chroma_for_sum(self.sum) {
-                            self.chroma = chroma
-                        } else {
-                            self.sum = self.sum - overs
-                        }
-                    }
-                },
-                _ => self.hue = hue,
-            };
-            self.hue = hue
-        } else {
-            self.hue = hue
-        }
-    }
-
-    pub fn set_chroma_value(&mut self, chroma_value: Prop, policy: SetScalar) -> Outcome {
-        match self.chroma.prop().cmp(&chroma_value) {
-            Ordering::Equal => Outcome::NoChange,
-            Ordering::Greater => {
-                self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
-                Outcome::Ok
-            }
-            Ordering::Less => {
-                if let Some(range) = self.hue.sum_range_for_chroma_prop(chroma_value) {
-                    match range.compare_sum(self.sum) {
-                        SumOrdering::TooSmall(shortfall) => match policy {
-                            SetScalar::Clamp => {
-                                if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
-                                    if adj_c_val == self.chroma {
-                                        Outcome::NoChange
-                                    } else {
-                                        self.chroma =
-                                            Chroma::from((adj_c_val.prop(), self.hue, self.sum));
-                                        Outcome::Clamped
-                                    }
-                                } else {
-                                    Outcome::Rejected
-                                }
-                            }
-                            SetScalar::Accommodate => {
-                                self.sum = self.sum + shortfall;
-                                self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
-                                Outcome::Accommodated
-                            }
-                            SetScalar::Reject => Outcome::Rejected,
-                        },
-                        SumOrdering::TooBig(overs) => match policy {
-                            SetScalar::Clamp => {
-                                if let Some(adj_c_val) = self.hue.max_chroma_for_sum(self.sum) {
-                                    if adj_c_val == self.chroma {
-                                        Outcome::NoChange
-                                    } else {
-                                        self.chroma =
-                                            Chroma::from((adj_c_val.prop(), self.hue, self.sum));
-                                        Outcome::Clamped
-                                    }
-                                } else {
-                                    Outcome::Rejected
-                                }
-                            }
-                            SetScalar::Accommodate => {
-                                self.sum = self.sum - overs;
-                                self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
-                                Outcome::Accommodated
-                            }
-                            SetScalar::Reject => Outcome::Rejected,
-                        },
-                        _ => {
-                            self.chroma = Chroma::from((chroma_value, self.hue, self.sum));
-                            Outcome::Ok
-                        }
-                    }
-                } else {
-                    // new value must be zero and needs no checking
-                    debug_assert_eq!(chroma_value, Prop::ZERO);
-                    self.chroma = Chroma::ZERO;
-                    Outcome::Ok
-                }
-            }
-        }
-    }
-
     pub(crate) fn set_sum(&mut self, new_sum: UFDRNumber, policy: SetScalar) -> Outcome {
         // TODO: overhaul manipulater code
         debug_assert!(new_sum.is_valid_sum());
         let (min_sum, max_sum) = self.sum_range_for_current_chroma_prop();
-        if new_sum < min_sum {
+        let outcome = if new_sum < min_sum {
             if policy == SetScalar::Clamp {
                 if self.sum == min_sum {
                     Outcome::NoChange
@@ -288,11 +197,9 @@ impl HCV {
         } else {
             self.sum = new_sum;
             Outcome::Ok
-        }
-    }
-
-    pub fn set_value(&mut self, new_value: Prop, policy: SetScalar) -> Outcome {
-        self.set_sum(new_value * 3, policy)
+        };
+        debug_assert!(self.is_valid());
+        outcome
     }
 }
 
@@ -437,8 +344,8 @@ impl From<&[Prop; 3]> for HCV {
 
 impl From<HCV> for [Prop; 3] {
     fn from(hcv: HCV) -> Self {
+        debug_assert!(hcv.is_valid());
         if hcv.chroma == Chroma::ZERO {
-            debug_assert_eq!(hcv.sum.0 % 3, 0);
             let value: Prop = (hcv.sum / 3).into();
             [value, value, value]
         } else {
