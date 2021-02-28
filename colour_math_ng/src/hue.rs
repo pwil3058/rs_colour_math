@@ -142,11 +142,7 @@ impl RGBHue {
         UFDRNumber::THREE - c_prop * 2
     }
 
-    pub(crate) fn array_for_sum_and_chroma(
-        &self,
-        sum: UFDRNumber,
-        chroma: Chroma,
-    ) -> Option<[Prop; 3]> {
+    pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
         debug_assert!(sum.is_valid_sum());
         let max_chroma_sum = UFDRNumber::ONE;
         let (first, other) = match sum.cmp(&max_chroma_sum) {
@@ -352,6 +348,61 @@ impl CMYHue {
             Yellow => [components.0, components.0, components.1].into(),
         }
     }
+
+    fn max_sum_for_chroma_prop(&self, c_prop: Prop) -> UFDRNumber {
+        UFDRNumber::THREE - c_prop
+    }
+
+    pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
+        debug_assert!(sum.is_valid_sum());
+        let max_chroma_sum = UFDRNumber::TWO;
+        let (primary, other) = match sum.cmp(&max_chroma_sum) {
+            Ordering::Equal => match chroma {
+                Chroma::ZERO => return None,
+                Chroma::Neither(c_prop) => {
+                    let other = (sum - c_prop * 2) / 3;
+                    (other + c_prop, other)
+                }
+                _ => return None,
+            },
+            Ordering::Less => match chroma {
+                Chroma::Shade(c_prop) => {
+                    if sum < c_prop * 2 {
+                        return None;
+                    } else {
+                        let other = (sum - c_prop * 2) / 3;
+                        (other + c_prop, other)
+                    }
+                }
+                _ => return None,
+            },
+            Ordering::Greater => match chroma {
+                Chroma::Tint(c_prop) => {
+                    if sum <= self.max_sum_for_chroma_prop(c_prop) {
+                        let other = (sum - c_prop * 2) / 3;
+                        (other + c_prop, other)
+                    } else {
+                        return None;
+                    }
+                }
+                _ => return None,
+            },
+        };
+        if primary.is_proportion() {
+            debug_assert!(primary > other);
+            debug_assert_eq!(primary * 2 + other, sum);
+            debug_assert_eq!(primary - other, chroma.prop().into());
+            let p_primary: Prop = primary.into();
+            let p_other: Prop = other.into();
+            match self {
+                CMYHue::Cyan => Some([p_other, p_primary, p_primary]),
+                CMYHue::Magenta => Some([p_primary, p_other, p_primary]),
+                CMYHue::Yellow => Some([p_primary, p_primary, p_other]),
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl HueIfce for CMYHue {
@@ -536,6 +587,79 @@ impl SextantHue {
 
     pub fn prop(&self) -> Prop {
         self.1
+    }
+
+    fn max_sum_for_chroma_prop(&self, c_prop: Prop) -> UFDRNumber {
+        UFDRNumber::THREE - (UFDRNumber::TWO - self.1) * c_prop
+    }
+
+    pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
+        debug_assert!(sum.is_valid_sum());
+        let max_chroma_sum = UFDRNumber::ONE + self.1;
+        let (first, second, third) = match sum.cmp(&max_chroma_sum) {
+            Ordering::Equal => match chroma {
+                Chroma::ZERO => return None,
+                Chroma::Neither(c_prop) => {
+                    let third = (sum - max_chroma_sum * c_prop) / 3;
+                    let first = third + c_prop;
+                    let second = sum - first - third;
+                    (first, second, third)
+                }
+                _ => return None,
+            },
+            Ordering::Less => match chroma {
+                Chroma::Shade(c_prop) => {
+                    if sum < max_chroma_sum * c_prop {
+                        return None;
+                    } else {
+                        let third = (sum - max_chroma_sum * c_prop) / 3;
+                        let first = third + c_prop;
+                        let second = sum - first - third;
+                        (first, second, third)
+                    }
+                }
+                _ => return None,
+            },
+            Ordering::Greater => match chroma {
+                Chroma::Tint(c_prop) => {
+                    if sum <= self.max_sum_for_chroma_prop(c_prop) {
+                        let third = (sum - max_chroma_sum * c_prop) / 3;
+                        let first = third + c_prop;
+                        let second = sum - first - third;
+                        (first, second, third)
+                    } else {
+                        return None;
+                    }
+                }
+                _ => return None,
+            },
+        };
+        if first.is_proportion() {
+            debug_assert!(first > second && second > third);
+            debug_assert_eq!(first + second + third, sum);
+            debug_assert_eq!(first - third, chroma.prop().into());
+            // TODO: try to find way to eliminate this rounding error
+            debug_assert!(
+                self.1
+                    .abs_diff(&((second - third) / (first - third)).into())
+                    .0
+                    < 0x3
+            );
+            let p_first: Prop = first.into();
+            let p_second: Prop = second.into();
+            let p_third: Prop = third.into();
+            use Sextant::*;
+            match self.0 {
+                RedMagenta => Some([p_first, p_third, p_second]),
+                RedYellow => Some([p_first, p_second, p_third]),
+                GreenYellow => Some([p_second, p_first, p_third]),
+                GreenCyan => Some([p_third, p_first, p_second]),
+                BlueCyan => Some([p_third, p_second, p_first]),
+                BlueMagenta => Some([p_second, p_third, p_first]),
+            }
+        } else {
+            None
+        }
     }
 }
 
