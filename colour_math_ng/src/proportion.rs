@@ -30,8 +30,17 @@ impl Chroma {
     pub const ZERO: Self = Self::Neither(Prop::ZERO);
     pub const ONE: Self = Self::Neither(Prop::ONE);
 
-    pub fn is_zero(&self) -> bool {
+    pub fn is_zero(self) -> bool {
         self.prop() == Prop::ZERO
+    }
+
+    pub fn is_valid(self) -> bool {
+        match self {
+            Chroma::Neither(_) => true,
+            Chroma::Shade(c_prop) | Chroma::Tint(c_prop) => {
+                c_prop > Prop::ZERO && c_prop < Prop::ONE
+            }
+        }
     }
 
     pub fn prop(&self) -> Prop {

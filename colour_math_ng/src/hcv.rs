@@ -111,6 +111,7 @@ impl HCV {
     }
 
     pub(crate) fn is_valid(&self) -> bool {
+        // TODO: Fix is_valid() for HCV
         match self.chroma.prop() {
             Prop::ZERO => self.sum <= UFDRNumber::THREE,
             prop => {
@@ -238,7 +239,7 @@ impl HCV {
     }
 
     pub(crate) fn set_sum(&mut self, new_sum: UFDRNumber, policy: SetScalar) -> Outcome {
-        debug_assert!(new_sum.is_valid());
+        debug_assert!(new_sum.is_valid_sum());
         let (min_sum, max_sum) = self.sum_range_for_current_chroma();
         if new_sum < min_sum {
             if policy == SetScalar::Clamp {

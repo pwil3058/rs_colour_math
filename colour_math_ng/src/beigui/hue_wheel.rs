@@ -4,7 +4,8 @@ use std::cmp::Ordering;
 use crate::{
     beigui::{DrawShapes, Point},
     fdrn::{FDRNumber, UFDRNumber},
-    ColourAttributes, ColourBasics, Hue, HueConstants, HueIfce, LightLevel, Prop, RGBConstants,
+    hue::HueIfce,
+    ColourAttributes, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants,
     ScalarAttribute, HCV, RGB,
 };
 

@@ -3,7 +3,8 @@
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    Chroma, ColourBasics, Greyness, Hue, HueConstants, HueIfce, Prop, RGBConstants, Warmth, HCV,
+    hue::HueIfce,
+    Chroma, ColourBasics, Greyness, Hue, HueConstants, Prop, RGBConstants, Warmth, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {

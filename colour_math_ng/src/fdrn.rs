@@ -41,6 +41,18 @@ impl FDRNumber {
         Self(self.0.abs())
     }
 
+    pub fn is_valid_sum(self) -> bool {
+        self >= Self::ZERO && self <= Self::ONE * 3
+    }
+
+    pub fn is_hue_valid(self) -> bool {
+        self > Self::ZERO && self < Self::ONE * 3
+    }
+
+    pub fn is_proportion(self) -> bool {
+        self >= Self::ZERO && self <= Self::ONE
+    }
+
     pub fn abs_diff(&self, other: &Self) -> FDRNumber {
         match self.cmp(other) {
             Ordering::Greater => FDRNumber(self.0 - other.0),
@@ -222,12 +234,16 @@ impl UFDRNumber {
     pub const SQRT_2: Self = Self(FDRNumber::SQRT_2.0 as u128);
     pub const SQRT_3: Self = Self(FDRNumber::SQRT_3.0 as u128);
 
-    pub fn is_valid(self) -> bool {
+    pub fn is_valid_sum(self) -> bool {
         self <= Self::THREE
     }
 
     pub fn is_hue_valid(self) -> bool {
         self > Self::ZERO && self < Self::THREE
+    }
+
+    pub fn is_proportion(self) -> bool {
+        self <= Self::ONE
     }
 
     pub fn abs_diff(&self, other: &Self) -> UFDRNumber {

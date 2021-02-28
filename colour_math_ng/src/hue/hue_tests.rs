@@ -5,7 +5,7 @@ use super::*;
 use num_traits_plus::assert_approx_eq;
 
 use crate::proportion::Chroma;
-use crate::{proportion::*, rgb::RGB, ColourBasics, CCI};
+use crate::{hue::Hue, proportion::*, rgb::RGB, ColourBasics, CCI};
 
 const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
 const VALID_OTHER_SUMS: [f64; 20] = [
@@ -238,6 +238,32 @@ fn hue_add_sub_angle() {
         ] {
             assert_approx_eq!((*hue + *angle).angle(), hue.angle() + *angle, 0x100);
             assert_approx_eq!((*hue - *angle).angle(), hue.angle() - *angle, 0x100);
+        }
+    }
+}
+
+#[test]
+fn array_for_sum_and_chroma() {
+    let light_levels: [Prop; 7] = [
+        Prop::ZERO,
+        Prop(1),
+        Prop::ONE / 100,
+        Prop::ONE / 2,
+        (Prop::ONE / 100 * 99).into(),
+        Prop::ONE - Prop(1),
+        Prop::ONE,
+    ];
+    // Valid primary hue colours
+    for first in &light_levels[1..] {
+        for others in &light_levels {
+            if *first > Prop::ZERO && others < first {
+                // Red hue
+                let rgb = RGB::<u64>::from([*first, *others, *others]);
+                let array = RGBHue::Red
+                    .array_for_sum_and_chroma(rgb.sum(), rgb.chroma())
+                    .expect("should be legal");
+                assert_eq!(RGB::<u64>::from(array), rgb);
+            }
         }
     }
 }

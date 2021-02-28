@@ -18,10 +18,11 @@ pub mod rgb;
 pub use crate::{
     fdrn::UFDRNumber,
     hcv::HCV,
-    hue::{angle::Angle, Hue, HueIfce},
+    hue::{angle::Angle, Hue},
     proportion::{Chroma, Greyness, Prop, Warmth},
     rgb::RGB,
 };
+use hue::HueIfce;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CCI {
