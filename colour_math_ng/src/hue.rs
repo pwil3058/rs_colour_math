@@ -142,11 +142,7 @@ impl RGBHue {
         UFDRNumber::THREE - c_prop * 2
     }
 
-    pub(crate) fn array_for_sum_and_chroma(
-        &self,
-        sum: UFDRNumber,
-        chroma: Chroma,
-    ) -> Option<[Prop; 3]> {
+    pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
         debug_assert!(sum.is_valid_sum());
         let max_chroma_sum = UFDRNumber::ONE;
         let (first, other) = match sum.cmp(&max_chroma_sum) {
@@ -350,6 +346,61 @@ impl CMYHue {
             Cyan => [components.1, components.0, components.0].into(),
             Magenta => [components.0, components.1, components.0].into(),
             Yellow => [components.0, components.0, components.1].into(),
+        }
+    }
+
+    fn max_sum_for_chroma_prop(&self, c_prop: Prop) -> UFDRNumber {
+        UFDRNumber::THREE - c_prop
+    }
+
+    pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
+        debug_assert!(sum.is_valid_sum());
+        let max_chroma_sum = UFDRNumber::TWO;
+        let (primary, other) = match sum.cmp(&max_chroma_sum) {
+            Ordering::Equal => match chroma {
+                Chroma::ZERO => return None,
+                Chroma::Neither(c_prop) => {
+                    let other = (sum - c_prop * 2) / 3;
+                    (other + c_prop, other)
+                }
+                _ => return None,
+            },
+            Ordering::Less => match chroma {
+                Chroma::Shade(c_prop) => {
+                    if sum < c_prop * 2 {
+                        return None;
+                    } else {
+                        let other = (sum - c_prop * 2) / 3;
+                        (other + c_prop, other)
+                    }
+                }
+                _ => return None,
+            },
+            Ordering::Greater => match chroma {
+                Chroma::Tint(c_prop) => {
+                    if sum <= self.max_sum_for_chroma_prop(c_prop) {
+                        let other = (sum - c_prop * 2) / 3;
+                        (other + c_prop, other)
+                    } else {
+                        return None;
+                    }
+                }
+                _ => return None,
+            },
+        };
+        if primary.is_proportion() {
+            debug_assert!(primary > other);
+            debug_assert_eq!(primary * 2 + other, sum);
+            debug_assert_eq!(primary - other, chroma.prop().into());
+            let p_primary: Prop = primary.into();
+            let p_other: Prop = other.into();
+            match self {
+                CMYHue::Cyan => Some([p_other, p_primary, p_primary]),
+                CMYHue::Magenta => Some([p_primary, p_other, p_primary]),
+                CMYHue::Yellow => Some([p_primary, p_primary, p_other]),
+            }
+        } else {
+            None
         }
     }
 }

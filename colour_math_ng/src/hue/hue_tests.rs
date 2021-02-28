@@ -253,16 +253,32 @@ fn array_for_sum_and_chroma() {
         Prop::ONE - Prop(1),
         Prop::ONE,
     ];
-    // Valid primary hue colours
+    // Valid primary and secondary hue colours
     for first in &light_levels[1..] {
         for others in &light_levels {
-            if *first > Prop::ZERO && others < first {
-                // Red hue
-                let rgb = RGB::<u64>::from([*first, *others, *others]);
-                let array = RGBHue::Red
-                    .array_for_sum_and_chroma(rgb.sum(), rgb.chroma())
-                    .expect("should be legal");
-                assert_eq!(RGB::<u64>::from(array), rgb);
+            if others < first {
+                for rgb_hue in &[RGBHue::Red, RGBHue::Green, RGBHue::Blue] {
+                    let rgb = match rgb_hue {
+                        RGBHue::Red => RGB::<u64>::from([*first, *others, *others]),
+                        RGBHue::Green => RGB::<u64>::from([*others, *first, *others]),
+                        RGBHue::Blue => RGB::<u64>::from([*others, *others, *first]),
+                    };
+                    let array = rgb_hue
+                        .array_for_sum_and_chroma(rgb.sum(), rgb.chroma())
+                        .expect("should be legal");
+                    assert_eq!(RGB::<u64>::from(array), rgb);
+                }
+                for cmy_hue in &[CMYHue::Cyan, CMYHue::Magenta, CMYHue::Yellow] {
+                    let rgb = match cmy_hue {
+                        CMYHue::Cyan => RGB::<u64>::from([*others, *first, *first]),
+                        CMYHue::Magenta => RGB::<u64>::from([*first, *others, *first]),
+                        CMYHue::Yellow => RGB::<u64>::from([*first, *first, *others]),
+                    };
+                    let array = cmy_hue
+                        .array_for_sum_and_chroma(rgb.sum(), rgb.chroma())
+                        .expect("should be legal");
+                    assert_eq!(RGB::<u64>::from(array), rgb);
+                }
             }
         }
     }
