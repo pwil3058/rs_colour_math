@@ -111,20 +111,25 @@ impl HCV {
     }
 
     pub(crate) fn is_valid(&self) -> bool {
-        // TODO: Fix is_valid() for HCV
-        match self.chroma.prop() {
-            Prop::ZERO => self.sum <= UFDRNumber::THREE,
-            prop => {
-                if let Some(range) = self.hue.sum_range_for_chroma_prop(prop) {
-                    range.compare_sum(self.sum).is_success()
-                } else {
-                    false
-                }
+        if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(self.chroma) {
+            self.sum >= min_sum && self.sum <= max_sum
+        } else {
+            match self.chroma {
+                Chroma::ZERO => self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0,
+                _ => false,
             }
         }
     }
 
     pub fn sum_range_for_current_chroma(&self) -> (UFDRNumber, UFDRNumber) {
+        if let Some(range) = self.hue.sum_range_for_chroma(self.chroma) {
+            range
+        } else {
+            (UFDRNumber::ZERO, UFDRNumber::THREE)
+        }
+    }
+
+    pub fn sum_range_for_current_chroma_prop(&self) -> (UFDRNumber, UFDRNumber) {
         if let Some(range) = self.hue.sum_range_for_chroma_prop(self.chroma.prop()) {
             (range.min, range.max)
         } else {
@@ -239,8 +244,9 @@ impl HCV {
     }
 
     pub(crate) fn set_sum(&mut self, new_sum: UFDRNumber, policy: SetScalar) -> Outcome {
+        // TODO: overhaul manipulater code
         debug_assert!(new_sum.is_valid_sum());
-        let (min_sum, max_sum) = self.sum_range_for_current_chroma();
+        let (min_sum, max_sum) = self.sum_range_for_current_chroma_prop();
         if new_sum < min_sum {
             if policy == SetScalar::Clamp {
                 if self.sum == min_sum {
@@ -432,10 +438,13 @@ impl From<&[Prop; 3]> for HCV {
 impl From<HCV> for [Prop; 3] {
     fn from(hcv: HCV) -> Self {
         if hcv.chroma == Chroma::ZERO {
+            debug_assert_eq!(hcv.sum.0 % 3, 0);
             let value: Prop = (hcv.sum / 3).into();
             [value, value, value]
         } else {
-            [Prop::ONE, Prop::ONE, Prop::ONE]
+            hcv.hue
+                .array_for_sum_and_chroma(hcv.sum, hcv.chroma)
+                .expect("Invalid Hue")
         }
     }
 }
@@ -499,7 +508,7 @@ impl ColourBasics for HCV {
     }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
-        debug_assert!(self.is_valid());
+        //debug_assert!(self.is_valid());
         match self.chroma {
             Chroma::ZERO => RGB::new_grey(self.value()),
             chroma => self
