@@ -987,33 +987,15 @@ impl<T: LightLevel> TryFrom<&RGB<T>> for Hue {
     type Error = &'static str;
 
     fn try_from(rgb: &RGB<T>) -> Result<Self, Self::Error> {
-        use Sextant::*;
-        let [red, green, blue] = <[Prop; 3]>::from(*rgb);
-        match red.cmp(&green) {
-            Ordering::Greater => match green.cmp(&blue) {
-                Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedYellow, rgb)))),
-                Ordering::Less => match red.cmp(&blue) {
-                    Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((RedMagenta, rgb)))),
-                    Ordering::Less => Ok(Hue::Sextant(SextantHue::from((BlueMagenta, rgb)))),
-                    Ordering::Equal => Ok(Hue::Secondary(CMYHue::Magenta)),
-                },
-                Ordering::Equal => Ok(Hue::Primary(RGBHue::Red)),
-            },
-            Ordering::Less => match red.cmp(&blue) {
-                Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((GreenYellow, rgb)))),
-                Ordering::Less => match green.cmp(&blue) {
-                    Ordering::Greater => Ok(Hue::Sextant(SextantHue::from((GreenCyan, rgb)))),
-                    Ordering::Less => Ok(Hue::Sextant(SextantHue::from((BlueCyan, rgb)))),
-                    Ordering::Equal => Ok(Hue::Secondary(CMYHue::Cyan)),
-                },
-                Ordering::Equal => Ok(Hue::Primary(RGBHue::Green)),
-            },
-            Ordering::Equal => match red.cmp(&blue) {
-                Ordering::Greater => Ok(Hue::Secondary(CMYHue::Yellow)),
-                Ordering::Less => Ok(Hue::Primary(RGBHue::Blue)),
-                Ordering::Equal => Err("RGB is grey and hs no hue"),
-            },
-        }
+        Self::try_from(<[Prop; 3]>::from(*rgb))
+    }
+}
+
+impl<T: LightLevel> TryFrom<RGB<T>> for Hue {
+    type Error = &'static str;
+
+    fn try_from(rgb: RGB<T>) -> Result<Self, Self::Error> {
+        Self::try_from(<[Prop; 3]>::from(rgb))
     }
 }
 
@@ -1195,6 +1177,14 @@ impl Hue {
                 Self::Sextant(other_sextant_hue) => sextant_hue.1.abs_diff(&other_sextant_hue.1),
                 _ => Prop::ONE,
             },
+        }
+    }
+
+    pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.array_for_sum_and_chroma(sum, chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.array_for_sum_and_chroma(sum, chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.array_for_sum_and_chroma(sum, chroma),
         }
     }
 }
