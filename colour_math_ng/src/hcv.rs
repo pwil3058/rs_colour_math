@@ -107,23 +107,29 @@ impl HCV {
     }
 
     pub(crate) fn is_valid(&self) -> bool {
-        if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(self.chroma) {
-            if self.sum >= min_sum && self.sum <= max_sum || min_sum == max_sum {
-                true
-            } else {
-                println!(
-                    "bad sum {:#X} : {:?} {:?}",
-                    self.sum.0,
-                    self.sum.is_hue_valid(),
-                    false
-                );
-                false
-            }
-        } else {
-            println!("bad grey");
-            match self.chroma {
+        match self.chroma {
+            Chroma::ZERO => match self.chroma {
                 Chroma::ZERO => self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0,
-                _ => false,
+                _ => {
+                    println!("bad grey: {:#X}", self.sum.0);
+                    false
+                }
+            },
+            _ => {
+                if self
+                    .hue
+                    .sum_and_chroma_are_compatible(self.sum, self.chroma)
+                {
+                    true
+                } else {
+                    println!(
+                        "bad sum {:#X} : {:?} {:?}",
+                        self.sum.0,
+                        self.sum.is_hue_valid(),
+                        false
+                    );
+                    false
+                }
             }
         }
     }
