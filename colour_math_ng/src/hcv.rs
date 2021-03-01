@@ -123,7 +123,8 @@ impl HCV {
                     true
                 } else {
                     println!(
-                        "bad sum {:#X} : {:?} {:?}",
+                        "{:?}: bad sum {:#X} : {:?} {:?}",
+                        self,
                         self.sum.0,
                         self.sum.is_hue_valid(),
                         false
