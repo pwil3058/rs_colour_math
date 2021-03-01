@@ -3,10 +3,31 @@ use std::cmp::Ordering;
 
 use crate::{
     fdrn::UFDRNumber,
-    hcv::{Outcome, SetHue, SetScalar},
     hue::HueIfce,
     Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, HCV, RGB,
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SetScalar {
+    Clamp,
+    Accommodate,
+    Reject,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SetHue {
+    FavourChroma,
+    FavourValue,
+}
+
+#[derive(Debug)]
+pub enum Outcome {
+    Ok,
+    Clamped,
+    Accommodated,
+    NoChange,
+    Rejected,
+}
 
 #[derive(Debug)]
 pub struct ColourManipulator {
@@ -46,94 +67,137 @@ impl ColourManipulator {
     }
 
     pub fn set_chroma_value(&mut self, chroma_value: Prop, policy: SetScalar) -> Outcome {
-        let outcome = match self.hcv.chroma.prop().cmp(&chroma_value) {
-            Ordering::Equal => Outcome::NoChange,
-            Ordering::Greater => {
-                println!("greater: {:?}", chroma_value);
-                self.hcv.chroma = Chroma::from((chroma_value, self.hcv.hue, self.hcv.sum));
-                Outcome::Ok
-            }
-            Ordering::Less => {
-                println!("less: {:?}", chroma_value);
-                if self.hcv.sum < self.hcv.hue.min_sum_for_chroma_prop(chroma_value) {
-                    println!("darkside");
-                    match policy {
-                        SetScalar::Clamp => {
-                            if let Some(adj_c_val) = self.hcv.hue.max_chroma_for_sum(self.hcv.sum) {
-                                println!(
-                                    "ADJ_C_VAL {:#X} SUM {:#X}",
-                                    adj_c_val.prop().0,
-                                    self.hcv.sum.0
-                                );
-                                if adj_c_val == self.hcv.chroma {
-                                    Outcome::NoChange
-                                } else {
-                                    self.hcv.chroma = Chroma::from((
-                                        adj_c_val.prop(),
-                                        self.hcv.hue,
-                                        self.hcv.sum,
-                                    ));
-                                    self.hcv.chroma =
-                                        self.hcv.hue.adjusted_chroma_for_sum_compatibility(
+        if chroma_value == Prop::ZERO {
+            self.hcv.chroma = Chroma::ZERO;
+            self.hcv.hue = None;
+            return Outcome::Ok;
+        }
+        let outcome = if let Some(hue) = self.hcv.hue {
+            match self.hcv.chroma.prop().cmp(&chroma_value) {
+                Ordering::Equal => Outcome::NoChange,
+                Ordering::Greater => {
+                    println!("greater: {:?}", chroma_value);
+                    self.hcv.chroma = Chroma::from((chroma_value, hue, self.hcv.sum));
+                    Outcome::Ok
+                }
+                Ordering::Less => {
+                    println!("less: {:?}", chroma_value);
+                    if self.hcv.sum < hue.min_sum_for_chroma_prop(chroma_value) {
+                        println!("darkside");
+                        match policy {
+                            SetScalar::Clamp => {
+                                if let Some(adj_c_val) = hue.max_chroma_for_sum(self.hcv.sum) {
+                                    println!(
+                                        "ADJ_C_VAL {:#X} SUM {:#X}",
+                                        adj_c_val.prop().0,
+                                        self.hcv.sum.0
+                                    );
+                                    if adj_c_val == self.hcv.chroma {
+                                        Outcome::NoChange
+                                    } else {
+                                        self.hcv.chroma = Chroma::from((
                                             adj_c_val.prop(),
+                                            hue,
                                             self.hcv.sum,
-                                        );
-                                    Outcome::Clamped
+                                        ));
+                                        self.hcv.chroma =
+                                            hue.adjusted_chroma_for_sum_compatibility(
+                                                adj_c_val.prop(),
+                                                self.hcv.sum,
+                                            );
+                                        Outcome::Clamped
+                                    }
+                                } else {
+                                    Outcome::Rejected
                                 }
-                            } else {
-                                Outcome::Rejected
                             }
+                            SetScalar::Accommodate => {
+                                let (adj_sum, chroma) = hue
+                                    .adjusted_sum_and_chroma_for_chroma_compatibility(
+                                        chroma_value,
+                                        self.hcv.sum,
+                                    );
+                                println!("Accommodate: {:?}, {:?}, {:?}", self.hcv, adj_sum, chroma);
+                                self.hcv.sum = adj_sum;
+                                self.hcv.chroma = chroma;
+                                Outcome::Accommodated
+                            }
+                            SetScalar::Reject => Outcome::Rejected,
                         }
-                        SetScalar::Accommodate => {
-                            let (adj_sum, chroma) = self
-                                .hcv
-                                .hue
-                                .adjusted_sum_and_chroma_for_chroma_compatibility(
-                                    chroma_value,
-                                    self.hcv.sum,
-                                );
-                            println!("Accommodate: {:?}, {:?}, {:?}", self.hcv, adj_sum, chroma);
-                            self.hcv.sum = adj_sum;
-                            self.hcv.chroma = chroma;
-                            Outcome::Accommodated
+                    } else if self.hcv.sum > hue.max_sum_for_chroma_prop(chroma_value) {
+                        println!("lightside");
+                        match policy {
+                            SetScalar::Clamp => {
+                                if let Some(adj_c_val) = hue.max_chroma_for_sum(self.hcv.sum) {
+                                    if adj_c_val == self.hcv.chroma {
+                                        Outcome::NoChange
+                                    } else {
+                                        self.hcv.chroma = Chroma::from((
+                                            adj_c_val.prop(),
+                                            hue,
+                                            self.hcv.sum,
+                                        ));
+                                        Outcome::Clamped
+                                    }
+                                } else {
+                                    Outcome::Rejected
+                                }
+                            }
+                            SetScalar::Accommodate => {
+                                let (adj_sum, chroma) =
+                                    hue
+                                    .adjusted_sum_and_chroma_for_chroma_compatibility(
+                                        chroma_value,
+                                        self.hcv.sum,
+                                    );
+                                self.hcv.sum = adj_sum;
+                                self.hcv.chroma = chroma;
+                                Outcome::Accommodated
+                            }
+                            SetScalar::Reject => Outcome::Rejected,
                         }
-                        SetScalar::Reject => Outcome::Rejected,
+                    } else {
+                        self.hcv.chroma = Chroma::from((chroma_value, hue, self.hcv.sum));
+                        Outcome::Ok
                     }
-                } else if self.hcv.sum > self.hcv.hue.max_sum_for_chroma_prop(chroma_value) {
-                    println!("lightside");
+                }
+            }
+        } else {
+            if self.hcv.sum == UFDRNumber::ZERO {
+                match policy {
+                    SetScalar::Clamp => Outcome::NoChange,
+                    SetScalar::Accommodate => {
+                        let (sum, chroma) = self.saved_hue.adjusted_sum_and_chroma_for_chroma_compatibility(chroma_value, UFDRNumber::ZERO);
+                        self.hcv = HCV::new(Some((self.saved_hue, chroma)), sum);
+                        Outcome::Accommodated
+                    }
+                    SetScalar::Reject => Outcome::Rejected
+                }
+            } else {
+                let min_sum = self.saved_hue.min_sum_for_chroma_prop(chroma_value);
+                if self.hcv.sum < min_sum {
                     match policy {
                         SetScalar::Clamp => {
-                            if let Some(adj_c_val) = self.hcv.hue.max_chroma_for_sum(self.hcv.sum) {
-                                if adj_c_val == self.hcv.chroma {
-                                    Outcome::NoChange
-                                } else {
-                                    self.hcv.chroma = Chroma::from((
-                                        adj_c_val.prop(),
-                                        self.hcv.hue,
-                                        self.hcv.sum,
-                                    ));
-                                    Outcome::Clamped
-                                }
+                            if self.hcv.sum == UFDRNumber::ZERO {
+                                Outcome::NoChange
                             } else {
-                                Outcome::Rejected
+                                self.hcv.chroma = self.saved_hue.adjusted_chroma_for_sum_compatibility(chroma_value, self.hcv.sum);
+                                self.hcv.hue = Some(self.saved_hue);
+                                Outcome::Clamped
                             }
                         }
                         SetScalar::Accommodate => {
-                            let (adj_sum, chroma) = self
-                                .hcv
-                                .hue
-                                .adjusted_sum_and_chroma_for_chroma_compatibility(
-                                    chroma_value,
-                                    self.hcv.sum,
-                                );
-                            self.hcv.sum = adj_sum;
-                            self.hcv.chroma = chroma;
+                            let (sum, chroma) = self.saved_hue.adjusted_sum_and_chroma_for_chroma_compatibility(chroma_value, self.hcv.sum);
+                            self.hcv = HCV::new(Some((self.saved_hue, chroma)), sum);
                             Outcome::Accommodated
                         }
-                        SetScalar::Reject => Outcome::Rejected,
+                        SetScalar::Reject => {
+                            Outcome::Rejected
+                        }
                     }
                 } else {
-                    self.hcv.chroma = Chroma::from((chroma_value, self.hcv.hue, self.hcv.sum));
+                    let (sum, chroma) = self.saved_hue.adjusted_sum_and_chroma_for_chroma_compatibility(chroma_value, self.hcv.sum);
+                    self.hcv = HCV::new(Some((self.saved_hue, chroma)), sum);
                     Outcome::Ok
                 }
             }
@@ -141,7 +205,7 @@ impl ColourManipulator {
         if self.hcv.chroma == Chroma::ZERO {
             self.hcv.sum = self.hcv.sum / 3 * 3;
         }
-        //debug_assert!(self.hcv.is_valid());
+        debug_assert!(self.hcv.is_valid());
         outcome
     }
 
@@ -190,6 +254,66 @@ impl ColourManipulator {
         }
     }
 
+    pub(crate) fn set_sum(&mut self, new_sum: UFDRNumber, policy: SetScalar) -> Outcome {
+        debug_assert!(new_sum.is_valid_sum());
+        if let Some(hue) = self.hcv.hue {
+            let (min_sum, max_sum) = self.hcv.sum_range_for_current_chroma_prop();
+            let outcome = if new_sum < min_sum {
+                if policy == SetScalar::Clamp {
+                    if self.hcv.sum == min_sum {
+                        Outcome::NoChange
+                    } else {
+                        self.hcv.sum = min_sum;
+                        Outcome::Clamped
+                    }
+                } else if policy == SetScalar::Accommodate {
+                    self.hcv.sum = new_sum;
+                    self.hcv.chroma = if let Some(max_chroma) = hue.max_chroma_for_sum(new_sum) {
+                        max_chroma
+                    } else {
+                        Chroma::ZERO
+                    };
+                    self.hcv.chroma = hue.adjusted_chroma_for_sum_compatibility(self.hcv.chroma.prop(), new_sum);
+                    Outcome::Accommodated
+                } else {
+                  Outcome::Rejected
+                }
+            } else if new_sum > max_sum {
+               if policy == SetScalar::Clamp {
+                   if self.hcv.sum == max_sum {
+                       Outcome::NoChange
+                    } else {
+                        self.hcv.sum = max_sum;
+                        Outcome::Clamped
+                    }
+                } else if policy == SetScalar::Accommodate {
+                    self.hcv.sum = new_sum;
+                    self.hcv.chroma = if let Some(max_chroma) = hue.max_chroma_for_sum(new_sum) {
+                        max_chroma
+                    } else {
+                        Chroma::ZERO
+                    };
+                    self.hcv.chroma = hue.adjusted_chroma_for_sum_compatibility(self.hcv.chroma.prop(), new_sum);
+                    Outcome::Accommodated
+                } else {
+                    Outcome::Rejected
+                }
+            } else {
+                self.hcv.sum = new_sum;
+                Outcome::Ok
+            };
+            //debug_assert!(self.hcv.is_valid());
+            outcome
+        } else {
+            if new_sum.0 % 3 == 0 {
+                self.hcv.sum = new_sum;
+            } else {
+                self.hcv.sum = new_sum / 3 * 3;
+            }
+            Outcome::Ok
+        }
+    }
+
     pub fn decr_value(&mut self, delta: Prop) -> bool {
         if self.hcv.sum == UFDRNumber::ZERO {
             false
@@ -204,7 +328,7 @@ impl ColourManipulator {
             } else {
                 SetScalar::Accommodate
             };
-            match self.hcv.set_sum(new_sum, policy) {
+            match self.set_sum(new_sum, policy) {
                 Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
                 _ => false,
             }
@@ -225,32 +349,35 @@ impl ColourManipulator {
             } else {
                 SetScalar::Accommodate
             };
-            match self.hcv.set_sum(new_sum, policy) {
+            match self.set_sum(new_sum, policy) {
                 Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => true,
                 _ => false,
             }
         }
     }
 
-    pub fn set_hue(&mut self, hue: Hue, policy: SetHue) {
+    pub fn set_hue(&mut self, new_hue: Hue, policy: SetHue) {
+        // TODO: change argument to Option<Hue>
         debug_assert!(self.hcv.is_valid());
-        if let Some((min_sum, max_sum)) = hue.sum_range_for_chroma(self.hcv.chroma) {
-            match policy {
-                SetHue::FavourChroma => {
-                    if self.hcv.sum < min_sum {
-                        self.hcv.sum = min_sum
-                    } else if self.hcv.sum > max_sum {
-                        self.hcv.sum = max_sum
+        if self.hcv.hue.is_some() {
+            if let Some((min_sum, max_sum)) = new_hue.sum_range_for_chroma(self.hcv.chroma) {
+                match policy {
+                    SetHue::FavourChroma => {
+                        if self.hcv.sum < min_sum {
+                            self.hcv.sum = min_sum
+                        } else if self.hcv.sum > max_sum {
+                            self.hcv.sum = max_sum
+                        }
+                    }
+                    SetHue::FavourValue => {
+                        self.hcv.chroma = new_hue.adjusted_chroma_for_sum_compatibility(
+                            self.hcv.chroma.prop(),
+                            self.hcv.sum,
+                        );
                     }
                 }
-                SetHue::FavourValue => {
-                    self.hcv.chroma = hue.adjusted_chroma_for_sum_compatibility(
-                        self.hcv.chroma.prop(),
-                        self.hcv.sum,
-                    );
-                }
-            }
-            self.hcv.hue = hue;
+                self.hcv.hue = Some(new_hue);
+            };
         };
         debug_assert!(self.hcv.is_valid());
     }

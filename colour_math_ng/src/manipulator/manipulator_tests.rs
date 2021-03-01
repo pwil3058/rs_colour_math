@@ -2,7 +2,7 @@
 use num_traits_plus::assert_approx_eq;
 
 use crate::hue::HueIfce;
-use crate::manipulator::ColourManipulatorBuilder;
+use crate::manipulator::{ColourManipulatorBuilder, SetHue};
 use crate::{
     hcv::*, hue::angle::*, Chroma, ColourBasics, Hue, HueConstants, Prop, RGBConstants, UFDRNumber,
     RGB,

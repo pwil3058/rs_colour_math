@@ -257,10 +257,17 @@ impl Prop {
 
 impl Debug for Prop {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        //formatter.write_fmt(format_args!("Prop(0.{:08X})", self.0))
-        formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
+        formatter.write_fmt(format_args!("Prop(0.{:08X})", self))
+        //formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
     }
 }
+
+impl fmt::UpperHex for Prop {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, formatter)
+    }
+}
+
 
 macro_rules! impl_to_from_float {
     ($float:ty, $number:ty) => {

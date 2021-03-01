@@ -68,6 +68,12 @@ impl Debug for FDRNumber {
     }
 }
 
+impl fmt::UpperHex for FDRNumber {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, formatter)
+    }
+}
+
 #[cfg(test)]
 impl FDRNumber {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
@@ -258,6 +264,12 @@ impl UFDRNumber {
 impl Debug for UFDRNumber {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
+    }
+}
+
+impl fmt::UpperHex for UFDRNumber {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, formatter)
     }
 }
 

@@ -1030,7 +1030,7 @@ impl HueIfce for SextantHue {
     }
 
     fn max_chroma_hcv(&self) -> HCV {
-        HCV::new(Hue::Sextant(*self), Chroma::ONE, Prop::ONE + self.1)
+        HCV::new(Some((Hue::Sextant(*self), Chroma::ONE)), Prop::ONE + self.1)
     }
 
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {

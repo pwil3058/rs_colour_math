@@ -11,31 +11,9 @@ use crate::{
     HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SetScalar {
-    Clamp,
-    Accommodate,
-    Reject,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SetHue {
-    FavourChroma,
-    FavourValue,
-}
-
-#[derive(Debug)]
-pub enum Outcome {
-    Ok,
-    Clamped,
-    Accommodated,
-    NoChange,
-    Rejected,
-}
-
 #[derive(Debug, Clone, Copy, Eq, Ord, Default, Serialize, Deserialize)]
 pub struct HCV {
-    pub(crate) hue: Hue,
+    pub(crate) hue: Option<Hue>,
     pub(crate) chroma: Chroma,
     pub(crate) sum: UFDRNumber,
 }
@@ -80,19 +58,19 @@ impl PartialOrd for HCV {
 }
 
 impl HCV {
-    pub(crate) fn new(hue: Hue, chroma: Chroma, sum: UFDRNumber) -> Self {
-        if let Some(range) = hue.sum_range_for_chroma_prop(chroma.prop()) {
-            debug_assert!(range.compare_sum(sum).is_success());
-            // TODO: verify chroma shade/tint
-            Self { hue, chroma, sum }
+    pub(crate) fn new(hue_data: Option<(Hue, Chroma)>, sum: UFDRNumber) -> Self {
+        if let Some((hue, chroma)) = hue_data {
+            debug_assert!(hue.sum_and_chroma_are_compatible(sum, chroma));
+            Self { hue: Some(hue), chroma, sum }
         } else {
-            Self { hue, chroma, sum }
+            debug_assert!(sum.is_valid_sum());
+            Self { hue: None, chroma: Chroma::ZERO, sum}
         }
     }
 
     pub(crate) fn new_grey_sum(sum: UFDRNumber) -> Self {
         Self {
-            hue: Hue::default(),
+            hue: None,
             chroma: Chroma::ZERO,
             sum,
         }
@@ -107,178 +85,129 @@ impl HCV {
     }
 
     pub(crate) fn is_valid(&self) -> bool {
-        match self.chroma {
-            Chroma::ZERO => match self.chroma {
-                Chroma::ZERO => self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0,
-                _ => {
-                    println!("bad grey: {:#X}", self.sum.0);
-                    false
-                }
-            },
-            _ => {
-                if self
-                    .hue
-                    .sum_and_chroma_are_compatible(self.sum, self.chroma)
-                {
-                    true
-                } else {
-                    println!(
-                        "{:?}: bad sum {:#X} : {:?} {:?}",
-                        self,
-                        self.sum.0,
-                        self.sum.is_hue_valid(),
-                        false
-                    );
-                    false
-                }
+        if let Some(hue) = self.hue {
+            if hue.sum_and_chroma_are_compatible(self.sum, self.chroma) {
+                true
+            } else {
+                println!("incompatible sum and chroma");
+                false
+            }
+        } else {
+            if self.chroma == Chroma::ZERO && self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0 {
+                true
+            } else {
+                println!("bad grey");
+                false
             }
         }
     }
 
     pub fn sum_range_for_current_chroma(&self) -> (UFDRNumber, UFDRNumber) {
-        if let Some(range) = self.hue.sum_range_for_chroma(self.chroma) {
-            range
+        if let Some(hue) = self.hue {
+            if let Some(range) =  hue.sum_range_for_chroma(self.chroma) {
+                range
+            } else {
+                (UFDRNumber::ZERO, UFDRNumber::THREE)
+            }
         } else {
             (UFDRNumber::ZERO, UFDRNumber::THREE)
         }
     }
 
     pub fn sum_range_for_current_chroma_prop(&self) -> (UFDRNumber, UFDRNumber) {
-        if let Some(range) = self.hue.sum_range_for_chroma_prop(self.chroma.prop()) {
-            (range.min, range.max)
+        if let Some(hue) = self.hue {
+            if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
+                (range.min, range.max)
+            } else {
+                (UFDRNumber::ZERO, UFDRNumber::THREE)
+            }
         } else {
             (UFDRNumber::ZERO, UFDRNumber::THREE)
         }
     }
 
     pub fn max_chroma_for_current_sum(&self) -> Chroma {
-        if let Some(max_chroma) = self.hue.max_chroma_for_sum(self.sum) {
-            max_chroma
+        if let Some(hue) = self.hue {
+            if let Some(max_chroma) = hue.max_chroma_for_sum(self.sum) {
+                max_chroma
+            } else {
+                Chroma::ZERO
+            }
         } else {
             Chroma::ZERO
         }
-    }
-
-    pub(crate) fn set_sum(&mut self, new_sum: UFDRNumber, policy: SetScalar) -> Outcome {
-        // TODO: overhaul manipulater code
-        debug_assert!(new_sum.is_valid_sum());
-        let (min_sum, max_sum) = self.sum_range_for_current_chroma_prop();
-        let outcome = if new_sum < min_sum {
-            if policy == SetScalar::Clamp {
-                if self.sum == min_sum {
-                    Outcome::NoChange
-                } else {
-                    self.sum = min_sum;
-                    Outcome::Clamped
-                }
-            } else if policy == SetScalar::Accommodate {
-                self.sum = new_sum;
-                self.chroma = if let Some(max_chroma) = self.hue.max_chroma_for_sum(new_sum) {
-                    max_chroma
-                } else {
-                    Chroma::ZERO
-                };
-                Outcome::Accommodated
-            } else {
-                Outcome::Rejected
-            }
-        } else if new_sum > max_sum {
-            if policy == SetScalar::Clamp {
-                if self.sum == max_sum {
-                    Outcome::NoChange
-                } else {
-                    self.sum = max_sum;
-                    Outcome::Clamped
-                }
-            } else if policy == SetScalar::Accommodate {
-                self.sum = new_sum;
-                self.chroma = if let Some(max_chroma) = self.hue.max_chroma_for_sum(new_sum) {
-                    max_chroma
-                } else {
-                    Chroma::ZERO
-                };
-                Outcome::Accommodated
-            } else {
-                Outcome::Rejected
-            }
-        } else {
-            self.sum = new_sum;
-            Outcome::Ok
-        };
-        debug_assert!(self.is_valid());
-        outcome
     }
 }
 
 impl HueConstants for HCV {
     const RED: Self = Self {
-        hue: Hue::RED,
+        hue: Some(Hue::RED),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE,
     };
 
     const GREEN: Self = Self {
-        hue: Hue::GREEN,
+        hue: Some(Hue::GREEN),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE,
     };
 
     const BLUE: Self = Self {
-        hue: Hue::BLUE,
+        hue: Some(Hue::BLUE),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE,
     };
 
     const CYAN: Self = Self {
-        hue: Hue::CYAN,
+        hue: Some(Hue::CYAN),
         chroma: Chroma::ONE,
         sum: UFDRNumber::TWO,
     };
 
     const MAGENTA: Self = Self {
-        hue: Hue::MAGENTA,
+        hue: Some(Hue::MAGENTA),
         chroma: Chroma::ONE,
         sum: UFDRNumber::TWO,
     };
 
     const YELLOW: Self = Self {
-        hue: Hue::YELLOW,
+        hue: Some(Hue::YELLOW),
         chroma: Chroma::ONE,
         sum: UFDRNumber::TWO,
     };
 
     const BLUE_CYAN: Self = Self {
-        hue: Hue::BLUE_CYAN,
+        hue: Some(Hue::BLUE_CYAN),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE_PT_5,
     };
 
     const BLUE_MAGENTA: Self = Self {
-        hue: Hue::BLUE_MAGENTA,
+        hue: Some(Hue::BLUE_MAGENTA),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE_PT_5,
     };
 
     const RED_MAGENTA: Self = Self {
-        hue: Hue::RED_MAGENTA,
+        hue: Some(Hue::RED_MAGENTA),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE_PT_5,
     };
 
     const RED_YELLOW: Self = Self {
-        hue: Hue::RED_YELLOW,
+        hue: Some(Hue::RED_YELLOW),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE_PT_5,
     };
 
     const GREEN_YELLOW: Self = Self {
-        hue: Hue::GREEN_YELLOW,
+        hue: Some(Hue::GREEN_YELLOW),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE_PT_5,
     };
 
     const GREEN_CYAN: Self = Self {
-        hue: Hue::GREEN_CYAN,
+        hue: Some(Hue::GREEN_CYAN),
         chroma: Chroma::ONE,
         sum: UFDRNumber::ONE_PT_5,
     };
@@ -286,13 +215,13 @@ impl HueConstants for HCV {
 
 impl RGBConstants for HCV {
     const WHITE: Self = Self {
-        hue: Hue::RED,
+        hue: None,
         chroma: Chroma::ZERO,
         sum: UFDRNumber::THREE,
     };
 
     const BLACK: Self = Self {
-        hue: Hue::RED,
+        hue: None,
         chroma: Chroma::ZERO,
         sum: UFDRNumber::ZERO,
     };
@@ -332,10 +261,10 @@ impl From<[Prop; 3]> for HCV {
     fn from(array: [Prop; 3]) -> Self {
         if let Ok(hue) = Hue::try_from(array) {
             let (sum, chroma) = sum_and_chroma((hue, array));
-            Self { hue, chroma, sum }
+            Self { hue: Some(hue), chroma, sum }
         } else {
             Self {
-                hue: Hue::default(),
+                hue: None,
                 chroma: Chroma::ZERO,
                 sum: array[0] + array[1] + array[2],
             }
@@ -352,13 +281,11 @@ impl From<&[Prop; 3]> for HCV {
 impl From<HCV> for [Prop; 3] {
     fn from(hcv: HCV) -> Self {
         debug_assert!(hcv.is_valid());
-        if hcv.chroma == Chroma::ZERO {
+        if let Some(hue) = hcv.hue {
+            hue.array_for_sum_and_chroma(hcv.sum, hcv.chroma).expect("Invalid Hue")
+        } else  {
             let value: Prop = (hcv.sum / 3).into();
             [value, value, value]
-        } else {
-            hcv.hue
-                .array_for_sum_and_chroma(hcv.sum, hcv.chroma)
-                .expect("Invalid Hue")
         }
     }
 }
@@ -389,16 +316,14 @@ impl<L: LightLevel> From<&HCV> for RGB<L> {
 
 impl ColourBasics for HCV {
     fn hue(&self) -> Option<Hue> {
-        match self.chroma {
-            Chroma::ZERO => None,
-            _ => Some(self.hue),
-        }
+        self.hue
     }
 
     fn hue_angle(&self) -> Option<Angle> {
-        match self.chroma {
-            Chroma::ZERO => None,
-            _ => Some(self.hue.angle()),
+        if let Some(hue) = self.hue {
+            Some(hue.angle())
+        } else {
+            None
         }
     }
 
@@ -415,20 +340,21 @@ impl ColourBasics for HCV {
     }
 
     fn warmth(&self) -> Warmth {
-        match self.chroma {
-            Chroma::ZERO => Warmth::calculate_monochrome_fm_sum(self.sum),
-            _ => self.hue.warmth_for_chroma(self.chroma),
+        if let Some(hue) = self.hue {
+            hue.warmth_for_chroma(self.chroma)
+        } else {
+            Warmth::calculate_monochrome_fm_sum(self.sum)
         }
     }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
         //debug_assert!(self.is_valid());
-        match self.chroma {
-            Chroma::ZERO => RGB::new_grey(self.value()),
-            chroma => self
-                .hue
-                .rgb_for_sum_and_chroma::<L>(self.sum, chroma)
-                .expect("Assume that we're valid and there must be an equivalent RGB"),
+        if let Some(hue) = self.hue {
+            hue
+                .rgb_for_sum_and_chroma::<L>(self.sum, self.chroma)
+                .expect("Assume that we're valid and there must be an equivalent RGB")
+        } else {
+            RGB::new_grey(self.value())
         }
     }
 
@@ -448,58 +374,65 @@ impl ManipulatedColour for HCV {
         HCV::from(rgb)
     }
     fn saturated(&self, prop: Prop) -> Self {
-        let new_chroma = match self.chroma {
-            Chroma::Shade(c_prop) => Chroma::Shade((c_prop - c_prop * prop + prop).into()),
-            Chroma::Tint(c_prop) => Chroma::Tint((c_prop - c_prop * prop + prop).into()),
-            Chroma::Neither(c_prop) => match prop {
-                Prop::ONE => Chroma::ONE,
-                Prop::ZERO => Chroma::from((prop, self.hue, self.sum)),
-                prop => Chroma::Neither((c_prop - c_prop * prop + prop).into()),
-            },
-        };
-        let new_sum = if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(new_chroma) {
-            if self.sum < min_sum {
-                min_sum
-            } else if self.sum > max_sum {
-                max_sum
+        if let Some(hue) = self.hue {
+            let new_chroma = match self.chroma {
+                Chroma::Shade(c_prop) => Chroma::Shade((c_prop - c_prop * prop + prop).into()),
+                Chroma::Tint(c_prop) => Chroma::Tint((c_prop - c_prop * prop + prop).into()),
+                Chroma::Neither(c_prop) => match prop {
+                    Prop::ONE => Chroma::ONE,
+                    prop => Chroma::Neither((c_prop - c_prop * prop + prop).into()),
+                },
+            };
+            let new_sum = if let Some((min_sum, max_sum)) = hue.sum_range_for_chroma(new_chroma) {
+                if self.sum < min_sum {
+                    min_sum
+                } else if self.sum > max_sum {
+                    max_sum
+                } else {
+                    self.sum
+                }
             } else {
                 self.sum
+            };
+            Self {
+                hue: Some(hue),
+                chroma: new_chroma,
+                sum: new_sum,
             }
         } else {
-            self.sum
-        };
-        Self {
-            hue: self.hue,
-            chroma: new_chroma,
-            sum: new_sum,
+            *self
         }
+
     }
 
     fn greyed(&self, prop: Prop) -> Self {
-        let new_chroma = match self.chroma {
-            Chroma::Shade(c_prop) => Chroma::Shade((c_prop - c_prop * prop).into()),
-            Chroma::Tint(c_prop) => Chroma::Tint((c_prop - c_prop * prop).into()),
-            Chroma::Neither(c_prop) => match prop {
-                Prop::ZERO => Chroma::ZERO,
-                Prop::ONE => Chroma::from((Prop::ONE - prop, self.hue, self.sum)),
-                prop => Chroma::Neither((c_prop - c_prop * prop).into()),
-            },
-        };
-        let new_sum = if let Some((min_sum, max_sum)) = self.hue.sum_range_for_chroma(new_chroma) {
-            if self.sum < min_sum {
-                min_sum
-            } else if self.sum > max_sum {
-                max_sum
+        if let Some(hue) = self.hue {
+            let new_chroma = match self.chroma {
+                Chroma::Shade(c_prop) => Chroma::Shade((c_prop - c_prop * prop).into()),
+                Chroma::Tint(c_prop) => Chroma::Tint((c_prop - c_prop * prop).into()),
+                Chroma::Neither(c_prop) => match prop {
+                    Prop::ONE => Chroma::from((Prop::ONE - prop, hue, self.sum)),
+                    prop => Chroma::Neither((c_prop - c_prop * prop).into()),
+                },
+            };
+            let new_sum = if let Some((min_sum, max_sum)) = hue.sum_range_for_chroma(new_chroma) {
+                if self.sum < min_sum {
+                    min_sum
+                } else if self.sum > max_sum {
+                    max_sum
+                } else {
+                    self.sum
+                }
             } else {
                 self.sum
+            };
+            Self {
+                hue: self.hue,
+                chroma: new_chroma,
+                sum: new_sum,
             }
         } else {
-            self.sum
-        };
-        Self {
-            hue: self.hue,
-            chroma: new_chroma,
-            sum: new_sum,
+            *self
         }
     }
 
@@ -512,22 +445,11 @@ impl Add<Angle> for HCV {
     type Output = Self;
 
     fn add(self, angle: Angle) -> Self {
-        let new_hue = self.hue + angle;
-        if let Some((min_sum, max_sum)) = new_hue.sum_range_for_chroma(self.chroma()) {
-            let new_sum = if self.sum < min_sum {
-                min_sum
-            } else if self.sum > max_sum {
-                max_sum
-            } else {
-                self.sum
-            };
-            Self {
-                hue: new_hue,
-                chroma: self.chroma,
-                sum: new_sum,
-            }
+        if let Some(hue) = self.hue {
+            let new_hue = hue + angle;
+            let (sum, chroma) = hue.adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum);
+            Self { hue: Some(new_hue), chroma, sum }
         } else {
-            // TODO: Should greys go through rotation unchanged
             self
         }
     }
@@ -537,22 +459,11 @@ impl Sub<Angle> for HCV {
     type Output = Self;
 
     fn sub(self, angle: Angle) -> Self {
-        let new_hue = self.hue - angle;
-        if let Some((min_sum, max_sum)) = new_hue.sum_range_for_chroma(self.chroma()) {
-            let new_sum = if self.sum < min_sum {
-                min_sum
-            } else if self.sum > max_sum {
-                max_sum
-            } else {
-                self.sum
-            };
-            Self {
-                hue: new_hue,
-                chroma: self.chroma,
-                sum: new_sum,
-            }
+        if let Some(hue) = self.hue {
+            let new_hue = hue - angle;
+            let (sum, chroma) = hue.adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum);
+            Self { hue: Some(new_hue), chroma, sum }
         } else {
-            // TODO: Should greys go through rotation unchanged
             self
         }
     }
