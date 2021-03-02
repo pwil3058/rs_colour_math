@@ -64,7 +64,10 @@ impl FDRNumber {
 
 impl Debug for FDRNumber {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
+        let int = self.0 / u64::MAX as i128;
+        let frac = self.0 % u64::MAX as i128;
+        formatter.write_fmt(format_args!("UFDRNumber({:X}.{:016X})", int, frac.abs()))
+        //formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
     }
 }
 
@@ -263,7 +266,9 @@ impl UFDRNumber {
 
 impl Debug for UFDRNumber {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_fmt(format_args!("UFDRNumber({:?})", f64::from(*self)))
+        let int = self.0 / u64::MAX as u128;
+        let frac = self.0 % u64::MAX as u128;
+        formatter.write_fmt(format_args!("UFDRNumber({:X}.{:016X})", int, frac))
     }
 }
 

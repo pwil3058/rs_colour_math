@@ -61,10 +61,18 @@ impl HCV {
     pub(crate) fn new(hue_data: Option<(Hue, Chroma)>, sum: UFDRNumber) -> Self {
         if let Some((hue, chroma)) = hue_data {
             debug_assert!(hue.sum_and_chroma_are_compatible(sum, chroma));
-            Self { hue: Some(hue), chroma, sum }
+            Self {
+                hue: Some(hue),
+                chroma,
+                sum,
+            }
         } else {
             debug_assert!(sum.is_valid_sum());
-            Self { hue: None, chroma: Chroma::ZERO, sum}
+            Self {
+                hue: None,
+                chroma: Chroma::ZERO,
+                sum,
+            }
         }
     }
 
@@ -104,7 +112,7 @@ impl HCV {
 
     pub fn sum_range_for_current_chroma(&self) -> (UFDRNumber, UFDRNumber) {
         if let Some(hue) = self.hue {
-            if let Some(range) =  hue.sum_range_for_chroma(self.chroma) {
+            if let Some(range) = hue.sum_range_for_chroma(self.chroma) {
                 range
             } else {
                 (UFDRNumber::ZERO, UFDRNumber::THREE)
@@ -261,7 +269,11 @@ impl From<[Prop; 3]> for HCV {
     fn from(array: [Prop; 3]) -> Self {
         if let Ok(hue) = Hue::try_from(array) {
             let (sum, chroma) = sum_and_chroma((hue, array));
-            Self { hue: Some(hue), chroma, sum }
+            Self {
+                hue: Some(hue),
+                chroma,
+                sum,
+            }
         } else {
             Self {
                 hue: None,
@@ -282,8 +294,9 @@ impl From<HCV> for [Prop; 3] {
     fn from(hcv: HCV) -> Self {
         debug_assert!(hcv.is_valid());
         if let Some(hue) = hcv.hue {
-            hue.array_for_sum_and_chroma(hcv.sum, hcv.chroma).expect("Invalid Hue")
-        } else  {
+            hue.array_for_sum_and_chroma(hcv.sum, hcv.chroma)
+                .expect("Invalid Hue")
+        } else {
             let value: Prop = (hcv.sum / 3).into();
             [value, value, value]
         }
@@ -350,8 +363,7 @@ impl ColourBasics for HCV {
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
         //debug_assert!(self.is_valid());
         if let Some(hue) = self.hue {
-            hue
-                .rgb_for_sum_and_chroma::<L>(self.sum, self.chroma)
+            hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma)
                 .expect("Assume that we're valid and there must be an equivalent RGB")
         } else {
             RGB::new_grey(self.value())
@@ -402,7 +414,6 @@ impl ManipulatedColour for HCV {
         } else {
             *self
         }
-
     }
 
     fn greyed(&self, prop: Prop) -> Self {
@@ -447,8 +458,13 @@ impl Add<Angle> for HCV {
     fn add(self, angle: Angle) -> Self {
         if let Some(hue) = self.hue {
             let new_hue = hue + angle;
-            let (sum, chroma) = hue.adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum);
-            Self { hue: Some(new_hue), chroma, sum }
+            if let Some((sum, chroma)) = new_hue
+                .adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum)
+            {
+                HCV::new(Some((new_hue, chroma)), sum)
+            } else {
+                HCV::new(None, self.sum)
+            }
         } else {
             self
         }
@@ -461,8 +477,13 @@ impl Sub<Angle> for HCV {
     fn sub(self, angle: Angle) -> Self {
         if let Some(hue) = self.hue {
             let new_hue = hue - angle;
-            let (sum, chroma) = hue.adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum);
-            Self { hue: Some(new_hue), chroma, sum }
+            if let Some((sum, chroma)) = new_hue
+                .adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum)
+            {
+                HCV::new(Some((new_hue, chroma)), sum)
+            } else {
+                HCV::new(None, self.sum)
+            }
         } else {
             self
         }
