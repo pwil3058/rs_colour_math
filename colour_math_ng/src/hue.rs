@@ -807,6 +807,7 @@ impl SextantHue {
                 Ordering::Less => {
                     let min_sum = self.min_sum_for_chroma_prop(c_prop);
                     if sum < min_sum {
+                        // TODO: check that chroma goes back to sum
                         Some(Chroma::Shade((sum / (Prop::ONE + self.1)).into()))
                     } else {
                         Some(Chroma::Shade(c_prop))
