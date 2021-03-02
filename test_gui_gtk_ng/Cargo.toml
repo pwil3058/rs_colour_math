@@ -12,3 +12,4 @@ pw_pathux = { git = "https://github.com/pwil3058/rs_pw_pathux" }
 
 colour_math_ng = { path = "../colour_math_ng" }
 colour_math_gtk_ng = { path = "../colour_math_gtk_ng" }
+colour_math_derive = { path = "../colour_math_derive" }

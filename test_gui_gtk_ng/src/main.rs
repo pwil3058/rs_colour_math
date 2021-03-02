@@ -145,3 +145,42 @@ fn main() {
     win.show();
     gtk::main()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use colour_math_derive::*;
+    use colour_math_ng::*;
+
+    #[derive(Colour)]
+    pub struct ColourWrapper {
+        colour: HCV,
+        _dummy: u64,
+    }
+
+    #[derive(Colour)]
+    pub struct RGBWrapper {
+        _dummy: u64,
+        #[colour]
+        rgb: RGB<u64>,
+    }
+
+    #[test]
+    fn colour_wrapper() {
+        let colour_wrapper = ColourWrapper {
+            colour: HCV::YELLOW,
+            _dummy: 0,
+        };
+        assert_eq!(colour_wrapper.rgb::<u64>(), RGB::<u64>::YELLOW);
+    }
+
+    #[test]
+    fn rgb_wrapper() {
+        let rgb_wrapper = RGBWrapper {
+            rgb: RGB::CYAN,
+            _dummy: 0,
+        };
+        assert_eq!(rgb_wrapper.hcv(), HCV::CYAN);
+    }
+}
