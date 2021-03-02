@@ -97,14 +97,12 @@ impl HCV {
             if hue.sum_and_chroma_are_compatible(self.sum, self.chroma) {
                 true
             } else {
-                println!("incompatible sum and chroma");
                 false
             }
         } else {
             if self.chroma == Chroma::ZERO && self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0 {
                 true
             } else {
-                println!("bad grey");
                 false
             }
         }

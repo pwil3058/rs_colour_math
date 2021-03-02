@@ -148,7 +148,7 @@ fn incr_chroma_clamped() {
             expected = (manipulator.hcv.chroma.prop() + incr)
                 .min(max_chroma.prop().into())
                 .into();
-            assert_eq!(manipulator.hcv.sum, start_sum);
+            assert_approx_eq!(manipulator.hcv.sum, start_sum);
             assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
         }
         assert!(!manipulator.hcv.is_grey());
@@ -156,7 +156,7 @@ fn incr_chroma_clamped() {
             manipulator.hcv.chroma,
             saved_hue.max_chroma_for_sum(start_sum).unwrap()
         );
-        assert_eq!(manipulator.hcv.sum, start_sum);
+        assert_approx_eq!(manipulator.hcv.sum, start_sum);
         assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
     }
 }
