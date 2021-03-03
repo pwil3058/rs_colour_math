@@ -11,7 +11,7 @@ use pw_gix::{
     wrapper::*,
 };
 
-use colour_math_cairo_ng::Point;
+use colour_math_cairo::Point;
 
 use crate::{
     colour::{

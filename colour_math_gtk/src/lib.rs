@@ -5,11 +5,11 @@ pub mod hue_wheel;
 pub mod manipulator;
 pub mod rgb_entry;
 
-pub use colour_math_cairo_ng;
+pub use colour_math_cairo;
 
 pub mod colour {
-    use colour_math_ng::ManipulatedColour;
-    pub use colour_math_ng::{
+    use colour_math::ManipulatedColour;
+    pub use colour_math::{
         beigui::{
             self, attr_display,
             hue_wheel::{ColouredShape, HueWheel},
@@ -21,7 +21,7 @@ pub mod colour {
     };
     use pw_gix::gdk;
 
-    pub trait GdkColour: colour_math_ng::ColourIfce {
+    pub trait GdkColour: colour_math::ColourIfce {
         fn gdk_rgba(&self) -> gdk::RGBA {
             let rgb = self.rgb::<f64>();
             gdk::RGBA {
@@ -105,7 +105,7 @@ pub mod attributes {
         wrapper::*,
     };
 
-    use colour_math_cairo_ng::{Drawer, Size};
+    use colour_math_cairo::{Drawer, Size};
 
     use crate::colour::{attr_display, GdkColour, ScalarAttribute, RGB};
 

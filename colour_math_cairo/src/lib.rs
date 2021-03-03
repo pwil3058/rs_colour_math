@@ -4,8 +4,8 @@ use std::{cell::Cell, ops::Add};
 
 use pw_gix::cairo;
 
-use colour_math_ng::beigui::DrawShapes;
-use colour_math_ng::{
+use colour_math::beigui::DrawShapes;
+use colour_math::{
     beigui::{self, Draw, DrawIsosceles},
     ColourBasics, Prop, RGBConstants, UFDRNumber, CCI, HCV, RGB,
 };

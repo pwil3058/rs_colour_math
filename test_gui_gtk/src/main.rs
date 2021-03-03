@@ -15,7 +15,7 @@ use pw_gix::{
     wrapper::*,
 };
 
-const DEFAULT_CONFIG_DIR_PATH: &str = "~/.config/test_gui_gtk_ng";
+const DEFAULT_CONFIG_DIR_PATH: &str = "~/.config/test_gui_gtk";
 
 const DCDP_OVERRIDE_ENVAR: &str = "COLOUR_MATH_NG_TEST_GUI_GTK_CONFIG_DIR";
 
@@ -46,7 +46,7 @@ pub fn recollection_file_path() -> PathBuf {
     gui_config_dir_path().join("recollections")
 }
 
-use colour_math_gtk_ng::{
+use colour_math_gtk::{
     attributes::ColourAttributeDisplayStackBuilder,
     colour::{
         beigui::hue_wheel::Shape, ColouredShape, HueConstants, Prop, ScalarAttribute, HCV, RGB,
@@ -151,7 +151,7 @@ mod tests {
     use super::*;
 
     use colour_math_derive::*;
-    use colour_math_ng::*;
+    use colour_math::*;
 
     #[derive(Colour)]
     pub struct ColourWrapper {

@@ -14,7 +14,7 @@ use pw_gix::{
     wrapper::*,
 };
 
-use colour_math_cairo_ng::*;
+use colour_math_cairo::*;
 
 use crate::{
     attributes::{AttributeSelector, AttributeSelectorBuilder},

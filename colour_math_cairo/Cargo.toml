@@ -1,5 +1,5 @@
 [package]
-name = "colour_math_cairo_ng"
+name = "colour_math_cairo"
 version = "0.1.0"
 authors = ["Peter Williams <pwil3058@gmail.com>"]
 edition = "2018"
@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
 
-colour_math_ng = { path = "../colour_math_ng" }
+colour_math = { path = "../colour_math" }
