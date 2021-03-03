@@ -1,15 +1,15 @@
 [workspace]
 
 members = [
-    "colour_math",
+#    "colour_math",
     "colour_math_ng",
-    "colour_math_cairo",
+#    "colour_math_cairo",
     "colour_math_cairo_ng",
     "colour_math_derive",
-    "colour_math_gdk_pixbuf",
-    "colour_math_gtk",
+#    "colour_math_gdk_pixbuf",
+#    "colour_math_gtk",
     "colour_math_gtk_ng",
-    "test_gdk_pixbuf",
-    "test_gui_gtk",
+#    "test_gdk_pixbuf",
+#    "test_gui_gtk",
     "test_gui_gtk_ng",
 ]
