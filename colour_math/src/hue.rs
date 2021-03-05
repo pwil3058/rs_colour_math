@@ -851,7 +851,7 @@ impl SextantHue {
                             None
                         } else {
                             let new_max_sum = self.max_sum_for_chroma_prop(new_c_prop);
-                            Some((Chroma::Tint(new_c_prop ), new_max_sum))
+                            Some((Chroma::Tint(new_c_prop), new_max_sum))
                         }
                     } else {
                         Some((Chroma::Tint(c_prop), sum))

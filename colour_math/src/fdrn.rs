@@ -119,10 +119,10 @@ impl Div for FDRNumber {
     }
 }
 
-impl Div<u8> for FDRNumber {
+impl Div<i32> for FDRNumber {
     type Output = Self;
 
-    fn div(self, rhs: u8) -> Self {
+    fn div(self, rhs: i32) -> Self {
         Self(self.0.div(rhs as i128))
     }
 }
@@ -172,10 +172,10 @@ impl Mul for FDRNumber {
     }
 }
 
-impl Mul<u8> for FDRNumber {
+impl Mul<i32> for FDRNumber {
     type Output = Self;
 
-    fn mul(self, rhs: u8) -> Self {
+    fn mul(self, rhs: i32) -> Self {
         Self(self.0.mul(rhs as i128))
     }
 }
@@ -381,6 +381,15 @@ impl Mul for UFDRNumber {
     }
 }
 
+impl Mul<i32> for UFDRNumber {
+    type Output = Self;
+
+    fn mul(self, rhs: i32) -> Self {
+        debug_assert!(rhs >= 0);
+        Self(self.0.mul(rhs as u128))
+    }
+}
+
 impl Div for UFDRNumber {
     type Output = Self;
 
@@ -392,11 +401,12 @@ impl Div for UFDRNumber {
     }
 }
 
-impl Div<u8> for UFDRNumber {
+impl Div<i32> for UFDRNumber {
     type Output = Self;
 
-    fn div(self, rhs: u8) -> Self {
-        Self(self.0 / rhs as u128)
+    fn div(self, rhs: i32) -> Self {
+        debug_assert!(rhs >= 0);
+        Self(self.0.div(rhs as u128))
     }
 }
 

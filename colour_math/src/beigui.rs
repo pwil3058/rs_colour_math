@@ -139,62 +139,62 @@ pub trait DrawIsosceles: Draw {
         height: UFDRNumber,
         fill: bool,
     ) {
-        let half_base = base / 2;
-        let half_height = height / 2;
+        let half_base = FDRNumber::from(base / 2);
+        let half_height = FDRNumber::from(height / 2);
         let points = match dirn {
             Dirn::Up => vec![
                 Point {
-                    x: centre.x - half_base.into(),
-                    y: centre.y - half_height.into(),
+                    x: centre.x - half_base,
+                    y: centre.y - half_height,
                 },
                 Point {
                     x: centre.x,
-                    y: centre.y + half_height.into(),
+                    y: centre.y + half_height,
                 },
                 Point {
-                    x: centre.x + half_base.into(),
-                    y: centre.y - half_height.into(),
+                    x: centre.x + half_base,
+                    y: centre.y - half_height,
                 },
             ],
             Dirn::Down => vec![
                 Point {
-                    x: centre.x - half_base.into(),
-                    y: centre.y + half_height.into(),
+                    x: centre.x - half_base,
+                    y: centre.y + half_height,
                 },
                 Point {
                     x: centre.x,
-                    y: centre.y - half_height.into(),
+                    y: centre.y - half_height,
                 },
                 Point {
-                    x: centre.x + half_base.into(),
-                    y: centre.y + half_height.into(),
+                    x: centre.x + half_base,
+                    y: centre.y + half_height,
                 },
             ],
             Dirn::Right => vec![
                 Point {
-                    x: centre.x - half_height.into(),
-                    y: centre.y - half_base.into(),
+                    x: centre.x - half_height,
+                    y: centre.y - half_base,
                 },
                 Point {
-                    x: centre.x - half_height.into(),
-                    y: centre.y + half_base.into(),
+                    x: centre.x - half_height,
+                    y: centre.y + half_base,
                 },
                 Point {
-                    x: centre.x + half_height.into(),
+                    x: centre.x + half_height,
                     y: centre.y,
                 },
             ],
             Dirn::Left => vec![
                 Point {
-                    x: centre.x + half_height.into(),
-                    y: centre.y - half_base.into(),
+                    x: centre.x + half_height,
+                    y: centre.y - half_base,
                 },
                 Point {
-                    x: centre.x + half_height.into(),
-                    y: centre.y + half_base.into(),
+                    x: centre.x + half_height,
+                    y: centre.y + half_base,
                 },
                 Point {
-                    x: centre.x - half_height.into(),
+                    x: centre.x - half_height,
                     y: centre.y,
                 },
             ],
@@ -208,22 +208,22 @@ pub trait DrawShapes: DrawIsosceles {
     fn draw_circle(&self, centre: Point, radius: UFDRNumber, fill: bool);
 
     fn draw_diamond(&self, centre: Point, side_length: UFDRNumber, fill: bool) {
-        let dist = side_length / 2;
+        let dist = FDRNumber::from(side_length / 2);
         let points = vec![
             Point {
                 x: centre.x,
-                y: centre.y + dist.into(),
+                y: centre.y + dist,
             },
             Point {
-                x: centre.x + dist.into(),
+                x: centre.x + dist,
                 y: centre.y,
             },
             Point {
                 x: centre.x,
-                y: centre.y - dist.into(),
+                y: centre.y - dist,
             },
             Point {
-                x: centre.x - dist.into(),
+                x: centre.x - dist,
                 y: centre.y,
             },
         ];
@@ -231,85 +231,85 @@ pub trait DrawShapes: DrawIsosceles {
     }
 
     fn draw_square(&self, centre: Point, side_length: UFDRNumber, fill: bool) {
-        let half_side = side_length / 2;
+        let half_side = FDRNumber::from(side_length / 2);
         let points = vec![
             Point {
-                x: centre.x - half_side.into(),
-                y: centre.y - half_side.into(),
+                x: centre.x - half_side,
+                y: centre.y - half_side,
             },
             Point {
-                x: centre.x - half_side.into(),
-                y: centre.y + half_side.into(),
+                x: centre.x - half_side,
+                y: centre.y + half_side,
             },
             Point {
-                x: centre.x + half_side.into(),
-                y: centre.y + half_side.into(),
+                x: centre.x + half_side,
+                y: centre.y + half_side,
             },
             Point {
-                x: centre.x + half_side.into(),
-                y: centre.y - half_side.into(),
+                x: centre.x + half_side,
+                y: centre.y - half_side,
             },
         ];
         self.draw_polygon(&points, fill);
     }
 
     fn draw_equilateral(&self, centre: Point, dirn: Dirn, side_length: UFDRNumber, fill: bool) {
-        let half_base = side_length / 2;
-        let half_height = side_length * UFDRNumber::SQRT_3 / 4;
+        let half_base = FDRNumber::from(side_length / 2);
+        let half_height = FDRNumber::from(side_length * UFDRNumber::SQRT_3 / 4);
         let points = match dirn {
             Dirn::Up => vec![
                 Point {
-                    x: centre.x - half_base.into(),
-                    y: centre.y - half_height.into(),
+                    x: centre.x - half_base,
+                    y: centre.y - half_height,
                 },
                 Point {
                     x: centre.x,
-                    y: centre.y + half_height.into(),
+                    y: centre.y + half_height,
                 },
                 Point {
-                    x: centre.x + half_base.into(),
-                    y: centre.y - half_height.into(),
+                    x: centre.x + half_base,
+                    y: centre.y - half_height,
                 },
             ],
             Dirn::Down => vec![
                 Point {
-                    x: centre.x - half_base.into(),
-                    y: centre.y + half_height.into(),
+                    x: centre.x - half_base,
+                    y: centre.y + half_height,
                 },
                 Point {
                     x: centre.x,
-                    y: centre.y - half_height.into(),
+                    y: centre.y - half_height,
                 },
                 Point {
-                    x: centre.x + half_base.into(),
-                    y: centre.y + half_height.into(),
+                    x: centre.x + half_base,
+                    y: centre.y + half_height,
                 },
             ],
             Dirn::Right => vec![
                 Point {
-                    x: centre.x - half_height.into(),
-                    y: centre.y - half_base.into(),
+                    x: centre.x - half_height,
+                    y: centre.y - half_base,
                 },
                 Point {
-                    x: centre.x - half_height.into(),
-                    y: centre.y + half_base.into(),
+                    x: centre.x - half_height,
+                    y: centre.y + half_base,
                 },
                 Point {
-                    x: centre.x + half_height.into(),
+                    x: centre.x + half_height,
                     y: centre.y,
                 },
             ],
             Dirn::Left => vec![
                 Point {
-                    x: centre.x + half_height.into(),
-                    y: centre.y - half_base.into(),
+                    x: centre.x + half_height,
+                    y: centre.y - half_base,
                 },
                 Point {
-                    x: centre.x + half_height.into(),
-                    y: centre.y + half_base.into(),
+                    x: centre.x + half_height,
+                    y: centre.y + half_base,
                 },
                 Point {
-                    x: centre.x - half_height.into(),
+                    x: centre.x - half_height,
                     y: centre.y,
                 },
             ],
@@ -318,25 +318,25 @@ pub trait DrawShapes: DrawIsosceles {
     }
 
     fn draw_plus_sign(&self, centre: Point, side_length: UFDRNumber) {
-        let half_side = side_length / 2;
+        let half_side = FDRNumber::from(side_length / 2);
         let points = vec![
             Point {
                 x: centre.x,
-                y: centre.y - half_side.into(),
+                y: centre.y - half_side,
             },
             Point {
                 x: centre.x,
-                y: centre.y + half_side.into(),
+                y: centre.y + half_side,
             },
         ];
         self.draw_line(&points);
         let points = vec![
             Point {
-                x: centre.x - half_side.into(),
+                x: centre.x - half_side,
                 y: centre.y,
             },
             Point {
-                x: centre.x + half_side.into(),
+                x: centre.x + half_side,
                 y: centre.y,
             },
         ];

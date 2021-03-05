@@ -95,7 +95,7 @@ fn ufdrn_sub() {
 
 #[test]
 fn ufdrn_div_u8() {
-    for (a, b) in &[(0.9_f64, 3_u8), (0.6, 2), (0.3, 2)] {
+    for (a, b) in &[(0.9_f64, 3), (0.6, 2), (0.3, 2)] {
         let expected = UFDRNumber::from(*a / *b as f64);
         println!("{:?} / {:?} = {:?} : {:?}", a, b, a / *b as f64, expected);
         let result = UFDRNumber::from(*a) / *b;
