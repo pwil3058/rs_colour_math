@@ -193,7 +193,7 @@ impl RGBHue {
                 Ordering::Greater => {
                     let max_sum = self.max_sum_for_chroma_prop(c_prop);
                     if sum > max_sum {
-                        let new_c_prop: Prop =((UFDRNumber::THREE - sum) / 2).into();
+                        let new_c_prop: Prop = ((UFDRNumber::THREE - sum) / 2).into();
                         if new_c_prop == Prop::ZERO {
                             None
                         } else {
@@ -844,7 +844,8 @@ impl SextantHue {
                 Ordering::Greater => {
                     let max_sum = self.max_sum_for_chroma_prop(c_prop);
                     if sum > max_sum {
-                        let new_c_prop: Prop = ((UFDRNumber::THREE - sum) / (UFDRNumber::TWO - self.1)).into();
+                        let new_c_prop: Prop =
+                            ((UFDRNumber::THREE - sum) / (UFDRNumber::TWO - self.1)).into();
                         // Rounding errors from the division can result in the chroma and sum
                         // still being incompatible so we'll fudge
                         if new_c_prop == Prop::ZERO {
@@ -976,18 +977,7 @@ impl SextantHue {
 
 impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
     fn from(arg: (Sextant, &RGB<T>)) -> Self {
-        use Sextant::*;
-        let [red, green, blue] = <[Prop; 3]>::from(*arg.1);
-        let other = match arg.0 {
-            RedMagenta => (blue - green) / (red - green),
-            RedYellow => (green - blue) / (red - blue),
-            GreenYellow => (red - blue) / (green - blue),
-            GreenCyan => (blue - red) / (green - red),
-            BlueCyan => (green - red) / (blue - red),
-            BlueMagenta => (red - green) / (blue - green),
-        };
-        debug_assert!(other > Prop::ZERO && other < Prop::ONE);
-        Self(arg.0, other)
+        Self::from((arg.0, <[Prop; 3]>::from(*arg.1)))
     }
 }
 
@@ -1003,7 +993,9 @@ impl From<(Sextant, [Prop; 3])> for SextantHue {
             BlueCyan => (green - red) / (blue - red),
             BlueMagenta => (red - green) / (blue - green),
         };
-        Self(arg.0, other)
+        // debug_assert!(other > Prop::ZERO && other < Prop::ONE);
+        // NB: instead of crashing on division rounding errors fix the problem
+        Self(arg.0, other.max(Prop::ALMOST_ZERO).min(Prop::ALMOST_ONE))
     }
 }
 
