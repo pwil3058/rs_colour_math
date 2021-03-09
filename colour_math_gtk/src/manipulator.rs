@@ -7,7 +7,7 @@ use std::{
 use pw_gix::{
     cairo, gdk, gdk_pixbuf,
     gtk::{self, prelude::*, DrawingAreaBuilder},
-    gtkx::menu::WrappedMenu,
+    gtkx::menu_ng::{WrappedMenu, WrappedMenuBuilder, MenuItemSpec},
     wrapper::*,
 };
 
@@ -277,7 +277,7 @@ impl ColourManipulatorGUIBuilder {
             samples: RefCell::new(vec![]),
             auto_match_btn: gtk::Button::with_label("Auto Match"),
             auto_match_on_paste_btn: gtk::CheckButton::with_label("On Paste?"),
-            popup_menu: WrappedMenu::new(&[]),
+            popup_menu: WrappedMenuBuilder::new().build(),
             popup_menu_posn: Cell::new((0.0, 0.0).into()),
             change_callbacks: RefCell::new(Vec::new()),
         });
@@ -372,14 +372,15 @@ impl ColourManipulatorGUIBuilder {
             .connect_clicked(move |_| rgbm_gui_c.auto_match_samples());
 
         // POPUP
+        let menu_item_spec = MenuItemSpec::from((
+            "Paste Sample",
+            None,
+            Some("Paste image sample from the clipboard at this position"),
+        ));
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui
             .popup_menu
-            .append_item(
-                "paste",
-                "Paste Sample",
-                "Paste image sample from the clipboard at this position",
-            )
+            .append_item("paste", &menu_item_spec)
             .connect_activate(move |_| {
                 let cbd = gtk::Clipboard::get(&gdk::SELECTION_CLIPBOARD);
                 if let Some(pixbuf) = cbd.wait_for_image() {
@@ -398,14 +399,15 @@ impl ColourManipulatorGUIBuilder {
                     rgbm_gui_c.inform_user("No image data on clipboard.", None);
                 }
             });
+        let menu_item_spec = MenuItemSpec::from((
+            "Remove Sample(s)",
+            None,
+            Some("Remove all image samples from the sample area"),
+        ));
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui
             .popup_menu
-            .append_item(
-                "remove",
-                "Remove Sample(s)",
-                "Remove all image samples from the sample area",
-            )
+            .append_item("remove", &menu_item_spec)
             .connect_activate(move |_| {
                 rgbm_gui_c.samples.borrow_mut().clear();
                 rgbm_gui_c.drawing_area.queue_draw();

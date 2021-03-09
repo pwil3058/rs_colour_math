@@ -150,8 +150,8 @@ fn main() {
 mod tests {
     use super::*;
 
-    use colour_math_derive::*;
     use colour_math::*;
+    use colour_math_derive::*;
 
     #[derive(Colour)]
     pub struct ColourWrapper {
