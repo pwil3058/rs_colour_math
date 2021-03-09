@@ -897,14 +897,13 @@ impl SextantHue {
     pub fn array_for_sum_and_chroma(&self, sum: UFDRNumber, chroma: Chroma) -> Option<[Prop; 3]> {
         debug_assert!(sum.is_valid_sum());
         let max_chroma_sum = UFDRNumber::ONE + self.1;
-        let (first, second, third) = match sum.cmp(&max_chroma_sum) {
+        // check sum and chroma are compatible
+        match sum.cmp(&max_chroma_sum) {
             Ordering::Equal => match chroma {
-                Chroma::ZERO => return None,
                 Chroma::Neither(c_prop) => {
-                    let third = (sum - max_chroma_sum * c_prop) / 3;
-                    let first = third + c_prop;
-                    let second = sum - first - third;
-                    (first, second, third)
+                    if c_prop == Prop::ZERO {
+                        return None;
+                    }
                 }
                 _ => return None,
             },
@@ -912,30 +911,23 @@ impl SextantHue {
                 Chroma::Shade(c_prop) => {
                     if sum < max_chroma_sum * c_prop {
                         return None;
-                    } else {
-                        let third = (sum - max_chroma_sum * c_prop) / 3;
-                        let first = third + c_prop;
-                        let second = sum - first - third;
-                        (first, second, third)
                     }
                 }
                 _ => return None,
             },
             Ordering::Greater => match chroma {
                 Chroma::Tint(c_prop) => {
-                    if sum <= self.max_sum_for_chroma_prop(c_prop) {
-                        let third = (sum - max_chroma_sum * c_prop) / 3;
-                        let first = third + c_prop;
-                        let second = sum - first - third;
-                        (first, second, third)
-                    } else {
+                    if sum > self.max_sum_for_chroma_prop(c_prop) {
                         return None;
                     }
                 }
                 _ => return None,
             },
-        };
+        }
+        let third = (sum - max_chroma_sum * chroma.prop()) / 3;
+        let first = third + chroma.prop();
         if first.is_proportion() {
+            let second = sum - first - third;
             debug_assert!(first > second && second > third);
             debug_assert_eq!(first + second + third, sum);
             debug_assert_eq!(first - third, chroma.prop().into());
