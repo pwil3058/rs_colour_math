@@ -113,7 +113,7 @@ pub(crate) trait HueIfce {
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>>;
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
     fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
@@ -386,7 +386,7 @@ impl HueIfce for RGBHue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
@@ -696,7 +696,7 @@ impl HueIfce for CMYHue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
@@ -1125,7 +1125,7 @@ impl HueIfce for SextantHue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
@@ -1392,15 +1392,15 @@ impl HueIfce for Hue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
     ) -> Option<RGB<T>> {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.rgb_for_sum_and_chroma(sum, chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.rgb_for_sum_and_chroma(sum, chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.rgb_for_sum_and_chroma(sum, chroma),
+            Self::Primary(rgb_hue) => rgb_hue.rgb_for_sum_and_chroma_prop(sum, chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.rgb_for_sum_and_chroma_prop(sum, chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.rgb_for_sum_and_chroma_prop(sum, chroma),
         }
     }
 }

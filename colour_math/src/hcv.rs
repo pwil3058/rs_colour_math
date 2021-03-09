@@ -315,13 +315,13 @@ impl<L: LightLevel> From<RGB<L>> for HCV {
 
 impl<L: LightLevel> From<HCV> for RGB<L> {
     fn from(hcv: HCV) -> Self {
-        hcv.rgb::<L>()
+        RGB::<L>::from(<[Prop; 3]>::from(hcv))
     }
 }
 
 impl<L: LightLevel> From<&HCV> for RGB<L> {
     fn from(hcv: &HCV) -> Self {
-        hcv.rgb::<L>()
+        RGB::<L>::from(*hcv)
     }
 }
 
@@ -359,13 +359,7 @@ impl ColourBasics for HCV {
     }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
-        //debug_assert!(self.is_valid());
-        if let Some(hue) = self.hue {
-            hue.rgb_for_sum_and_chroma::<L>(self.sum, self.chroma)
-                .expect("Assume that we're valid and there must be an equivalent RGB")
-        } else {
-            RGB::new_grey(self.value())
-        }
+        self.into()
     }
 
     fn hcv(&self) -> HCV {
