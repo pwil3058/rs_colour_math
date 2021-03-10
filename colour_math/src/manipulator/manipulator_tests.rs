@@ -64,10 +64,6 @@ fn set_get_parameters() {
             for blue in &ll_list {
                 let rgb = RGB::<u8>::from([*red, *green, *blue]);
                 manipualor.set_colour(&rgb);
-                println!(
-                    "[{:?}, {:?}, {:?}] -> {:?}",
-                    red, green, blue, manipualor.hcv
-                );
                 assert_eq!(rgb, manipualor.rgb());
             }
         }
@@ -139,10 +135,7 @@ fn incr_chroma_clamped() {
         let mut expected: Prop = (manipulator.hcv.chroma.prop() + incr)
             .min(max_chroma.prop().into())
             .into();
-        println!("Max: {:?}", max_chroma);
-        println! {"HCV: {:?} incr: {:?} expected: {:?}", manipulator.hcv, incr, expected};
         while manipulator.incr_chroma(incr) {
-            println! {"HCV: {:?} incr: {:?} expected: {:?}", manipulator.hcv, incr, expected};
             assert_eq!(manipulator.hcv.chroma.prop(), expected);
             max_chroma = saved_hue.max_chroma_for_sum(manipulator.hcv.sum).unwrap();
             expected = (manipulator.hcv.chroma.prop() + incr)

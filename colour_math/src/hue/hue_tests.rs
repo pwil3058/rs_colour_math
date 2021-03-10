@@ -188,7 +188,6 @@ fn hue_max_chroma_rgb() {
     ] {
         let rgb = RGB::<f64>::from(*array);
         let hue = Hue::Sextant(SextantHue(*sextant, *second));
-        println!("{:?} {:?} {:?} {:?}", rgb, sextant, second, hue);
         assert_eq!(Hue::try_from(&rgb), Ok(hue));
     }
 }
@@ -530,7 +529,6 @@ fn other_max_chroma_rgbs() {
 #[test]
 fn min_max_sum_rgb_for_chroma() {
     for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<f64>::PRIMARIES.iter()) {
-        println!("{:?} : {:?}", hue, expected_rgb);
         assert_eq!(
             hue.min_sum_rgb_for_chroma::<f64>(Chroma::ONE),
             *expected_rgb
@@ -551,7 +549,6 @@ fn min_max_sum_rgb_for_chroma() {
     for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
         let prop = Prop::from(0.5_f64);
         let chroma = Chroma::Neither(prop);
-        println!("{:?} : {:?}", hue, expected_rgb);
         assert_eq!(hue.min_sum_rgb_for_chroma(Chroma::ONE), *expected_rgb);
         assert_eq!(hue.max_sum_rgb_for_chroma(Chroma::ONE), *expected_rgb);
         let shade = hue.min_sum_rgb_for_chroma(chroma);
@@ -606,13 +603,6 @@ fn primary_rgb_for_sum_and_chroma_prop() {
         for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
             for sum in VALID_OTHER_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
                 let chroma = Chroma::from((prop, *hue, sum));
-                println!(
-                    "Chroma: {:?} sum: {:?} hue: {:?} {:?}",
-                    chroma,
-                    sum,
-                    hue,
-                    hue.sum_for_max_chroma()
-                );
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma_prop::<u64>(sum, chroma) {
                     // NB: expect rounding error due to divide by 3 in the maths
                     assert_approx_eq!(rgb.sum(), sum, 0x0000000000005000);
@@ -625,7 +615,6 @@ fn primary_rgb_for_sum_and_chroma_prop() {
                     assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
                     let range = hue.sum_range_for_chroma_prop(chroma.prop()).unwrap();
-                    println!("{:?}, {:?}, {:?} : {:?}", *hue, sum, chroma, range);
                     assert!(range.compare_sum(sum).is_failure());
                 }
             }
