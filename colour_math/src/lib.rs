@@ -12,6 +12,7 @@ pub mod fdrn;
 pub mod hcv;
 pub mod hue;
 pub mod manipulator;
+pub mod mixing;
 pub mod proportion;
 pub mod rgb;
 
