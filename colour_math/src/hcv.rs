@@ -8,7 +8,7 @@ use std::{
 use crate::hue::{CMYHue, RGBHue, Sextant};
 use crate::{
     fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
-    HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants,
+    HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,
 };
 
 #[derive(Debug, Clone, Copy, Eq, Ord, Default, Serialize, Deserialize)]
@@ -84,7 +84,7 @@ impl HCV {
         }
     }
 
-    pub fn new_grey(value: Prop) -> Self {
+    pub fn new_grey(value: Value) -> Self {
         Self::new_grey_sum(value * 3)
     }
 
@@ -346,7 +346,7 @@ impl ColourBasics for HCV {
         self.chroma
     }
 
-    fn value(&self) -> Prop {
+    fn value(&self) -> Value {
         (self.sum / 3).into()
     }
 
@@ -377,6 +377,7 @@ impl ManipulatedColour for HCV {
         let rgb = RGB::<u64>::from(self).darkened(prop);
         HCV::from(rgb)
     }
+
     fn saturated(&self, prop: Prop) -> Self {
         if let Some(hue) = self.hue {
             let new_chroma = match self.chroma {

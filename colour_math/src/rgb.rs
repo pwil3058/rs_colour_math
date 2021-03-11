@@ -16,7 +16,7 @@ use crate::{
     hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
     proportion::Warmth,
     Angle, Chroma, ColourBasics, Float, HueConstants, LightLevel, ManipulatedColour, Prop,
-    RGBConstants, CCI, HCV,
+    RGBConstants, Value, CCI, HCV,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -47,7 +47,8 @@ impl<T: LightLevel> RGBConstants for RGB<T> {
 }
 
 impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
-    pub fn new_grey(value: Prop) -> Self {
+    pub fn new_grey(value: Value) -> Self {
+        let value: Prop = value.into();
         Self::from([value, value, value])
     }
 
@@ -112,7 +113,7 @@ impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
             Chroma::ZERO
         }
     }
-    fn value(&self) -> Prop {
+    fn value(&self) -> Value {
         (self.sum() / 3).into()
     }
 

@@ -49,7 +49,7 @@ pub fn recollection_file_path() -> PathBuf {
 use colour_math_gtk::{
     attributes::ColourAttributeDisplayStackBuilder,
     colour::{
-        beigui::hue_wheel::Shape, ColouredShape, HueConstants, Prop, ScalarAttribute, HCV, RGB,
+        beigui::hue_wheel::Shape, ColouredShape, HueConstants, ScalarAttribute, Value, HCV, RGB,
     },
     colour_edit::ColourEditorBuilder,
     hue_wheel::GtkHueWheelBuilder,
@@ -126,7 +126,7 @@ fn main() {
         Shape::Diamond,
     ));
     gtk_hue_wheel.add_item(ColouredShape::new(
-        &HCV::new_grey(Prop::ONE / 2),
+        &HCV::new_grey(Value::ONE / 2),
         "Grey",
         "Midle Grey",
         Shape::Circle,

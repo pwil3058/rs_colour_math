@@ -471,8 +471,8 @@ impl Warmth {
         ((UFDRNumber::THREE - sum) / 6).into()
     }
 
-    pub fn calculate_monochrome(value: Prop) -> Self {
-        ((Prop::ONE - value) / 2).into()
+    pub fn calculate_monochrome(value: Value) -> Self {
+        ((Prop::ONE - Prop::from(value)) / 2).into()
     }
 
     pub fn abs_diff(&self, other: &Self) -> Warmth {
@@ -508,3 +508,64 @@ impl From<Warmth> for Prop {
 
 impl_to_from_number!(UFDRNumber, u128, Warmth);
 impl_to_from_number!(FDRNumber, i128, Warmth);
+
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
+)]
+pub struct Value(pub(crate) u64);
+
+impl Value {
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(u64::MAX);
+
+    pub fn abs_diff(&self, other: &Self) -> Value {
+        match self.cmp(other) {
+            Ordering::Greater => Value(self.0 - other.0),
+            Ordering::Less => Value(other.0 - self.0),
+            Ordering::Equal => Value(0),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Value {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+        Prop::from(*self).approx_eq(&(*other).into(), acceptable_rounding_error)
+    }
+}
+
+impl Div<i32> for Value {
+    type Output = Value;
+
+    fn div(self, rhs: i32) -> Self {
+        debug_assert!(rhs >= 0);
+        Self(self.0 / rhs as u64)
+    }
+}
+
+impl Mul<i32> for Value {
+    type Output = UFDRNumber;
+
+    fn mul(self, rhs: i32) -> UFDRNumber {
+        debug_assert!(rhs >= 0);
+        UFDRNumber(self.0 as u128 * rhs as u128)
+    }
+}
+
+impl_to_from_float!(f32, Value);
+impl_to_from_float!(f64, Value);
+
+impl From<Prop> for Value {
+    fn from(prop: Prop) -> Self {
+        Self(prop.0)
+    }
+}
+
+impl From<Value> for Prop {
+    fn from(value: Value) -> Self {
+        Self(value.0)
+    }
+}
+
+impl_to_from_number!(UFDRNumber, u128, Value);
+impl_to_from_number!(FDRNumber, i128, Value);

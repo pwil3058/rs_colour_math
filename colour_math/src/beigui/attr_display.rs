@@ -4,7 +4,7 @@ use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
     hue::HueIfce,
-    Chroma, ColourBasics, Greyness, Hue, HueConstants, Prop, RGBConstants, Warmth, HCV,
+    Chroma, ColourBasics, Greyness, Hue, HueConstants, Prop, RGBConstants, Value, Warmth, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {
@@ -268,7 +268,7 @@ impl ChromaCAD {
     }
 
     fn default_colour_stops() -> Vec<(HCV, Prop)> {
-        let grey = HCV::new_grey(Prop::HALF);
+        let grey = HCV::new_grey(Value::ONE / 2);
         vec![(grey, Prop::ZERO), (grey, Prop::ONE)]
     }
 }
@@ -277,7 +277,7 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
     const LABEL: &'static str = "Chroma";
 
     fn new() -> Self {
-        let grey = HCV::new_grey(Prop::HALF);
+        let grey = HCV::new_grey(Value::ONE / 2);
         Self {
             chroma: None,
             target_chroma: None,
@@ -363,8 +363,8 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
 
 // VALUE
 pub struct ValueCAD {
-    value: Option<Prop>,
-    target_value: Option<Prop>,
+    value: Option<Value>,
+    target_value: Option<Value>,
     value_fg_colour: HCV,
     target_value_fg_colour: HCV,
 }
@@ -392,7 +392,7 @@ impl ColourAttributeDisplayIfce for ValueCAD {
     }
 
     fn attr_value(&self) -> Option<Prop> {
-        self.value
+        Some(self.value?.into())
     }
 
     fn attr_value_fg_colour(&self) -> HCV {
@@ -410,7 +410,7 @@ impl ColourAttributeDisplayIfce for ValueCAD {
     }
 
     fn attr_target_value(&self) -> Option<Prop> {
-        self.target_value
+        Some(self.target_value?.into())
     }
 
     fn attr_target_value_fg_colour(&self) -> HCV {
@@ -447,7 +447,7 @@ impl GreynessCAD {
     }
 
     fn default_colour_stops() -> Vec<(HCV, Prop)> {
-        let grey = HCV::new_grey(Prop::HALF);
+        let grey = HCV::new_grey(Value::ONE / 2);
         vec![(grey, Prop::ZERO), (grey, Prop::ONE)]
     }
 }
@@ -456,7 +456,7 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
     const LABEL: &'static str = "Greyness";
 
     fn new() -> Self {
-        let grey = HCV::new_grey(Prop::HALF);
+        let grey = HCV::new_grey(Value::ONE / 2);
         Self {
             greyness: None,
             target_greyness: None,
@@ -612,7 +612,7 @@ impl ColourAttributeDisplayIfce for WarmthCAD {
         vec![
             (HCV::WHITE, Prop::ZERO),
             (HCV::CYAN, Prop::ONE / 4),
-            (HCV::new_grey(Prop::HALF), Prop::HALF),
+            (HCV::new_grey(Value::ONE / 2), Prop::HALF),
             (HCV::RED, Prop::ONE),
         ]
     }

@@ -8,7 +8,7 @@ use pw_gix::{
 
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
-    colour::{GdkColour, LightLevel, ManipGdkColour, Prop, ScalarAttribute, HCV, RGB},
+    colour::{GdkColour, LightLevel, ManipGdkColour, Value, ScalarAttribute, HCV, RGB},
     manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
     rgb_entry::{Hexable, RGBHexEntry, RGBHexEntryBuilder},
 };
@@ -111,7 +111,7 @@ impl ColourEditorBuilder {
             default_colour: if let Some(rgb) = self.default_colour {
                 rgb
             } else {
-                HCV::new_grey(Prop::ONE / 2)
+                HCV::new_grey(Value::ONE / 2)
             },
         });
 

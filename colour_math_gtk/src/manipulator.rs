@@ -7,7 +7,7 @@ use std::{
 use pw_gix::{
     cairo, gdk, gdk_pixbuf,
     gtk::{self, prelude::*, DrawingAreaBuilder},
-    gtkx::menu_ng::{WrappedMenu, WrappedMenuBuilder, MenuItemSpec},
+    gtkx::menu_ng::{MenuItemSpec, WrappedMenu, WrappedMenuBuilder},
     wrapper::*,
 };
 
@@ -16,7 +16,7 @@ use colour_math_cairo::Point;
 use crate::{
     colour::{
         Angle, ColourManipulator, ColourManipulatorBuilder, LightLevel, ManipGdkColour, Prop, CCI,
-        HCV, RGB,
+        HCV, RGB,Value
     },
     coloured::Colourable,
 };
@@ -183,7 +183,7 @@ impl ColourManipulatorGUI {
 
     pub fn reset(&self) {
         self.delete_samples();
-        self.set_colour_and_inform(&(HCV::new_grey(Prop::ONE / 2)));
+        self.set_colour_and_inform(&(HCV::new_grey(Value::ONE / 2)));
     }
 
     pub fn delete_samples(&self) {

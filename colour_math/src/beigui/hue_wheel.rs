@@ -5,8 +5,8 @@ use crate::{
     beigui::{DrawShapes, Point},
     fdrn::{FDRNumber, UFDRNumber},
     hue::HueIfce,
-    ColourAttributes, ColourBasics, Hue, HueConstants, LightLevel, Prop, RGBConstants,
-    ScalarAttribute, HCV, RGB,
+    ColourAttributes, ColourBasics, Hue, HueConstants, LightLevel, RGBConstants, ScalarAttribute,
+    Value, HCV, RGB,
 };
 
 #[derive(Debug)]
@@ -265,7 +265,7 @@ pub trait Graticule {
     }
 
     fn draw_graticule(&self, zoom: &Zoom, draw_shapes: &impl DrawShapes) {
-        draw_shapes.set_background_colour(&HCV::new_grey(Prop::HALF));
+        draw_shapes.set_background_colour(&HCV::new_grey(Value::ONE / 2));
         Self::draw_spokes(UFDRNumber::from(0.1), zoom, draw_shapes);
         Self::draw_rings(10, zoom, draw_shapes);
     }

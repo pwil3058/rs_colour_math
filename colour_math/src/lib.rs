@@ -20,7 +20,7 @@ pub use crate::{
     fdrn::UFDRNumber,
     hcv::HCV,
     hue::{angle::Angle, Hue},
-    proportion::{Chroma, Greyness, Prop, Warmth},
+    proportion::{Chroma, Greyness, Prop, Value, Warmth},
     rgb::RGB,
 };
 use hue::HueIfce;
@@ -157,7 +157,7 @@ pub trait ColourBasics {
     }
 
     fn chroma(&self) -> Chroma;
-    fn value(&self) -> Prop;
+    fn value(&self) -> Value;
 
     fn greyness(&self) -> Greyness {
         self.chroma().into()
@@ -187,7 +187,7 @@ pub trait ColourBasics {
             Chroma::Shade(_) => HCV::WHITE,
             Chroma::Tint(_) => HCV::BLACK,
             _ => {
-                if self.value() < Prop::ONE / 2 {
+                if self.value() < Value::ONE / 2 {
                     HCV::WHITE
                 } else {
                     HCV::BLACK
@@ -226,7 +226,7 @@ pub trait ColourAttributes: ColourBasics {
         match attr {
             ScalarAttribute::Chroma => self.chroma().prop(),
             ScalarAttribute::Greyness => Prop::ONE - self.chroma().prop(),
-            ScalarAttribute::Value => self.value(),
+            ScalarAttribute::Value => self.value().into(),
             ScalarAttribute::Warmth => self.warmth().into(),
         }
     }

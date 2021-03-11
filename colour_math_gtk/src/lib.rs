@@ -17,7 +17,7 @@ pub mod colour {
         },
         manipulator::{ColourManipulator, ColourManipulatorBuilder},
         Angle, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute, UnsignedLightLevel,
-        CCI, HCV, RGB,
+        Value, CCI, HCV, RGB,
     };
     use pw_gix::gdk;
 
