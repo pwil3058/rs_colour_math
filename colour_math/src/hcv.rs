@@ -370,11 +370,13 @@ impl ColourBasics for HCV {
 impl ManipulatedColour for HCV {
     fn lightened(&self, prop: Prop) -> Self {
         let rgb = RGB::<u64>::from(self).lightened(prop);
+        println!("lighten: {:?} -> {:?}", self, rgb);
         HCV::from(rgb)
     }
 
     fn darkened(&self, prop: Prop) -> Self {
         let rgb = RGB::<u64>::from(self).darkened(prop);
+        println!("darken: {:?} -> {:?}", self, rgb);
         HCV::from(rgb)
     }
 

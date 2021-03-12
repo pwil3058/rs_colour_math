@@ -418,5 +418,14 @@ impl Rem for UFDRNumber {
     }
 }
 
+impl Rem<i32> for UFDRNumber {
+    type Output = Self;
+
+    fn rem(self, rhs: i32) -> Self {
+        debug_assert!(rhs >= 0);
+        Self(self.0 % rhs as u128)
+    }
+}
+
 #[cfg(test)]
 mod fdrn_tests;

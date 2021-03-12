@@ -15,8 +15,8 @@ use colour_math_cairo::Point;
 
 use crate::{
     colour::{
-        Angle, ColourManipulator, ColourManipulatorBuilder, LightLevel, ManipGdkColour, Prop, CCI,
-        HCV, RGB,Value
+        Angle, ColourManipulator, ColourManipulatorBuilder, LightLevel, ManipGdkColour, Prop,
+        Value, CCI, HCV, RGB,
     },
     coloured::Colourable,
 };
@@ -104,20 +104,31 @@ pub struct ColourManipulatorGUI {
 impl ColourManipulatorGUI {
     pub fn set_colour(&self, colour: &impl ManipGdkColour) {
         self.colour_manipulator.borrow_mut().set_colour(colour);
+        println!(
+            "Manipulator: set colour {:?}: {:?}",
+            colour.hcv(),
+            colour.rgb::<u8>()
+        );
         let offset: Prop = (Prop::ONE / 10 * 2).into();
         self.incr_value_btn
             .set_widget_colour(&colour.lightened(offset));
+        println!("lightened");
         self.decr_value_btn
             .set_widget_colour(&colour.darkened(offset));
+        println!("darkened");
         self.decr_chroma_btn
             .set_widget_colour(&colour.greyed(offset));
+        println!("greyed");
         self.incr_chroma_btn
             .set_widget_colour(&colour.saturated(offset));
+        println!("saturated");
         let angle_offset = Angle::from(45);
         self.hue_left_btn
             .set_widget_colour(&colour.rotated(angle_offset));
+        println!("rotated left");
         self.hue_right_btn
             .set_widget_colour(&colour.rotated(-angle_offset));
+        println!("rotated right");
         self.drawing_area.queue_draw();
     }
 
