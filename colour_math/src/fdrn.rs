@@ -1,5 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
+use crate::Prop;
 use std::ops::Neg;
 use std::{
     cmp::Ordering,
@@ -257,6 +258,11 @@ impl UFDRNumber {
 
     pub fn is_proportion(self) -> bool {
         self <= Self::ONE
+    }
+
+    pub fn to_prop(&self) -> Prop {
+        debug_assert!(self.is_proportion());
+        Prop(self.0 as u64)
     }
 
     pub fn abs_diff(&self, other: &Self) -> UFDRNumber {

@@ -103,6 +103,7 @@ impl SunRange {
 
 pub(crate) trait HueBasics: Debug + Sized {
     fn sum_for_max_chroma(&self) -> UFDRNumber;
+    fn to_hue(&self) -> Hue;
 
     fn min_sum_for_chroma_prop(&self, c_prop: Prop) -> Option<UFDRNumber> {
         match c_prop {
@@ -143,6 +144,55 @@ pub(crate) trait HueBasics: Debug + Sized {
             }
         } else {
             None
+        }
+    }
+}
+
+pub(crate) trait OrderedTriplets: HueBasics {
+    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool;
+    fn rgb_ordered_triplet_for_sum_and_chroma(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<[Prop; 3]>;
+
+    fn ordered_triplet_for_sum_and_chroma(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<[Prop; 3]> {
+        if sum >= self.sum_for_max_chroma() * c_prop {
+            let third = (sum - self.sum_for_max_chroma() * c_prop) / 3;
+            let first = third + c_prop;
+            if first.is_proportion() {
+                let second = sum - first - third;
+                debug_assert_eq!(first + second + third, sum);
+                debug_assert_eq!(first - third, c_prop.into());
+                debug_assert_approx_eq!(first + second + third, sum_for_max_chroma * chroma.prop());
+                let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
+                debug_assert!(self.ordered_triplet_is_valid(&triplet));
+                Some(triplet)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn ordered_triplet_to_hcv(&self, triplet: &[Prop; 3]) -> HCV {
+        debug_assert!(self.ordered_triplet_is_valid(triplet));
+        let sum = triplet[0] + triplet[1] + triplet[2];
+        let c_prop = triplet[0] - triplet[2];
+        let chroma = match sum.cmp(&self.sum_for_max_chroma()) {
+            Ordering::Less => Chroma::Shade(c_prop),
+            Ordering::Equal => Chroma::Neither(c_prop),
+            Ordering::Greater => Chroma::Tint(c_prop),
+        };
+        HCV {
+            hue: Some(self.to_hue()),
+            chroma,
+            sum,
         }
     }
 }
@@ -283,6 +333,30 @@ pub enum RGBHue {
 impl HueBasics for RGBHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::ONE
+    }
+
+    fn to_hue(&self) -> Hue {
+        Hue::Primary(*self)
+    }
+}
+
+impl OrderedTriplets for RGBHue {
+    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+        triplet[0] > triplet[1] && triplet[1] == triplet[2]
+    }
+
+    fn rgb_ordered_triplet_for_sum_and_chroma(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<[Prop; 3]> {
+        let triplet = self.ordered_triplet_for_sum_and_chroma(sum, c_prop)?;
+        use RGBHue::*;
+        match self {
+            Red => Some(triplet),
+            Green => Some([triplet[1], triplet[0], triplet[2]]),
+            Blue => Some([triplet[2], triplet[0], triplet[1]]),
+        }
     }
 }
 
@@ -569,6 +643,30 @@ pub enum CMYHue {
 impl HueBasics for CMYHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::TWO
+    }
+
+    fn to_hue(&self) -> Hue {
+        Hue::Secondary(*self)
+    }
+}
+
+impl OrderedTriplets for CMYHue {
+    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+        triplet[0] == triplet[1] && triplet[1] > triplet[2]
+    }
+
+    fn rgb_ordered_triplet_for_sum_and_chroma(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<[Prop; 3]> {
+        let triplet = self.ordered_triplet_for_sum_and_chroma(sum, c_prop)?;
+        use CMYHue::*;
+        match self {
+            Cyan => Some([triplet[1], triplet[2], triplet[0]]),
+            Magenta => Some([triplet[0], triplet[2], triplet[1]]),
+            Yellow => Some(triplet),
+        }
     }
 }
 
@@ -886,6 +984,34 @@ impl HueBasics for SextantHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::ONE + self.1
     }
+
+    fn to_hue(&self) -> Hue {
+        Hue::Sextant(*self)
+    }
+}
+
+impl OrderedTriplets for SextantHue {
+    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+        triplet[0] > triplet[1] && triplet[1] > triplet[2]
+    }
+
+    fn rgb_ordered_triplet_for_sum_and_chroma(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<[Prop; 3]> {
+        let triplet = self.ordered_triplet_for_sum_and_chroma(sum, c_prop)?;
+        use Sextant::*;
+        match self.0 {
+            RedMagenta => Some([triplet[0], triplet[2], triplet[1]]),
+            RedYellow => Some(triplet),
+            GreenYellow => Some([triplet[1], triplet[0], triplet[2]]),
+            // TODO: fix blatant error and tests
+            GreenCyan => Some([triplet[2], triplet[0], triplet[1]]),
+            BlueCyan => Some([triplet[2], triplet[1], triplet[0]]),
+            BlueMagenta => Some([triplet[1], triplet[2], triplet[0]]),
+        }
+    }
 }
 
 impl ColourModificationHelpers for SextantHue {}
@@ -897,6 +1023,7 @@ impl SextantHue {
             RedMagenta => [components.0, components.2, components.1].into(),
             RedYellow => [components.0, components.1, components.2].into(),
             GreenYellow => [components.1, components.0, components.2].into(),
+            // TODO: fix blatant error and tests
             GreenCyan => [components.2, components.0, components.1].into(),
             BlueCyan => [components.2, components.1, components.0].into(),
             BlueMagenta => [components.1, components.2, components.0].into(),
@@ -1462,6 +1589,34 @@ impl HueBasics for Hue {
             Self::Primary(rgb_hue) => rgb_hue.sum_for_max_chroma(),
             Self::Secondary(cmy_hue) => cmy_hue.sum_for_max_chroma(),
             Self::Sextant(sextant_hue) => sextant_hue.sum_for_max_chroma(),
+        }
+    }
+
+    fn to_hue(&self) -> Hue {
+        *self
+    }
+}
+
+impl OrderedTriplets for Hue {
+    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.ordered_triplet_is_valid(triplet),
+            Self::Secondary(cmy_hue) => cmy_hue.ordered_triplet_is_valid(triplet),
+            Self::Sextant(sextant_hue) => sextant_hue.ordered_triplet_is_valid(triplet),
+        }
+    }
+
+    fn rgb_ordered_triplet_for_sum_and_chroma(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<[Prop; 3]> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.rgb_ordered_triplet_for_sum_and_chroma(sum, c_prop),
+            Self::Secondary(cmy_hue) => cmy_hue.rgb_ordered_triplet_for_sum_and_chroma(sum, c_prop),
+            Self::Sextant(sextant_hue) => {
+                sextant_hue.rgb_ordered_triplet_for_sum_and_chroma(sum, c_prop)
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use crate::hue::{CMYHue, ColourModificationHelpers, HueBasics, RGBHue, Sextant};
+use crate::hue::{CMYHue, ColourModificationHelpers, HueBasics, OrderedTriplets, RGBHue, Sextant};
 use crate::{
     fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
     HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,
@@ -293,7 +293,7 @@ impl From<HCV> for [Prop; 3] {
     fn from(hcv: HCV) -> Self {
         debug_assert!(hcv.is_valid());
         if let Some(hue) = hcv.hue {
-            hue.array_for_sum_and_chroma(hcv.sum, hcv.chroma)
+            hue.rgb_ordered_triplet_for_sum_and_chroma(hcv.sum, hcv.chroma.prop())
                 .expect("Invalid Hue")
         } else {
             let value: Prop = (hcv.sum / 3).into();
