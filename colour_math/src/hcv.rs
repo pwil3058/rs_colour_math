@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use crate::hue::{CMYHue, HueBasics, RGBHue, Sextant};
+use crate::hue::{CMYHue, ColourModificationHelpers, HueBasics, RGBHue, Sextant};
 use crate::{
     fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
     HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,
@@ -370,13 +370,21 @@ impl ColourBasics for HCV {
 
 impl ManipulatedColour for HCV {
     fn lightened(&self, prop: Prop) -> Self {
-        let rgb = RGB::<u64>::from(self).lightened(prop);
-        HCV::from(rgb)
+        let compl = Prop::ONE - prop;
+        let mut array = <[Prop; 3]>::from(*self);
+        for item in &mut array {
+            *item = (*item * compl + prop).into();
+        }
+        HCV::from(array)
     }
 
     fn darkened(&self, prop: Prop) -> Self {
-        let rgb = RGB::<u64>::from(self).darkened(prop);
-        HCV::from(rgb)
+        let compl = Prop::ONE - prop;
+        let mut array = <[Prop; 3]>::from(*self);
+        for item in &mut array {
+            *item = *item * compl;
+        }
+        HCV::from(array)
     }
 
     fn saturated(&self, prop: Prop) -> Self {
@@ -400,10 +408,10 @@ impl ManipulatedColour for HCV {
             } else {
                 self.sum
             };
-            Self {
-                hue: Some(hue),
-                chroma: new_chroma,
-                sum: new_sum,
+            if let Some((chroma, sum)) = hue.adjusted_favouring_chroma(new_sum, new_chroma) {
+                HCV::new(Some((hue, chroma)), sum)
+            } else {
+                HCV::new_grey((new_sum / 3).into())
             }
         } else {
             *self
@@ -431,10 +439,10 @@ impl ManipulatedColour for HCV {
             } else {
                 self.sum
             };
-            Self {
-                hue: self.hue,
-                chroma: new_chroma,
-                sum: new_sum,
+            if let Some((chroma, sum)) = hue.adjusted_favouring_chroma(new_sum, new_chroma) {
+                HCV::new(Some((hue, chroma)), sum)
+            } else {
+                HCV::new_grey((new_sum / 3).into())
             }
         } else {
             *self
