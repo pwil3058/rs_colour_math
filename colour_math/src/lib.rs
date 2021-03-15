@@ -8,6 +8,7 @@ use num_traits::{Signed, Unsigned};
 use num_traits_plus::float_plus::*;
 
 pub mod beigui;
+pub mod debug;
 pub mod fdrn;
 pub mod hcv;
 pub mod hue;

@@ -12,6 +12,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::{
+    debug::ApproxEq,
     fdrn::UFDRNumber,
     hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
     proportion::Warmth,
@@ -213,7 +214,7 @@ where
     }
 }
 
-impl<T: LightLevel + Float> RGB<T> {
+impl<T: LightLevel + ApproxEq> RGB<T> {
     pub fn approx_eq(&self, other: &Self, max_diff: Option<T>) -> bool {
         for i in 0..3 {
             if !self.0[i].approx_eq(&other.0[i], max_diff) {

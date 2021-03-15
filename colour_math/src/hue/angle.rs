@@ -56,7 +56,7 @@ impl Angle {
 impl Debug for Angle {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         //formatter.write_fmt(format_args!("Prop(0.{:08X})", self.0))
-        formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
+        formatter.write_fmt(format_args!("Angle({:?})", f64::from(*self)))
     }
 }
 

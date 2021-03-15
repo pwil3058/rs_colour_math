@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use crate::hue::{CMYHue, RGBHue, Sextant};
+use crate::hue::{CMYHue, HueBasics, RGBHue, Sextant};
 use crate::{
     fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
     HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,
@@ -67,7 +67,7 @@ impl HCV {
                 sum,
             }
         } else {
-            debug_assert!(sum.is_valid_sum());
+            debug_assert!(sum.is_valid_sum() && sum % 3 == UFDRNumber::ZERO);
             Self {
                 hue: None,
                 chroma: Chroma::ZERO,
@@ -77,6 +77,7 @@ impl HCV {
     }
 
     pub(crate) fn new_grey_sum(sum: UFDRNumber) -> Self {
+        debug_assert!(sum % 3 == UFDRNumber::ZERO);
         Self {
             hue: None,
             chroma: Chroma::ZERO,
@@ -123,7 +124,7 @@ impl HCV {
     pub fn sum_range_for_current_chroma_prop(&self) -> (UFDRNumber, UFDRNumber) {
         if let Some(hue) = self.hue {
             if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
-                (range.min, range.max)
+                range
             } else {
                 (UFDRNumber::ZERO, UFDRNumber::THREE)
             }
@@ -370,13 +371,11 @@ impl ColourBasics for HCV {
 impl ManipulatedColour for HCV {
     fn lightened(&self, prop: Prop) -> Self {
         let rgb = RGB::<u64>::from(self).lightened(prop);
-        println!("lighten: {:?} -> {:?}", self, rgb);
         HCV::from(rgb)
     }
 
     fn darkened(&self, prop: Prop) -> Self {
         let rgb = RGB::<u64>::from(self).darkened(prop);
-        println!("darken: {:?} -> {:?}", self, rgb);
         HCV::from(rgb)
     }
 

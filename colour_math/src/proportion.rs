@@ -12,10 +12,10 @@ use std::{
 
 use crate::{
     fdrn::{FDRNumber, UFDRNumber},
-    hue::HueIfce,
     Hue,
 };
 
+use crate::hue::HueBasics;
 #[cfg(test)]
 use num_traits_plus::float_plus::*;
 
@@ -259,7 +259,10 @@ impl Prop {
 
 impl Debug for Prop {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_fmt(format_args!("Prop(0.{:016X})", self))
+        let int = self.0 / u64::MAX;
+        let frac = self.0 % u64::MAX;
+        formatter.write_fmt(format_args!("Prop({:X}.{:016X})", int, frac))
+        //formatter.write_fmt(format_args!("Prop(0.{:016X})", self))
         //formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
     }
 }
@@ -368,8 +371,12 @@ impl Div for Prop {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        let result = (self.0 as u128 * u64::MAX as u128) / rhs.0 as u128;
-        Self(result as u64)
+        if rhs == Self::ONE {
+            self
+        } else {
+            let result = (self.0 as u128 * u64::MAX as u128) / rhs.0 as u128;
+            Self(result as u64)
+        }
     }
 }
 
@@ -412,6 +419,21 @@ impl Sub<Prop> for UFDRNumber {
     fn sub(self, rhs: Prop) -> Self {
         debug_assert!(self.0 >= rhs.0 as u128);
         Self(self.0 - rhs.0 as u128)
+    }
+}
+
+impl Div<Prop> for UFDRNumber {
+    type Output = Self;
+
+    fn div(self, rhs: Prop) -> Self {
+        if rhs == Prop::ONE {
+            self
+        } else {
+            match self.0.cmp(&(rhs.0 as u128)) {
+                Ordering::Equal => Self::ONE,
+                Ordering::Less | Ordering::Greater => self.mul(Self(u128::MAX / rhs.0 as u128)),
+            }
+        }
     }
 }
 

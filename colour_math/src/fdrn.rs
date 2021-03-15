@@ -102,19 +102,23 @@ impl Div for FDRNumber {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        let val: Self = UFDRNumber::from(self.abs())
-            .div(UFDRNumber::from(rhs.abs()))
-            .into();
-        if self.0.is_negative() {
-            if rhs.0.is_negative() {
-                val
-            } else {
-                val.neg()
-            }
-        } else if rhs.0.is_negative() {
-            val.neg()
+        if rhs == Self::ONE {
+            self
         } else {
-            val
+            let val: Self = UFDRNumber::from(self.abs())
+                .div(UFDRNumber::from(rhs.abs()))
+                .into();
+            if self.0.is_negative() {
+                if rhs.0.is_negative() {
+                    val
+                } else {
+                    val.neg()
+                }
+            } else if rhs.0.is_negative() {
+                val.neg()
+            } else {
+                val
+            }
         }
     }
 }
@@ -394,9 +398,13 @@ impl Div for UFDRNumber {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        match self.0.cmp(&rhs.0) {
-            Ordering::Equal => Self::ONE,
-            Ordering::Less | Ordering::Greater => self.mul(Self(u128::MAX / rhs.0)),
+        if rhs == Self::ONE {
+            self
+        } else {
+            match self.0.cmp(&rhs.0) {
+                Ordering::Equal => Self::ONE,
+                Ordering::Less | Ordering::Greater => self.mul(Self(u128::MAX / rhs.0)),
+            }
         }
     }
 }
