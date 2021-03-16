@@ -115,7 +115,16 @@ pub(crate) trait OrderedTriplets: HueBasics {
 
 pub(crate) trait HueIfce: HueBasics {
     fn angle(&self) -> Angle;
-    fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma>;
+
+    fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
+        let c_prop = self.max_chroma_prop_for_sum(sum)?;
+        match sum.cmp(&self.sum_for_max_chroma()) {
+            Ordering::Equal => Some(Chroma::Neither(c_prop)),
+            Ordering::Less => Some(Chroma::Shade(c_prop)),
+            Ordering::Greater => Some(Chroma::Tint(c_prop)),
+        }
+    }
+
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
 
     fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
@@ -385,19 +394,6 @@ impl HueIfce for RGBHue {
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
-        if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
-            None
-        } else if sum < UFDRNumber::ONE {
-            Some(Chroma::Shade(sum.into()))
-        } else if sum > UFDRNumber::ONE {
-            Some(Chroma::Tint(((UFDRNumber::THREE - sum) / 2).into()))
-        } else {
-            Some(Chroma::ONE)
-        }
-    }
-
     fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
         match chroma {
             Chroma::ZERO => None,
@@ -658,19 +654,6 @@ impl HueIfce for CMYHue {
             CMYHue::Cyan => Angle::CYAN,
             CMYHue::Magenta => Angle::MAGENTA,
             CMYHue::Yellow => Angle::YELLOW,
-        }
-    }
-
-    fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
-        if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
-            None
-        } else if sum < UFDRNumber::TWO {
-            Some(Chroma::Shade((sum / 2).into()))
-        } else if sum > UFDRNumber::TWO {
-            Some(Chroma::Tint((UFDRNumber::THREE - sum).into()))
-        } else {
-            Some(Chroma::ONE)
         }
     }
 
@@ -1039,25 +1022,6 @@ impl HueIfce for SextantHue {
                     Sextant::BlueCyan => Angle::BLUE - angle,
                     Sextant::BlueMagenta => Angle::BLUE + angle,
                 }
-            }
-        }
-    }
-
-    fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
-        if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
-            None
-        } else {
-            match sum.cmp(&(UFDRNumber::ONE + self.1)) {
-                Ordering::Less => {
-                    let temp = sum / (Prop::ONE + self.1);
-                    Some(Chroma::Shade(temp.into()))
-                }
-                Ordering::Greater => {
-                    let temp = (UFDRNumber::THREE - sum) / (UFDRNumber::TWO - self.1);
-                    Some(Chroma::Tint(temp.into()))
-                }
-                Ordering::Equal => Some(Chroma::ONE),
             }
         }
     }

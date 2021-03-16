@@ -417,7 +417,6 @@ impl ColourManipulator {
                             let (chroma, sum) = new_hue
                                 .adjusted_favouring_sum(self.hcv.sum, chroma)
                                 .unwrap();
-                            assert!(new_hue.sum_and_chroma_are_compatible(sum, chroma));
                             HCV::new(Some((new_hue, chroma)), sum)
                         }
                     }

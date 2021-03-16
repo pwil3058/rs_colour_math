@@ -405,13 +405,12 @@ impl Div for UFDRNumber {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
-        if rhs == Self::ONE {
-            self
-        } else {
-            match self.0.cmp(&rhs.0) {
+        match rhs.0 % u64::MAX as u128 {
+            0 => Self(self.0 / (rhs.0 / u64::MAX as u128)),
+            _ => match self.0.cmp(&rhs.0) {
                 Ordering::Equal => Self::ONE,
                 Ordering::Less | Ordering::Greater => self.mul(Self(u128::MAX / rhs.0)),
-            }
+            },
         }
     }
 }
