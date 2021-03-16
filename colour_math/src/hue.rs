@@ -1243,11 +1243,7 @@ impl From<(Sextant, [Prop; 3])> for SextantHue {
     fn from(arg: (Sextant, [Prop; 3])) -> Self {
         let [first, second, third] = arg.1;
         debug_assert!(first > second && second > third);
-        // TODO: fix division algorithm so that min/max stuff isn't needed
-        let mut sum_for_max_chroma = UFDRNumber::ONE
-            + ((second - third) / (first - third))
-                .max(Prop::ALMOST_ZERO)
-                .min(Prop::ALMOST_ONE);
+        let mut sum_for_max_chroma = UFDRNumber::ONE + ((second - third) / (first - third));
         debug_assert!(sum_for_max_chroma > UFDRNumber::ONE && sum_for_max_chroma < UFDRNumber::TWO);
         // Handle possible (fatal) rounding error
         while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
@@ -1256,13 +1252,10 @@ impl From<(Sextant, [Prop; 3])> for SextantHue {
             sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
         }
         debug_assert!(sum_for_max_chroma > UFDRNumber::ONE && sum_for_max_chroma < UFDRNumber::TWO);
-        #[cfg(debug)]
-        if sum_for_max_chroma * (first - third) > first + second + third {
-            debug_assert_eq!(
-                (first + second + third - sum_for_max_chroma * (first - third)) / 3,
-                third.into()
-            );
-        }
+        debug_assert_eq!(
+            (first + second + third - sum_for_max_chroma * (first - third)) / 3,
+            third.into()
+        );
         Self(arg.0, (sum_for_max_chroma - UFDRNumber::ONE).into())
     }
 }

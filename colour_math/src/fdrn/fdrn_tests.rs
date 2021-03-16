@@ -40,7 +40,9 @@ fn ufdrn_div() {
     ] {
         let expected = UFDRNumber::from(lhs / rhs);
         let result = UFDRNumber::from(*lhs) / UFDRNumber::from(*rhs);
-        assert_approx_eq!(result, expected, 0x0000000000040000);
+        assert_approx_eq!(result, expected, 0x0000000000001000);
+        let go_back = result * UFDRNumber::from(*rhs);
+        assert_approx_eq!(go_back, UFDRNumber::from(*lhs), 0x0000000000000002);
     }
 }
 

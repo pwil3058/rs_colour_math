@@ -375,8 +375,7 @@ impl Div for Prop {
         if rhs == Self::ONE {
             self
         } else {
-            let result = (self.0 as u128 * u64::MAX as u128) / rhs.0 as u128;
-            Self(result as u64)
+            Self(((self.0 as u128 * u64::MAX as u128) / rhs.0 as u128) as u64)
         }
     }
 }

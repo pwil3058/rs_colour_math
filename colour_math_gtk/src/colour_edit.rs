@@ -8,7 +8,7 @@ use pw_gix::{
 
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
-    colour::{GdkColour, LightLevel, ManipGdkColour, Value, ScalarAttribute, HCV, RGB},
+    colour::{GdkColour, LightLevel, ManipGdkColour, ScalarAttribute, Value, HCV, RGB},
     manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
     rgb_entry::{Hexable, RGBHexEntry, RGBHexEntryBuilder},
 };

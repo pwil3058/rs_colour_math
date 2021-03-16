@@ -147,7 +147,7 @@ fn incr_chroma_clamped() {
             .min(max_chroma.prop().into())
             .into();
         while manipulator.incr_chroma(incr) {
-             assert!(!manipulator.hcv.is_grey());
+            assert!(!manipulator.hcv.is_grey());
             assert_approx_eq!(manipulator.hcv.chroma.prop(), expected);
             max_chroma = saved_hue.max_chroma_for_sum(manipulator.hcv.sum).unwrap();
             expected = (manipulator.hcv.chroma.prop() + incr)
