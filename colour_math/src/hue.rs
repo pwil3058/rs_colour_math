@@ -9,8 +9,8 @@ use std::{
 pub mod angle;
 
 use crate::{
-    fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, HueConstants, LightLevel,
-    Prop, RGBConstants, HCV, RGB,
+    fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, ColourBasics, HueConstants,
+    LightLevel, Prop, RGBConstants, HCV, RGB,
 };
 
 use crate::fdrn::FDRNumber;
@@ -145,8 +145,18 @@ pub(crate) trait HueIfce: HueBasics {
         }
     }
 
-    fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T>;
-    fn max_chroma_hcv(&self) -> HCV;
+    fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
+        self.max_chroma_hcv().rgb::<T>()
+    }
+
+    fn max_chroma_hcv(&self) -> HCV {
+        HCV {
+            hue: Some(self.to_hue()),
+            chroma: Chroma::ONE,
+            sum: self.sum_for_max_chroma(),
+        }
+    }
+
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>>;
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
     fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> RGB<T>;
@@ -394,46 +404,12 @@ impl HueIfce for RGBHue {
         }
     }
 
-    fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some(UFDRNumber::ONE),
-            Chroma::Shade(c_prop) => Some(c_prop.into()),
-            Chroma::Tint(_) => Some(UFDRNumber::JUST_OVER_ONE),
-        }
-    }
-
-    fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some(UFDRNumber::ONE),
-            Chroma::Shade(_) => Some(UFDRNumber::ALMOST_ONE),
-            Chroma::Tint(c_prop) => Some(UFDRNumber::THREE - c_prop * 2),
-        }
-    }
-
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
             RGBHue::Red => ((UFDRNumber::ONE + chroma.prop()) / 2).into(),
             RGBHue::Green | RGBHue::Blue => ((UFDRNumber::TWO - chroma.prop()) / 4).into(),
         };
         Warmth::calculate(chroma, x_dash)
-    }
-
-    fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
-        match self {
-            RGBHue::Red => RGB::RED,
-            RGBHue::Green => RGB::GREEN,
-            RGBHue::Blue => RGB::BLUE,
-        }
-    }
-
-    fn max_chroma_hcv(&self) -> HCV {
-        match self {
-            RGBHue::Red => HCV::RED,
-            RGBHue::Green => HCV::GREEN,
-            RGBHue::Blue => HCV::BLUE,
-        }
     }
 
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
@@ -657,46 +633,12 @@ impl HueIfce for CMYHue {
         }
     }
 
-    fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some(UFDRNumber::TWO),
-            Chroma::Shade(c_prop) => Some((c_prop * 2).min(UFDRNumber::ALMOST_TWO)),
-            Chroma::Tint(_) => Some(UFDRNumber::JUST_OVER_TWO),
-        }
-    }
-
-    fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some(UFDRNumber::TWO),
-            Chroma::Shade(_) => Some(UFDRNumber::ALMOST_TWO),
-            Chroma::Tint(c_prop) => Some(UFDRNumber::THREE - c_prop),
-        }
-    }
-
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
             CMYHue::Cyan => (UFDRNumber::ONE - chroma.prop()) / 2,
             CMYHue::Magenta | CMYHue::Yellow => (UFDRNumber::TWO + chroma.prop()) / 4,
         };
         Warmth::calculate(chroma, x_dash.into())
-    }
-
-    fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
-        match self {
-            CMYHue::Cyan => RGB::CYAN,
-            CMYHue::Magenta => RGB::MAGENTA,
-            CMYHue::Yellow => RGB::YELLOW,
-        }
-    }
-
-    fn max_chroma_hcv(&self) -> HCV {
-        match self {
-            CMYHue::Cyan => HCV::CYAN,
-            CMYHue::Magenta => HCV::MAGENTA,
-            CMYHue::Yellow => HCV::YELLOW,
-        }
     }
 
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
@@ -1041,14 +983,6 @@ impl HueIfce for SextantHue {
         Warmth::calculate(chroma, x_dash.into())
     }
 
-    fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
-        self.make_rgb((Prop::ONE, self.1, Prop::ZERO))
-    }
-
-    fn max_chroma_hcv(&self) -> HCV {
-        HCV::new(Some((Hue::Sextant(*self), Chroma::ONE)), Prop::ONE + self.1)
-    }
-
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
         debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
         if sum == UFDRNumber::ZERO || sum == UFDRNumber::THREE {
@@ -1344,35 +1278,11 @@ impl HueIfce for Hue {
         }
     }
 
-    fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.max_chroma_for_sum(sum),
-            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_for_sum(sum),
-            Self::Sextant(sextant_hue) => sextant_hue.max_chroma_for_sum(sum),
-        }
-    }
-
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.warmth_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.warmth_for_chroma(chroma),
             Self::Sextant(sextant_hue) => sextant_hue.warmth_for_chroma(chroma),
-        }
-    }
-
-    fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb(),
-            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb(),
-            Self::Sextant(sextant_hue) => sextant_hue.max_chroma_rgb(),
-        }
-    }
-
-    fn max_chroma_hcv(&self) -> HCV {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.max_chroma_hcv(),
-            Self::Secondary(cmy_hue) => cmy_hue.max_chroma_hcv(),
-            Self::Sextant(sextant_hue) => sextant_hue.max_chroma_hcv(),
         }
     }
 
