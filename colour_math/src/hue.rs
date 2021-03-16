@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    convert::{Into, TryFrom},
+    convert::{From, Into, TryFrom},
     fmt::Debug,
 };
 
@@ -17,9 +17,8 @@ use crate::fdrn::FDRNumber;
 use num_traits_plus::{debug_assert_approx_eq, float_plus::FloatPlus};
 use std::ops::{Add, Sub};
 
-pub(crate) trait HueBasics: Debug + Sized {
+pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
     fn sum_for_max_chroma(&self) -> UFDRNumber;
-    fn to_hue(&self) -> Hue;
 
     fn min_sum_for_chroma_prop(&self, c_prop: Prop) -> Option<UFDRNumber> {
         match c_prop {
@@ -106,7 +105,7 @@ pub(crate) trait OrderedTriplets: HueBasics {
             Ordering::Greater => Chroma::Tint(c_prop),
         };
         HCV {
-            hue: Some(self.to_hue()),
+            hue: Some((*self).into()),
             chroma,
             sum,
         }
@@ -151,7 +150,7 @@ pub(crate) trait HueIfce: HueBasics {
 
     fn max_chroma_hcv(&self) -> HCV {
         HCV {
-            hue: Some(self.to_hue()),
+            hue: Some((*self).into()),
             chroma: Chroma::ONE,
             sum: self.sum_for_max_chroma(),
         }
@@ -267,13 +266,15 @@ pub enum RGBHue {
     Blue = 1,
 }
 
+impl From<RGBHue> for Hue {
+    fn from(rgb_hue: RGBHue) -> Self {
+        Hue::Primary(rgb_hue)
+    }
+}
+
 impl HueBasics for RGBHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::ONE
-    }
-
-    fn to_hue(&self) -> Hue {
-        Hue::Primary(*self)
     }
 }
 
@@ -480,13 +481,15 @@ pub enum CMYHue {
     Yellow = 7,
 }
 
+impl From<CMYHue> for Hue {
+    fn from(cmy_hue: CMYHue) -> Self {
+        Hue::Secondary(cmy_hue)
+    }
+}
+
 impl HueBasics for CMYHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::TWO
-    }
-
-    fn to_hue(&self) -> Hue {
-        Hue::Secondary(*self)
     }
 }
 
@@ -715,15 +718,17 @@ pub enum Sextant {
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct SextantHue(Sextant, Prop);
 
+impl From<SextantHue> for Hue {
+    fn from(sextant_hue: SextantHue) -> Self {
+        Hue::Sextant(sextant_hue)
+    }
+}
+
 impl Eq for SextantHue {}
 
 impl HueBasics for SextantHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::ONE + self.1
-    }
-
-    fn to_hue(&self) -> Hue {
-        Hue::Sextant(*self)
     }
 }
 
@@ -1236,10 +1241,6 @@ impl HueBasics for Hue {
             Self::Secondary(cmy_hue) => cmy_hue.sum_for_max_chroma(),
             Self::Sextant(sextant_hue) => sextant_hue.sum_for_max_chroma(),
         }
-    }
-
-    fn to_hue(&self) -> Hue {
-        *self
     }
 }
 
