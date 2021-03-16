@@ -225,7 +225,8 @@ impl Prop {
 
     pub(crate) const ALMOST_ZERO: Self = Self(1);
     pub(crate) const ALMOST_ONE: Self = Self(u64::MAX - 1);
-    pub(crate) const HALF: Self = Self(u64::MAX / 2);
+    // NB: make sure evenly divisible by 3
+    pub(crate) const HALF: Self = Self(u64::MAX / 6 * 3);
 
     pub fn abs_diff(&self, other: &Self) -> Prop {
         match self.cmp(other) {

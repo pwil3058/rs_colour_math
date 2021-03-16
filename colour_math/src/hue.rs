@@ -243,7 +243,9 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
     }
 
     fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> (Chroma, UFDRNumber) {
-        if let Some(overs) = self.overs(sum, c_prop) {
+        if c_prop == Prop::ZERO {
+            (Chroma::ZERO, sum / 3 * 3)
+        } else if let Some(overs) = self.overs(sum, c_prop) {
             let sum = sum - overs;
             match sum.cmp(&self.sum_for_max_chroma()) {
                 Ordering::Equal => (Chroma::Neither(c_prop), sum),
@@ -351,11 +353,12 @@ impl OrderedTriplets for RGBHue {
         c_prop: Prop,
     ) -> Option<[Prop; 3]> {
         let triplet = self.ordered_triplet_for_sum_and_chroma(sum, c_prop)?;
+        debug_assert!(self.ordered_triplet_is_valid(&triplet));
         use RGBHue::*;
         match self {
             Red => Some(triplet),
             Green => Some([triplet[1], triplet[0], triplet[2]]),
-            Blue => Some([triplet[2], triplet[0], triplet[1]]),
+            Blue => Some([triplet[2], triplet[1], triplet[0]]),
         }
     }
 }
@@ -661,9 +664,10 @@ impl OrderedTriplets for CMYHue {
         c_prop: Prop,
     ) -> Option<[Prop; 3]> {
         let triplet = self.ordered_triplet_for_sum_and_chroma(sum, c_prop)?;
+        debug_assert!(self.ordered_triplet_is_valid(&triplet));
         use CMYHue::*;
         match self {
-            Cyan => Some([triplet[1], triplet[2], triplet[0]]),
+            Cyan => Some([triplet[2], triplet[0], triplet[1]]),
             Magenta => Some([triplet[0], triplet[2], triplet[1]]),
             Yellow => Some(triplet),
         }
@@ -1001,12 +1005,12 @@ impl OrderedTriplets for SextantHue {
         c_prop: Prop,
     ) -> Option<[Prop; 3]> {
         let triplet = self.ordered_triplet_for_sum_and_chroma(sum, c_prop)?;
+        debug_assert!(self.ordered_triplet_is_valid(&triplet));
         use Sextant::*;
         match self.0 {
             RedMagenta => Some([triplet[0], triplet[2], triplet[1]]),
             RedYellow => Some(triplet),
             GreenYellow => Some([triplet[1], triplet[0], triplet[2]]),
-            // TODO: fix blatant error and tests
             GreenCyan => Some([triplet[2], triplet[0], triplet[1]]),
             BlueCyan => Some([triplet[2], triplet[1], triplet[0]]),
             BlueMagenta => Some([triplet[1], triplet[2], triplet[0]]),
@@ -1023,7 +1027,6 @@ impl SextantHue {
             RedMagenta => [components.0, components.2, components.1].into(),
             RedYellow => [components.0, components.1, components.2].into(),
             GreenYellow => [components.1, components.0, components.2].into(),
-            // TODO: fix blatant error and tests
             GreenCyan => [components.2, components.0, components.1].into(),
             BlueCyan => [components.2, components.1, components.0].into(),
             BlueMagenta => [components.1, components.2, components.0].into(),
