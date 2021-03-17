@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use num_traits_plus::assert_approx_eq;
 
-use crate::hue::HueIfce;
+use crate::hue::HueBasics;
 use crate::manipulator::{ColourManipulatorBuilder, SetHue};
 use crate::{
     hcv::*, hue::angle::*, Chroma, ColourBasics, Hue, HueConstants, Prop, RGBConstants, UFDRNumber,
