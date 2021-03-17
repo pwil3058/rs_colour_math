@@ -242,7 +242,7 @@ fn hue_add_sub_angle() {
 }
 
 #[test]
-fn rgb_ordered_triplet_for_sum_and_chroma() {
+fn rgb_ordered_triplet() {
     let light_levels: [Prop; 7] = [
         Prop::ZERO,
         Prop(1),
@@ -263,7 +263,7 @@ fn rgb_ordered_triplet_for_sum_and_chroma() {
                         RGBHue::Blue => RGB::<u64>::from([*others, *others, *first]),
                     };
                     let array = rgb_hue
-                        .rgb_ordered_triplet_for_sum_and_chroma(rgb.sum(), rgb.chroma().prop())
+                        .rgb_ordered_triplet(rgb.sum(), rgb.chroma().prop())
                         .expect("should be legal");
                     assert_eq!(RGB::<u64>::from(array), rgb);
                 }
@@ -274,7 +274,7 @@ fn rgb_ordered_triplet_for_sum_and_chroma() {
                         CMYHue::Yellow => RGB::<u64>::from([*first, *first, *others]),
                     };
                     let array = cmy_hue
-                        .rgb_ordered_triplet_for_sum_and_chroma(rgb.sum(), rgb.chroma().prop())
+                        .rgb_ordered_triplet(rgb.sum(), rgb.chroma().prop())
                         .expect("should be legal");
                     assert_eq!(RGB::<u64>::from(array), rgb);
                 }
@@ -309,19 +309,13 @@ fn rgb_ordered_triplet_for_sum_and_chroma() {
                             match hue {
                                 Hue::Sextant(sextant_hue) => {
                                     let array = sextant_hue
-                                        .rgb_ordered_triplet_for_sum_and_chroma(
-                                            rgb.sum(),
-                                            rgb.chroma().prop(),
-                                        )
+                                        .rgb_ordered_triplet(rgb.sum(), rgb.chroma().prop())
                                         .expect("should be legal");
                                     assert_approx_eq!(RGB::<u64>::from(array), rgb);
                                     let rgb = sextant_hue.max_chroma_rgb();
                                     // make sure we hit Chroma::Neither at least once
                                     let array = sextant_hue
-                                        .rgb_ordered_triplet_for_sum_and_chroma(
-                                            rgb.sum(),
-                                            rgb.chroma().prop(),
-                                        )
+                                        .rgb_ordered_triplet(rgb.sum(), rgb.chroma().prop())
                                         .expect("should be legal");
                                     assert_eq!(RGB::<u64>::from(array), rgb);
                                 }
