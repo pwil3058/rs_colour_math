@@ -460,9 +460,7 @@ impl Add<Angle> for HCV {
     fn add(self, angle: Angle) -> Self {
         if let Some(hue) = self.hue {
             let new_hue = hue + angle;
-            if let Some((sum, chroma)) = new_hue
-                .adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum)
-            {
+            if let Some((chroma, sum)) = new_hue.adjusted_favouring_chroma(self.sum, self.chroma) {
                 HCV::new(Some((new_hue, chroma)), sum)
             } else {
                 HCV::new(None, self.sum)
@@ -479,9 +477,7 @@ impl Sub<Angle> for HCV {
     fn sub(self, angle: Angle) -> Self {
         if let Some(hue) = self.hue {
             let new_hue = hue - angle;
-            if let Some((sum, chroma)) = new_hue
-                .adjusted_sum_and_chroma_for_chroma_compatibility(self.chroma.prop(), self.sum)
-            {
+            if let Some((chroma, sum)) = new_hue.adjusted_favouring_chroma(self.sum, self.chroma) {
                 HCV::new(Some((new_hue, chroma)), sum)
             } else {
                 HCV::new(None, self.sum)
