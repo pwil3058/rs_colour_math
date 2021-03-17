@@ -106,8 +106,15 @@ pub(crate) trait SumChromaCompatibility: HueBasics {
 }
 
 pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
-    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool;
-    fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]>;
+    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool;
+    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool;
+    fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3];
+
+    fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
+        let triplet = self.ordered_triplet(sum, c_prop)?;
+        debug_assert!(self.has_valid_value_order(&triplet));
+        Some(self.triplet_to_rgb_order(&triplet))
+    }
 
     fn ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
         if sum >= self.sum_for_max_chroma() * c_prop {
@@ -120,7 +127,7 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
                 debug_assert_eq!(first - third, c_prop.into());
                 debug_assert_approx_eq!(first + second + third, sum_for_max_chroma * chroma.prop());
                 let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
-                debug_assert!(self.ordered_triplet_is_valid(&triplet));
+                debug_assert!(self.has_valid_value_order(&triplet));
                 Some(triplet)
             } else {
                 None
@@ -131,7 +138,7 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
     }
 
     fn ordered_triplet_to_hcv(&self, triplet: &[Prop; 3]) -> HCV {
-        debug_assert!(self.ordered_triplet_is_valid(triplet));
+        debug_assert!(self.has_valid_value_order(triplet));
         let sum = triplet[0] + triplet[1] + triplet[2];
         let c_prop = triplet[0] - triplet[2];
         let chroma = match sum.cmp(&self.sum_for_max_chroma()) {
@@ -344,18 +351,26 @@ impl HueBasics for RGBHue {
 }
 
 impl OrderedTriplets for RGBHue {
-    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
         triplet[0] > triplet[1] && triplet[1] == triplet[2]
     }
 
-    fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
-        let triplet = self.ordered_triplet(sum, c_prop)?;
-        debug_assert!(self.ordered_triplet_is_valid(&triplet));
+    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
         use RGBHue::*;
         match self {
-            Red => Some(triplet),
-            Green => Some([triplet[1], triplet[0], triplet[2]]),
-            Blue => Some([triplet[2], triplet[1], triplet[0]]),
+            Red => triplet[0] > triplet[1] && triplet[1] == triplet[2],
+            Green => triplet[1] > triplet[0] && triplet[0] == triplet[2],
+            Blue => triplet[2] > triplet[0] && triplet[0] == triplet[1],
+        }
+    }
+
+    fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
+        debug_assert!(self.has_valid_value_order(&triplet));
+        use RGBHue::*;
+        match self {
+            Red => *triplet,
+            Green => [triplet[1], triplet[0], triplet[2]],
+            Blue => [triplet[2], triplet[1], triplet[0]],
         }
     }
 }
@@ -469,18 +484,26 @@ impl HueBasics for CMYHue {
 }
 
 impl OrderedTriplets for CMYHue {
-    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
         triplet[0] == triplet[1] && triplet[1] > triplet[2]
     }
 
-    fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
-        let triplet = self.ordered_triplet(sum, c_prop)?;
-        debug_assert!(self.ordered_triplet_is_valid(&triplet));
+    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
         use CMYHue::*;
         match self {
-            Cyan => Some([triplet[2], triplet[0], triplet[1]]),
-            Magenta => Some([triplet[0], triplet[2], triplet[1]]),
-            Yellow => Some(triplet),
+            Cyan => triplet[1] == triplet[2] && triplet[1] > triplet[0],
+            Magenta => triplet[0] == triplet[2] && triplet[0] > triplet[1],
+            Yellow => triplet[0] == triplet[1] && triplet[0] > triplet[2],
+        }
+    }
+
+    fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
+        debug_assert!(self.has_valid_value_order(&triplet));
+        use CMYHue::*;
+        match self {
+            Cyan => [triplet[2], triplet[0], triplet[1]],
+            Magenta => [triplet[0], triplet[2], triplet[1]],
+            Yellow => *triplet,
         }
     }
 }
@@ -629,21 +652,32 @@ impl HueBasics for SextantHue {
 }
 
 impl OrderedTriplets for SextantHue {
-    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
         triplet[0] > triplet[1] && triplet[1] > triplet[2]
     }
 
-    fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
-        let triplet = self.ordered_triplet(sum, c_prop)?;
-        debug_assert!(self.ordered_triplet_is_valid(&triplet));
+    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
         use Sextant::*;
         match self.0 {
-            RedMagenta => Some([triplet[0], triplet[2], triplet[1]]),
-            RedYellow => Some(triplet),
-            GreenYellow => Some([triplet[1], triplet[0], triplet[2]]),
-            GreenCyan => Some([triplet[2], triplet[0], triplet[1]]),
-            BlueCyan => Some([triplet[2], triplet[1], triplet[0]]),
-            BlueMagenta => Some([triplet[1], triplet[2], triplet[0]]),
+            RedMagenta => triplet[0] > triplet[2] && triplet[2] > triplet[1],
+            RedYellow => triplet[0] > triplet[1] && triplet[1] > triplet[2],
+            GreenYellow => triplet[1] > triplet[0] && triplet[0] > triplet[2],
+            GreenCyan => triplet[1] > triplet[2] && triplet[2] > triplet[0],
+            BlueCyan => triplet[2] > triplet[1] && triplet[1] > triplet[0],
+            BlueMagenta => triplet[2] > triplet[0] && triplet[0] > triplet[1],
+        }
+    }
+
+    fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
+        debug_assert!(self.has_valid_value_order(&triplet));
+        use Sextant::*;
+        match self.0 {
+            RedMagenta => [triplet[0], triplet[2], triplet[1]],
+            RedYellow => *triplet,
+            GreenYellow => [triplet[1], triplet[0], triplet[2]],
+            GreenCyan => [triplet[2], triplet[0], triplet[1]],
+            BlueCyan => [triplet[2], triplet[1], triplet[0]],
+            BlueMagenta => [triplet[1], triplet[2], triplet[0]],
         }
     }
 }
@@ -1097,11 +1131,27 @@ impl SumChromaCompatibility for Hue {
 }
 
 impl OrderedTriplets for Hue {
-    fn ordered_triplet_is_valid(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.ordered_triplet_is_valid(triplet),
-            Self::Secondary(cmy_hue) => cmy_hue.ordered_triplet_is_valid(triplet),
-            Self::Sextant(sextant_hue) => sextant_hue.ordered_triplet_is_valid(triplet),
+            Self::Primary(rgb_hue) => rgb_hue.has_valid_value_order(triplet),
+            Self::Secondary(cmy_hue) => cmy_hue.has_valid_value_order(triplet),
+            Self::Sextant(sextant_hue) => sextant_hue.has_valid_value_order(triplet),
+        }
+    }
+
+    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.has_valid_rgb_order(triplet),
+            Self::Secondary(cmy_hue) => cmy_hue.has_valid_rgb_order(triplet),
+            Self::Sextant(sextant_hue) => sextant_hue.has_valid_rgb_order(triplet),
+        }
+    }
+
+    fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.triplet_to_rgb_order(triplet),
+            Self::Secondary(cmy_hue) => cmy_hue.triplet_to_rgb_order(triplet),
+            Self::Sextant(sextant_hue) => sextant_hue.triplet_to_rgb_order(triplet),
         }
     }
 
