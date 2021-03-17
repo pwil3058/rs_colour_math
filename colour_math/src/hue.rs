@@ -445,20 +445,6 @@ impl ColourModificationHelpers for CMYHue {}
 
 impl SumChromaCompatibility for CMYHue {}
 
-impl CMYHue {
-    pub fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some((UFDRNumber::TWO, UFDRNumber::TWO)),
-            Chroma::Shade(c_prop) => Some((
-                (c_prop * 2).min(UFDRNumber::ALMOST_TWO),
-                UFDRNumber::ALMOST_TWO,
-            )),
-            Chroma::Tint(c_prop) => Some((UFDRNumber::JUST_OVER_TWO, UFDRNumber::THREE - c_prop)),
-        }
-    }
-}
-
 impl HueIfce for CMYHue {
     fn angle(&self) -> Angle {
         match self {
@@ -574,21 +560,6 @@ impl SextantHue {
 
     pub fn prop(&self) -> Prop {
         self.1
-    }
-
-    pub fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some((UFDRNumber::ONE + self.1, UFDRNumber::ONE + self.1)),
-            Chroma::Shade(c_prop) => Some((
-                ((UFDRNumber::ONE + self.1) * c_prop).min(UFDRNumber::ALMOST_ONE + self.1),
-                UFDRNumber::ALMOST_ONE + self.1,
-            )),
-            Chroma::Tint(c_prop) => Some((
-                UFDRNumber::JUST_OVER_ONE + self.1,
-                UFDRNumber::THREE - (UFDRNumber::TWO - self.1) * c_prop,
-            )),
-        }
     }
 }
 
@@ -1117,38 +1088,6 @@ impl Hue {
                 Self::Sextant(other_sextant_hue) => sextant_hue.1.abs_diff(&other_sextant_hue.1),
                 _ => Prop::ONE,
             },
-        }
-    }
-
-    pub fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.min_sum_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.min_sum_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.min_sum_for_chroma(chroma),
-        }
-    }
-
-    pub fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.max_sum_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.max_sum_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.max_sum_for_chroma(chroma),
-        }
-    }
-
-    pub fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.sum_range_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.sum_range_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.sum_range_for_chroma(chroma),
-        }
-    }
-
-    pub fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.sum_and_chroma_are_compatible(sum, chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.sum_and_chroma_are_compatible(sum, chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.sum_and_chroma_are_compatible(sum, chroma),
         }
     }
 }

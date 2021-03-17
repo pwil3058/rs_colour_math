@@ -5,7 +5,10 @@ use std::{
     ops::{Add, Sub},
 };
 
-use crate::hue::{CMYHue, ColourModificationHelpers, HueBasics, OrderedTriplets, RGBHue, Sextant};
+use crate::hue::{
+    CMYHue, ColourModificationHelpers, HueBasics, OrderedTriplets, RGBHue, Sextant,
+    SumChromaCompatibility,
+};
 use crate::{
     fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
     HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,

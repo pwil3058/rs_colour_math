@@ -240,11 +240,6 @@ impl UFDRNumber {
 
     // NB: make sure this is evenly divisible by 3
     pub(crate) const ONE_PT_5: Self = Self(u64::MAX as u128 + u64::MAX as u128 / 6 * 3);
-    //pub(crate) const ALMOST_ZERO: Self = Self(1);
-    pub(crate) const ALMOST_ONE: Self = Self(u64::MAX as u128 - 1);
-    pub(crate) const JUST_OVER_ONE: Self = Self(u64::MAX as u128 + 1);
-    pub(crate) const ALMOST_TWO: Self = Self(u64::MAX as u128 * 2 - 1);
-    pub(crate) const JUST_OVER_TWO: Self = Self(u64::MAX as u128 * 2 + 1);
 
     pub const SQRT_2: Self = Self(FDRNumber::SQRT_2.0 as u128);
     pub const SQRT_3: Self = Self(FDRNumber::SQRT_3.0 as u128);
