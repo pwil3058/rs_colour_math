@@ -2,9 +2,9 @@
 
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
 use crate::{
-    fdrn::{FDRNumber, UFDRNumber},
+    fdrn::{FDRNumber, Prop, UFDRNumber},
     hue::HueIfce,
-    Chroma, ColourBasics, Greyness, Hue, HueConstants, Prop, RGBConstants, Value, Warmth, HCV,
+    Chroma, ColourBasics, Greyness, Hue, HueConstants, RGBConstants, Value, Warmth, HCV,
 };
 
 pub trait ColourAttributeDisplayIfce {

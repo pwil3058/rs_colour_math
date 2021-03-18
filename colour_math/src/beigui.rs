@@ -2,8 +2,8 @@
 use std::ops::{Add, Mul, Sub};
 
 use crate::{
-    fdrn::{FDRNumber, UFDRNumber},
-    Angle, ColourBasics, Prop, HCV,
+    fdrn::{FDRNumber, Prop, UFDRNumber},
+    Angle, ColourBasics, HCV,
 };
 
 #[cfg(test)]

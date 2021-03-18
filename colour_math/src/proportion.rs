@@ -1,23 +1,20 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
 
-#[cfg(test)]
-mod proportion_tests;
-
 use std::{
     cmp::Ordering,
-    fmt::{self, Debug, Formatter},
-    ops::{Add, Div, Mul, Sub},
+    fmt::Debug,
+    ops::{Div, Mul},
 };
 
+use crate::{impl_prop_to_from_float, impl_to_from_number};
+
 use crate::{
-    fdrn::{FDRNumber, UFDRNumber},
+    fdrn::{FDRNumber, Prop, UFDRNumber},
     Hue,
 };
 
 use crate::hue::HueBasics;
-#[cfg(test)]
-use num_traits_plus::float_plus::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma {
@@ -216,252 +213,6 @@ impl From<Chroma> for Greyness {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub struct Prop(pub(crate) u64);
-
-impl Prop {
-    pub const ZERO: Self = Self(0);
-    pub const ONE: Self = Self(u64::MAX);
-
-    //pub(crate) const ALMOST_ZERO: Self = Self(1);
-    //pub(crate) const ALMOST_ONE: Self = Self(u64::MAX - 1);
-    // NB: make sure evenly divisible by 3
-    pub(crate) const HALF: Self = Self(u64::MAX / 6 * 3);
-
-    pub fn abs_diff(&self, other: &Self) -> Prop {
-        match self.cmp(other) {
-            Ordering::Greater => Prop(self.0 - other.0),
-            Ordering::Less => Prop(other.0 - self.0),
-            Ordering::Equal => Prop(0),
-        }
-    }
-}
-
-#[cfg(test)]
-impl Prop {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        let abs_diff = self.abs_diff(other);
-        let scaled_diff = if self >= other {
-            if self.0 > 0 {
-                ((u64::MAX / self.0) as u128 * abs_diff.0 as u128 / u64::MAX as u128) as u64
-            } else {
-                abs_diff.0
-            }
-        } else {
-            ((u64::MAX / other.0) as u128 * abs_diff.0 as u128 / u64::MAX as u128) as u64
-        };
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            scaled_diff < acceptable_rounding_error as u64
-        } else {
-            scaled_diff < u64::MAX / 1_000_000_000_000_000
-        }
-    }
-}
-
-impl Debug for Prop {
-    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        let int = self.0 / u64::MAX;
-        let frac = self.0 % u64::MAX;
-        formatter.write_fmt(format_args!("Prop({:X}.{:016X})", int, frac))
-        //formatter.write_fmt(format_args!("Prop(0.{:016X})", self))
-        //formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
-    }
-}
-
-impl fmt::UpperHex for Prop {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::UpperHex::fmt(&self.0, formatter)
-    }
-}
-
-macro_rules! impl_to_from_float {
-    ($float:ty, $number:ty) => {
-        impl From<$float> for $number {
-            fn from(arg: $float) -> Self {
-                debug_assert!(0.0 <= arg && arg <= 1.0);
-                // TODO: watch out for floating point not being proper reals
-                Self((arg * u64::MAX as $float) as u64)
-            }
-        }
-
-        impl From<$number> for $float {
-            fn from(arg: $number) -> Self {
-                arg.0 as $float / u64::MAX as $float
-            }
-        }
-    };
-}
-
-impl_to_from_float!(f32, Prop);
-impl_to_from_float!(f64, Prop);
-
-macro_rules! impl_to_from_number {
-    ($number:ty, $core:ty, $proportion:ty) => {
-        impl From<$number> for $proportion {
-            #[allow(unused_comparisons)]
-            fn from(arg: $number) -> Self {
-                debug_assert!(arg.0 >= 0 && arg.0 <= u64::MAX as $core);
-                Self(arg.0 as u64)
-            }
-        }
-
-        impl From<$proportion> for $number {
-            fn from(arg: $proportion) -> Self {
-                Self(arg.0 as $core)
-            }
-        }
-    };
-}
-
-impl_to_from_number!(UFDRNumber, u128, Prop);
-impl_to_from_number!(FDRNumber, i128, Prop);
-
-macro_rules! impl_unsigned_to_from_prop {
-    (u64) => {
-        impl From<u64> for Prop {
-            fn from(arg: u64) -> Self {
-                Self(arg as u64)
-            }
-        }
-
-        impl From<Prop> for u64 {
-            fn from(arg: Prop) -> Self {
-                arg.0 as u64
-            }
-        }
-    };
-    ($unsigned:ty) => {
-        impl From<$unsigned> for Prop {
-            fn from(arg: $unsigned) -> Self {
-                let val = arg as u128 * u64::MAX as u128 / <$unsigned>::MAX as u128;
-                Self(val as u64)
-            }
-        }
-
-        impl From<Prop> for $unsigned {
-            fn from(arg: Prop) -> Self {
-                let val = arg.0 as u128 * <$unsigned>::MAX as u128 / u64::MAX as u128;
-                val as $unsigned
-            }
-        }
-    };
-}
-
-impl_unsigned_to_from_prop!(u8);
-impl_unsigned_to_from_prop!(u16);
-impl_unsigned_to_from_prop!(u32);
-impl_unsigned_to_from_prop!(u64);
-
-impl Mul for Prop {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self {
-        Self(((self.0 as u128 * rhs.0 as u128) / u64::MAX as u128) as u64)
-    }
-}
-
-impl Mul<u8> for Prop {
-    type Output = UFDRNumber;
-
-    fn mul(self, rhs: u8) -> UFDRNumber {
-        UFDRNumber(self.0 as u128 * rhs as u128)
-    }
-}
-
-impl Div for Prop {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self {
-        if rhs == Self::ONE {
-            self
-        } else {
-            Self(((self.0 as u128 * u64::MAX as u128) / rhs.0 as u128) as u64)
-        }
-    }
-}
-
-impl Div<u8> for Prop {
-    type Output = Self;
-
-    fn div(self, rhs: u8) -> Self {
-        Prop(self.0 / rhs as u64)
-    }
-}
-
-impl Add for Prop {
-    type Output = UFDRNumber;
-
-    fn add(self, rhs: Self) -> UFDRNumber {
-        UFDRNumber(self.0 as u128 + rhs.0 as u128)
-    }
-}
-
-impl Sub for Prop {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self {
-        debug_assert!(self.0 >= rhs.0);
-        Self(self.0 - rhs.0)
-    }
-}
-
-impl Add<Prop> for UFDRNumber {
-    type Output = Self;
-
-    fn add(self, rhs: Prop) -> UFDRNumber {
-        UFDRNumber(self.0 + rhs.0 as u128)
-    }
-}
-
-impl Sub<Prop> for UFDRNumber {
-    type Output = Self;
-
-    fn sub(self, rhs: Prop) -> Self {
-        debug_assert!(self.0 >= rhs.0 as u128);
-        Self(self.0 - rhs.0 as u128)
-    }
-}
-
-impl Div<Prop> for UFDRNumber {
-    type Output = Self;
-
-    fn div(self, rhs: Prop) -> Self {
-        if rhs == Prop::ONE {
-            self
-        } else {
-            match self.0.cmp(&(rhs.0 as u128)) {
-                Ordering::Equal => Self::ONE,
-                Ordering::Less | Ordering::Greater => self.mul(Self(u128::MAX / rhs.0 as u128)),
-            }
-        }
-    }
-}
-
-impl Mul<Prop> for UFDRNumber {
-    type Output = Self;
-
-    fn mul(self, rhs: Prop) -> Self {
-        if rhs.0 == u64::MAX {
-            self
-        } else if self.0 >= u64::MAX as u128 {
-            let one = u64::MAX as u128;
-            let l_int = self.0 / one;
-            let l_rem = self.0 % one;
-            Self(l_int * rhs.0 as u128 + rhs.0 as u128 * l_rem / one)
-        } else {
-            Self((self.0 * rhs.0 as u128) / u64::MAX as u128)
-        }
-    }
-}
-
-impl Mul<u8> for UFDRNumber {
-    type Output = Self;
-
-    fn mul(self, rhs: u8) -> Self {
-        Self(self.0 * rhs as u128)
-    }
-}
-
 #[derive(
     Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
 )]
@@ -513,8 +264,8 @@ impl Warmth {
     }
 }
 
-impl_to_from_float!(f32, Warmth);
-impl_to_from_float!(f64, Warmth);
+impl_prop_to_from_float!(f32, Warmth);
+impl_prop_to_from_float!(f64, Warmth);
 
 impl From<Prop> for Warmth {
     fn from(prop: Prop) -> Self {
@@ -574,8 +325,8 @@ impl Mul<i32> for Value {
     }
 }
 
-impl_to_from_float!(f32, Value);
-impl_to_from_float!(f64, Value);
+impl_prop_to_from_float!(f32, Value);
+impl_prop_to_from_float!(f64, Value);
 
 impl From<Prop> for Value {
     fn from(prop: Prop) -> Self {

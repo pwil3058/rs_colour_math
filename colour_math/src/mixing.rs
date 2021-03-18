@@ -1,6 +1,9 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use crate::{fdrn::UFDRNumber, proportion::Prop, ColourBasics, LightLevel, HCV, RGB};
+use crate::{
+    fdrn::{Prop, UFDRNumber},
+    ColourBasics, LightLevel, HCV, RGB,
+};
 
 #[derive(Default, Debug)]
 pub struct SubtractiveMixer {

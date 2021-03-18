@@ -18,10 +18,10 @@ pub mod proportion;
 pub mod rgb;
 
 pub use crate::{
-    fdrn::UFDRNumber,
+    fdrn::{Prop, UFDRNumber},
     hcv::HCV,
     hue::{angle::Angle, Hue},
-    proportion::{Chroma, Greyness, Prop, Value, Warmth},
+    proportion::{Chroma, Greyness, Value, Warmth},
     rgb::RGB,
 };
 use hue::HueIfce;
