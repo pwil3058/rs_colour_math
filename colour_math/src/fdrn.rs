@@ -494,6 +494,12 @@ impl fmt::UpperHex for Prop {
     }
 }
 
+pub trait IntoProp: Sized + Copy + Into<Prop> {
+    fn into_prop(self) -> Prop {
+        self.into()
+    }
+}
+
 #[macro_export]
 macro_rules! impl_prop_to_from_float {
     ($float:ty, $number:ty) => {
@@ -512,6 +518,10 @@ macro_rules! impl_prop_to_from_float {
         }
     };
 }
+
+impl IntoProp for f32 {}
+
+impl IntoProp for f64 {}
 
 impl_prop_to_from_float!(f32, Prop);
 impl_prop_to_from_float!(f64, Prop);
@@ -538,6 +548,10 @@ macro_rules! impl_to_from_number {
 impl_to_from_number!(UFDRNumber, u128, Prop);
 impl_to_from_number!(FDRNumber, i128, Prop);
 
+impl IntoProp for UFDRNumber {}
+
+impl IntoProp for FDRNumber {}
+
 #[macro_export]
 macro_rules! impl_unsigned_to_from_prop {
     (u64) => {
@@ -552,6 +566,8 @@ macro_rules! impl_unsigned_to_from_prop {
                 arg.0 as u64
             }
         }
+
+        impl IntoProp for u64 {}
     };
     ($unsigned:ty) => {
         impl From<$unsigned> for Prop {
@@ -567,6 +583,8 @@ macro_rules! impl_unsigned_to_from_prop {
                 val as $unsigned
             }
         }
+
+        impl IntoProp for $unsigned {}
     };
 }
 
