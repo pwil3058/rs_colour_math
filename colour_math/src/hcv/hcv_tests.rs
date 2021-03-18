@@ -3,8 +3,8 @@ use std::convert::From;
 
 use num_traits_plus::assert_approx_eq;
 
+use crate::attributes::Warmth;
 use crate::hcv::*;
-use crate::proportion::Warmth;
 
 #[test]
 fn default_hcv_is_black() {

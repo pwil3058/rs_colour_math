@@ -9,7 +9,7 @@ use std::{
 pub mod angle;
 
 use crate::{
-    fdrn::UFDRNumber, hue::angle::Angle, proportion::Warmth, Chroma, ColourBasics, HueConstants,
+    attributes::Warmth, fdrn::UFDRNumber, hue::angle::Angle, Chroma, ColourBasics, HueConstants,
     LightLevel, Prop, HCV, RGB,
 };
 

@@ -10,7 +10,7 @@ use crate::hue::{
     SumChromaCompatibility,
 };
 use crate::{
-    fdrn::UFDRNumber, hue::HueIfce, proportion::Warmth, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
+    attributes::Warmth, fdrn::UFDRNumber, hue::HueIfce, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
     HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,
 };
 

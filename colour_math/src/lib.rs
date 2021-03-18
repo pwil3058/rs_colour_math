@@ -7,6 +7,7 @@ use std::fmt::{Debug, LowerExp, LowerHex, UpperExp, UpperHex};
 use num_traits::{Signed, Unsigned};
 use num_traits_plus::float_plus::*;
 
+pub mod attributes;
 pub mod beigui;
 pub mod debug;
 pub mod fdrn;
@@ -14,14 +15,13 @@ pub mod hcv;
 pub mod hue;
 pub mod manipulator;
 pub mod mixing;
-pub mod proportion;
 pub mod rgb;
 
 pub use crate::{
+    attributes::{Chroma, Greyness, Value, Warmth},
     fdrn::{Prop, UFDRNumber},
     hcv::HCV,
     hue::{angle::Angle, Hue},
-    proportion::{Chroma, Greyness, Value, Warmth},
     rgb::RGB,
 };
 use hue::HueIfce;

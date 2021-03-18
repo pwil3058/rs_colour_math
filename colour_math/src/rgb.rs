@@ -12,10 +12,10 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::{
+    attributes::Warmth,
     debug::ApproxEq,
     fdrn::UFDRNumber,
     hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
-    proportion::Warmth,
     Angle, Chroma, ColourBasics, Float, HueConstants, LightLevel, ManipulatedColour, Prop,
     RGBConstants, Value, CCI, HCV,
 };
