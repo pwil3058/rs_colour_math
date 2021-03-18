@@ -278,7 +278,9 @@ impl Warmth {
 #[cfg(test)]
 impl Warmth {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        Prop::from(*self).approx_eq(&(*other).into(), acceptable_rounding_error)
+        (*self)
+            .into_prop()
+            .approx_eq(&(*other).into_prop(), acceptable_rounding_error)
     }
 }
 
@@ -296,6 +298,8 @@ impl From<Warmth> for Prop {
         Self(warmth.0)
     }
 }
+
+impl IntoProp for Warmth {}
 
 impl_to_from_number!(UFDRNumber, u128, Warmth);
 impl_to_from_number!(FDRNumber, i128, Warmth);
@@ -321,7 +325,9 @@ impl Value {
 #[cfg(test)]
 impl Value {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        Prop::from(*self).approx_eq(&(*other).into(), acceptable_rounding_error)
+        (*self)
+            .into_prop()
+            .approx_eq(&(*other).into_prop(), acceptable_rounding_error)
     }
 }
 
@@ -357,6 +363,8 @@ impl From<Value> for Prop {
         Self(value.0)
     }
 }
+
+impl IntoProp for Value {}
 
 impl_to_from_number!(UFDRNumber, u128, Value);
 impl_to_from_number!(FDRNumber, i128, Value);
