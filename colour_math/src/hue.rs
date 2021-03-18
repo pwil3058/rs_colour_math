@@ -239,27 +239,19 @@ pub(crate) trait HueIfce:
 }
 
 pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
-    fn overs(&self, sum: UFDRNumber, c_prop: Prop) -> Option<UFDRNumber> {
-        debug_assert!(sum.is_valid_sum() && c_prop > Prop::ZERO);
-        if sum < self.sum_for_max_chroma() * c_prop {
-            None
-        } else {
-            Some((sum - self.sum_for_max_chroma() * c_prop) % 3)
-        }
-    }
-
     fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> (Chroma, UFDRNumber) {
         if c_prop == Prop::ZERO {
             (Chroma::ZERO, sum / 3 * 3)
-        } else if let Some(overs) = self.overs(sum, c_prop) {
+        } else if sum < self.sum_for_max_chroma() * c_prop {
+            (Chroma::Shade(c_prop), self.sum_for_max_chroma() * c_prop)
+        } else {
+            let overs = (sum - self.sum_for_max_chroma() * c_prop) % 3;
             let sum = sum - overs;
             match sum.cmp(&self.sum_for_max_chroma()) {
                 Ordering::Equal => (Chroma::Neither(c_prop), sum),
                 Ordering::Less => (Chroma::Shade(c_prop), sum),
                 Ordering::Greater => (Chroma::Tint(c_prop), sum),
             }
-        } else {
-            (Chroma::Shade(c_prop), self.sum_for_max_chroma() * c_prop)
         }
     }
 
@@ -932,14 +924,6 @@ impl OrderedTriplets for Hue {
 }
 
 impl ColourModificationHelpers for Hue {
-    fn overs(&self, sum: UFDRNumber, c_prop: Prop) -> Option<UFDRNumber> {
-        match self {
-            Self::Primary(primary_hue) => primary_hue.overs(sum, c_prop),
-            Self::Secondary(secondary_hue) => secondary_hue.overs(sum, c_prop),
-            Self::Sextant(sextant_hue) => sextant_hue.overs(sum, c_prop),
-        }
-    }
-
     fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> (Chroma, UFDRNumber) {
         match self {
             Self::Primary(primary_hue) => primary_hue.trim_overs(sum, c_prop),
