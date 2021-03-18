@@ -145,20 +145,24 @@ impl Greyness {
     pub const ONE: Self = Self::Neither(Prop::ONE);
 
     pub fn is_zero(&self) -> bool {
-        self.prop() == Prop::ZERO
-    }
-
-    pub fn prop(&self) -> Prop {
-        use Greyness::*;
-        match self {
-            Shade(proportion) | Tint(proportion) | Neither(proportion) => *proportion,
-        }
+        self.into_prop() == Prop::ZERO
     }
 
     pub fn abs_diff(&self, other: &Self) -> Prop {
-        self.prop().abs_diff(&other.prop())
+        self.into_prop().abs_diff(&other.into_prop())
     }
 }
+
+impl From<Greyness> for Prop {
+    fn from(greyness: Greyness) -> Prop {
+        use Greyness::*;
+        match greyness {
+            Shade(proportion) | Tint(proportion) | Neither(proportion) => proportion,
+        }
+    }
+}
+
+impl IntoProp for Greyness {}
 
 impl Default for Greyness {
     fn default() -> Self {
@@ -210,7 +214,9 @@ impl Greyness {
                     proportion.approx_eq(other_proportion, acceptable_rounding_error)
                 }
             },
-            Neither(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
+            Neither(proportion) => {
+                proportion.approx_eq(&other.into_prop(), acceptable_rounding_error)
+            }
         }
     }
 }

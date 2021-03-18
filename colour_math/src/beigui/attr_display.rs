@@ -1,9 +1,8 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
-use crate::fdrn::IntoProp;
 use crate::{
-    fdrn::{FDRNumber, Prop, UFDRNumber},
+    beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn},
+    fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
     hue::HueIfce,
     Chroma, ColourBasics, Greyness, Hue, HueConstants, RGBConstants, Value, Warmth, HCV,
 };
@@ -489,7 +488,7 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
 
     fn attr_value(&self) -> Option<Prop> {
         if let Some(greyness) = self.greyness {
-            Some(greyness.prop())
+            Some(greyness.into_prop())
         } else {
             None
         }
@@ -522,7 +521,7 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
 
     fn attr_target_value(&self) -> Option<Prop> {
         if let Some(greyness) = self.target_greyness {
-            Some(greyness.prop())
+            Some(greyness.into_prop())
         } else {
             None
         }

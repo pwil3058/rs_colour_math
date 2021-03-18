@@ -5,14 +5,15 @@ use std::{
     ops::{Add, Sub},
 };
 
-use crate::fdrn::IntoProp;
-use crate::hue::{
-    CMYHue, ColourModificationHelpers, HueBasics, OrderedTriplets, RGBHue, Sextant,
-    SumChromaCompatibility,
-};
 use crate::{
-    attributes::Warmth, fdrn::UFDRNumber, hue::HueIfce, rgb::RGB, Angle, Chroma, ColourBasics, Hue,
-    HueConstants, LightLevel, ManipulatedColour, Prop, RGBConstants, Value,
+    attributes::{Chroma, Value, Warmth},
+    fdrn::{IntoProp, Prop, UFDRNumber},
+    hue::{
+        angle::Angle, CMYHue, ColourModificationHelpers, Hue, HueBasics, HueIfce, OrderedTriplets,
+        RGBHue, Sextant, SumChromaCompatibility,
+    },
+    rgb::RGB,
+    ColourBasics, HueConstants, LightLevel, ManipulatedColour, RGBConstants,
 };
 
 #[derive(Debug, Clone, Copy, Eq, Ord, Default, Serialize, Deserialize)]
