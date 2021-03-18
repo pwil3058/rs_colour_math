@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn};
+use crate::fdrn::IntoProp;
 use crate::{
     fdrn::{FDRNumber, Prop, UFDRNumber},
     hue::HueIfce,
@@ -309,7 +310,7 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
 
     fn attr_value(&self) -> Option<Prop> {
         if let Some(chroma) = self.chroma {
-            Some(chroma.prop())
+            Some(chroma.into_prop())
         } else {
             None
         }
@@ -342,7 +343,7 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
 
     fn attr_target_value(&self) -> Option<Prop> {
         if let Some(chroma) = self.target_chroma {
-            Some(chroma.prop())
+            Some(chroma.into_prop())
         } else {
             None
         }

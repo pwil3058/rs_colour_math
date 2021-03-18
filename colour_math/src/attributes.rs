@@ -10,11 +10,10 @@ use std::{
 use crate::{impl_prop_to_from_float, impl_to_from_number};
 
 use crate::{
-    fdrn::{FDRNumber, Prop, UFDRNumber},
+    fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
+    hue::HueBasics,
     Hue,
 };
-
-use crate::hue::HueBasics;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Chroma {
@@ -28,7 +27,7 @@ impl Chroma {
     pub const ONE: Self = Self::Neither(Prop::ONE);
 
     pub fn is_zero(self) -> bool {
-        self.prop() == Prop::ZERO
+        self.into_prop() == Prop::ZERO
     }
 
     pub fn is_valid(self) -> bool {
@@ -40,17 +39,28 @@ impl Chroma {
         }
     }
 
-    pub fn prop(&self) -> Prop {
-        use Chroma::*;
-        match self {
-            Shade(proportion) | Tint(proportion) | Neither(proportion) => *proportion,
-        }
-    }
+    // pub fn prop(&self) -> Prop {
+    //     use Chroma::*;
+    //     match self {
+    //         Shade(proportion) | Tint(proportion) | Neither(proportion) => *proportion,
+    //     }
+    // }
 
     pub fn abs_diff(&self, other: &Self) -> Prop {
-        self.prop().abs_diff(&other.prop())
+        self.into_prop().abs_diff(&other.into_prop())
     }
 }
+
+impl From<Chroma> for Prop {
+    fn from(chroma: Chroma) -> Prop {
+        use Chroma::*;
+        match chroma {
+            Shade(proportion) | Tint(proportion) | Neither(proportion) => proportion,
+        }
+    }
+}
+
+impl IntoProp for Chroma {}
 
 impl Default for Chroma {
     fn default() -> Self {
@@ -116,7 +126,9 @@ impl Chroma {
                     proportion.approx_eq(other_proportion, acceptable_rounding_error)
                 }
             },
-            Neither(proportion) => proportion.approx_eq(&other.prop(), acceptable_rounding_error),
+            Neither(proportion) => {
+                proportion.approx_eq(&other.into_prop(), acceptable_rounding_error)
+            }
         }
     }
 }
@@ -228,7 +240,7 @@ impl Warmth {
 
     pub fn calculate(chroma: Chroma, x_dash: Prop) -> Self {
         debug_assert_ne!(chroma, Chroma::ZERO);
-        let temp = (Self::K + Self::K_COMP * x_dash) * chroma.prop();
+        let temp = (Self::K + Self::K_COMP * x_dash) * chroma.into_prop();
         debug_assert!(temp <= UFDRNumber::ONE);
         match chroma {
             Chroma::Shade(prop) => {

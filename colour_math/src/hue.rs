@@ -13,7 +13,7 @@ use crate::{
     LightLevel, Prop, HCV, RGB,
 };
 
-use crate::fdrn::FDRNumber;
+use crate::fdrn::{FDRNumber, IntoProp};
 use num_traits_plus::{debug_assert_approx_eq, float_plus::FloatPlus};
 use std::ops::{Add, Sub};
 
@@ -49,7 +49,7 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
     }
 
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
-        let (min_sum, max_sum) = self.sum_range_for_chroma_prop(chroma.prop())?;
+        let (min_sum, max_sum) = self.sum_range_for_chroma_prop(chroma.into_prop())?;
         match chroma {
             Chroma::ZERO => None,
             Chroma::Neither(_) => Some((self.sum_for_max_chroma(), self.sum_for_max_chroma())),
@@ -59,7 +59,7 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
     }
 
     fn max_chroma_prop_for_sum(&self, sum: UFDRNumber) -> Option<Prop> {
-        Some(self.max_chroma_for_sum(sum)?.prop())
+        Some(self.max_chroma_for_sum(sum)?.into_prop())
     }
 
     fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
@@ -98,7 +98,7 @@ pub(crate) trait SumChromaCompatibility: HueBasics {
         if let Some((min_sum, max_sum)) = self.sum_range_for_chroma(chroma) {
             sum >= min_sum
                 && sum <= max_sum
-                && (sum - self.sum_for_max_chroma() * chroma.prop()) % 3 == UFDRNumber::ZERO
+                && (sum - self.sum_for_max_chroma() * chroma.into_prop()) % 3 == UFDRNumber::ZERO
         } else {
             false
         }
@@ -198,7 +198,7 @@ pub(crate) trait HueIfce:
             sum => {
                 let max_chroma = self.max_chroma_for_sum(sum)?;
                 let (chroma, sum) = self.adjusted_favouring_sum(sum, max_chroma)?;
-                let triplet = self.rgb_ordered_triplet(sum, chroma.prop())?;
+                let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
                 Some(RGB::<T>::from(triplet))
             }
         }
@@ -207,14 +207,14 @@ pub(crate) trait HueIfce:
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         let min_sum = self.min_sum_for_chroma(chroma)?;
         let (chroma, sum) = self.adjusted_favouring_chroma(min_sum, chroma)?;
-        let triplet = self.rgb_ordered_triplet(sum, chroma.prop())?;
+        let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
     fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         let max_sum = self.max_sum_for_chroma(chroma)?;
         let (chroma, sum) = self.adjusted_favouring_chroma(max_sum, chroma)?;
-        let triplet = self.rgb_ordered_triplet(sum, chroma.prop())?;
+        let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
@@ -226,11 +226,11 @@ pub(crate) trait HueIfce:
         let (min_sum, max_sum) = self.sum_range_for_chroma(chroma)?;
         match sum {
             sum if sum < min_sum || sum > max_sum => None,
-            sum => match chroma.prop() {
+            sum => match chroma.into_prop() {
                 Prop::ZERO => None,
                 c_prop => {
                     let (chroma, sum) = self.trim_overs(sum, c_prop);
-                    let triplet = self.rgb_ordered_triplet(sum, chroma.prop())?;
+                    let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
                     Some(RGB::<T>::from(triplet))
                 }
             },
@@ -278,7 +278,7 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
                     Ordering::Equal | Ordering::Less => Some((chroma, sum)),
                     Ordering::Greater => {
                         let max_sum = self
-                            .max_sum_for_chroma_prop(chroma.prop())
+                            .max_sum_for_chroma_prop(chroma.into_prop())
                             .expect("chroma > 0");
                         if sum > max_sum {
                             Some(self.trim_overs(max_sum, c_prop))
@@ -316,7 +316,7 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
                     }
                     Ordering::Greater => {
                         if let Some(max_chroma) = self.max_chroma_prop_for_sum(sum) {
-                            if chroma.prop() > max_chroma {
+                            if chroma.into_prop() > max_chroma {
                                 Some(self.trim_overs(sum, max_chroma))
                             } else {
                                 Some(self.trim_overs(sum, c_prop))
@@ -390,8 +390,8 @@ impl HueIfce for RGBHue {
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
-            RGBHue::Red => ((UFDRNumber::ONE + chroma.prop()) / 2).into(),
-            RGBHue::Green | RGBHue::Blue => ((UFDRNumber::TWO - chroma.prop()) / 4).into(),
+            RGBHue::Red => ((UFDRNumber::ONE + chroma.into_prop()) / 2).into(),
+            RGBHue::Green | RGBHue::Blue => ((UFDRNumber::TWO - chroma.into_prop()) / 4).into(),
         };
         Warmth::calculate(chroma, x_dash)
     }
@@ -456,8 +456,8 @@ impl HueIfce for CMYHue {
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
         let x_dash = match self {
-            CMYHue::Cyan => (UFDRNumber::ONE - chroma.prop()) / 2,
-            CMYHue::Magenta | CMYHue::Yellow => (UFDRNumber::TWO + chroma.prop()) / 4,
+            CMYHue::Cyan => (UFDRNumber::ONE - chroma.into_prop()) / 2,
+            CMYHue::Magenta | CMYHue::Yellow => (UFDRNumber::TWO + chroma.into_prop()) / 4,
         };
         Warmth::calculate(chroma, x_dash.into())
     }
@@ -538,7 +538,7 @@ impl SumChromaCompatibility for SextantHue {
         if let Some((min_sum, max_sum)) = self.sum_range_for_chroma(chroma) {
             sum >= min_sum
                 && sum <= max_sum
-                && (sum - self.sum_for_max_chroma() * chroma.prop()) % 3 < UFDRNumber(3)
+                && (sum - self.sum_for_max_chroma() * chroma.into_prop()) % 3 < UFDRNumber(3)
         } else {
             false
         }
@@ -633,16 +633,18 @@ impl HueIfce for SextantHue {
     }
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
-        let kc = chroma.prop() * self.1;
+        let kc = chroma.into_prop() * self.1;
         let x_dash = match self.0 {
             // TODO: take tint and shade into account
             Sextant::RedYellow | Sextant::RedMagenta => {
-                (UFDRNumber::TWO + chroma.prop() * 2 - kc) / 4
+                (UFDRNumber::TWO + chroma.into_prop() * 2 - kc) / 4
             }
             Sextant::GreenYellow | Sextant::BlueMagenta => {
-                (UFDRNumber::TWO + kc * 2 - chroma.prop()) / 4
+                (UFDRNumber::TWO + kc * 2 - chroma.into_prop()) / 4
             }
-            Sextant::GreenCyan | Sextant::BlueCyan => (UFDRNumber::TWO - kc - chroma.prop()) / 4,
+            Sextant::GreenCyan | Sextant::BlueCyan => {
+                (UFDRNumber::TWO - kc - chroma.into_prop()) / 4
+            }
         };
         Warmth::calculate(chroma, x_dash.into())
     }

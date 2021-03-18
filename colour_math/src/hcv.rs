@@ -5,6 +5,7 @@ use std::{
     ops::{Add, Sub},
 };
 
+use crate::fdrn::IntoProp;
 use crate::hue::{
     CMYHue, ColourModificationHelpers, HueBasics, OrderedTriplets, RGBHue, Sextant,
     SumChromaCompatibility,
@@ -126,7 +127,7 @@ impl HCV {
 
     pub fn sum_range_for_current_chroma_prop(&self) -> (UFDRNumber, UFDRNumber) {
         if let Some(hue) = self.hue {
-            if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.prop()) {
+            if let Some(range) = hue.sum_range_for_chroma_prop(self.chroma.into_prop()) {
                 range
             } else {
                 (UFDRNumber::ZERO, UFDRNumber::THREE)
@@ -296,7 +297,7 @@ impl From<HCV> for [Prop; 3] {
     fn from(hcv: HCV) -> Self {
         debug_assert!(hcv.is_valid());
         if let Some(hue) = hcv.hue {
-            hue.rgb_ordered_triplet(hcv.sum, hcv.chroma.prop())
+            hue.rgb_ordered_triplet(hcv.sum, hcv.chroma.into_prop())
                 .expect("Invalid Hue")
         } else {
             let value: Prop = (hcv.sum / 3).into();

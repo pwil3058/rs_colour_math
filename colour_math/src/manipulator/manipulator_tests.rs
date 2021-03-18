@@ -1,6 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use num_traits_plus::assert_approx_eq;
 
+use crate::fdrn::IntoProp;
 use crate::hue::HueBasics;
 use crate::manipulator::{ColourManipulatorBuilder, SetHue};
 use crate::{
@@ -98,11 +99,11 @@ fn decr_chroma() {
         assert_eq!(manipulator.hcv.chroma, Chroma::ONE);
         let saved_hue = manipulator.hcv.hue();
         let decr = Prop::from(0.1);
-        let mut expected = manipulator.hcv.chroma.prop() - decr;
+        let mut expected = manipulator.hcv.chroma.into_prop() - decr;
         while manipulator.decr_chroma(decr) {
-            assert_approx_eq!(manipulator.hcv.chroma.prop(), expected);
-            expected = if manipulator.hcv.chroma.prop() > decr {
-                manipulator.hcv.chroma.prop() - decr
+            assert_approx_eq!(manipulator.hcv.chroma.into_prop(), expected);
+            expected = if manipulator.hcv.chroma.into_prop() > decr {
+                manipulator.hcv.chroma.into_prop() - decr
             } else {
                 Prop::ZERO
             };
@@ -143,15 +144,15 @@ fn incr_chroma_clamped() {
         } else {
             manipulator.hcv.chroma
         };
-        let mut expected: Prop = (manipulator.hcv.chroma.prop() + incr)
-            .min(max_chroma.prop().into())
+        let mut expected: Prop = (manipulator.hcv.chroma.into_prop() + incr)
+            .min(max_chroma.into_prop().into())
             .into();
         while manipulator.incr_chroma(incr) {
             assert!(!manipulator.hcv.is_grey());
-            assert_approx_eq!(manipulator.hcv.chroma.prop(), expected);
+            assert_approx_eq!(manipulator.hcv.chroma.into_prop(), expected);
             max_chroma = saved_hue.max_chroma_for_sum(manipulator.hcv.sum).unwrap();
-            expected = (manipulator.hcv.chroma.prop() + incr)
-                .min(max_chroma.prop().into())
+            expected = (manipulator.hcv.chroma.into_prop() + incr)
+                .min(max_chroma.into_prop().into())
                 .into();
             assert_approx_eq!(manipulator.hcv.sum, start_sum);
             assert_eq!(manipulator.hcv.hue(), Some(saved_hue));
@@ -182,12 +183,12 @@ fn incr_chroma_unclamped() {
         let start_sum = manipulator.hcv.sum;
         let saved_hue = manipulator.hcv.hue().unwrap();
         let incr: Prop = 0.1_f64.into();
-        let mut expected: Prop = (manipulator.hcv.chroma.prop() + incr)
+        let mut expected: Prop = (manipulator.hcv.chroma.into_prop() + incr)
             .min(UFDRNumber::ONE)
             .into();
         while manipulator.incr_chroma(incr) {
-            assert_eq!(manipulator.hcv.chroma.prop(), expected);
-            expected = (manipulator.hcv.chroma.prop() + incr)
+            assert_eq!(manipulator.hcv.chroma.into_prop(), expected);
+            expected = (manipulator.hcv.chroma.into_prop() + incr)
                 .min(UFDRNumber::ONE)
                 .into();
             let (min_sum, max_sum) = manipulator.hcv.sum_range_for_current_chroma();

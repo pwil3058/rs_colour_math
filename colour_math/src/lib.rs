@@ -17,6 +17,7 @@ pub mod manipulator;
 pub mod mixing;
 pub mod rgb;
 
+use crate::fdrn::IntoProp;
 pub use crate::{
     attributes::{Chroma, Greyness, Value, Warmth},
     fdrn::{Prop, UFDRNumber},
@@ -225,8 +226,8 @@ impl std::fmt::Display for ScalarAttribute {
 pub trait ColourAttributes: ColourBasics {
     fn scalar_attribute(&self, attr: ScalarAttribute) -> Prop {
         match attr {
-            ScalarAttribute::Chroma => self.chroma().prop(),
-            ScalarAttribute::Greyness => Prop::ONE - self.chroma().prop(),
+            ScalarAttribute::Chroma => self.chroma().into_prop(),
+            ScalarAttribute::Greyness => Prop::ONE - self.chroma().into_prop(),
             ScalarAttribute::Value => self.value().into(),
             ScalarAttribute::Warmth => self.warmth().into(),
         }
