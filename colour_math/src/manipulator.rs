@@ -393,7 +393,7 @@ impl ColourManipulator {
                 } else {
                     self.hcv = match policy {
                         SetHue::FavourChroma => {
-                            let (chroma, sum) = if let Some((min_sum, max_sum)) =
+                            if let Some((chroma, sum)) = if let Some((min_sum, max_sum)) =
                                 new_hue.sum_range_for_chroma(chroma)
                             {
                                 if self.hcv.sum < min_sum {
@@ -405,8 +405,11 @@ impl ColourManipulator {
                                 }
                             } else {
                                 new_hue.trim_overs(self.hcv.sum, chroma.into_prop())
-                            };
-                            HCV::new(Some((new_hue, chroma)), sum)
+                            } {
+                                HCV::new(Some((new_hue, chroma)), sum)
+                            } else {
+                                HCV::new_grey((self.hcv.sum / 3).into())
+                            }
                         }
                         SetHue::FavourValue => {
                             let max_chroma = new_hue

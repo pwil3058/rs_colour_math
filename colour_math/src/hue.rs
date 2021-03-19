@@ -229,7 +229,7 @@ pub(crate) trait HueIfce:
             sum => match chroma.into_prop() {
                 Prop::ZERO => None,
                 c_prop => {
-                    let (chroma, sum) = self.trim_overs(sum, c_prop);
+                    let (chroma, sum) = self.trim_overs(sum, c_prop)?;
                     let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
                     Some(RGB::<T>::from(triplet))
                 }
@@ -239,18 +239,19 @@ pub(crate) trait HueIfce:
 }
 
 pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
-    fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> (Chroma, UFDRNumber) {
+    fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> Option<(Chroma, UFDRNumber)> {
+        debug_assert!(sum.is_valid_sum());
         match self.sum_for_max_chroma() * c_prop {
-            UFDRNumber::ZERO => (Chroma::ZERO, sum / 3 * 3),
-            min_sum if sum < min_sum => (Chroma::Shade(c_prop), min_sum),
-            min_sum => {
-                let sum = sum - (sum - min_sum) % 3;
-                match sum.cmp(&self.sum_for_max_chroma()) {
-                    Ordering::Equal => (Chroma::Neither(c_prop), sum),
-                    Ordering::Less => (Chroma::Shade(c_prop), sum),
-                    Ordering::Greater => (Chroma::Tint(c_prop), sum),
-                }
-            }
+            UFDRNumber::ZERO => None,
+            min_sum if sum < min_sum => Some((Chroma::Shade(c_prop), min_sum)),
+            min_sum => match sum - (sum - min_sum) % 3 {
+                UFDRNumber::ZERO => None,
+                sum => match sum.cmp(&self.sum_for_max_chroma()) {
+                    Ordering::Equal => Some((Chroma::Neither(c_prop), sum)),
+                    Ordering::Less => Some((Chroma::Shade(c_prop), sum)),
+                    Ordering::Greater => Some((Chroma::Tint(c_prop), sum)),
+                },
+            },
         }
     }
 
@@ -264,7 +265,7 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
             Chroma::ZERO => None,
             Chroma::ONE => Some((Chroma::ONE, self.sum_for_max_chroma())),
             Chroma::Neither(c_prop) | Chroma::Tint(c_prop) | Chroma::Shade(c_prop) => {
-                let (chroma, sum) = self.trim_overs(sum, c_prop);
+                let (chroma, sum) = self.trim_overs(sum, c_prop)?;
                 match sum.cmp(&self.sum_for_max_chroma()) {
                     Ordering::Equal | Ordering::Less => Some((chroma, sum)),
                     Ordering::Greater => {
@@ -272,7 +273,7 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
                             .max_sum_for_chroma_prop(chroma.into_prop())
                             .expect("chroma > 0");
                         if sum > max_sum {
-                            Some(self.trim_overs(max_sum, c_prop))
+                            Some(self.trim_overs(max_sum, c_prop)?)
                         } else {
                             Some((chroma, sum))
                         }
@@ -292,22 +293,22 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
             Chroma::ZERO => None,
             Chroma::Neither(c_prop) | Chroma::Tint(c_prop) | Chroma::Shade(c_prop) => {
                 match sum.cmp(&self.sum_for_max_chroma()) {
-                    //Ordering::Equal => Some((chroma, sum)),
-                    Ordering::Less | Ordering::Equal => {
+                    Ordering::Equal => Some(self.trim_overs(sum, c_prop)?),
+                    Ordering::Less => {
                         let min_sum = self.min_sum_for_chroma_prop(c_prop).expect("chroma > 0");
                         if sum < min_sum {
                             let max_chroma = self.max_chroma_prop_for_sum(sum)?;
-                            Some(self.trim_overs(sum, max_chroma))
+                            Some(self.trim_overs(sum, max_chroma)?)
                         } else {
-                            Some(self.trim_overs(sum, c_prop))
+                            Some(self.trim_overs(sum, c_prop)?)
                         }
                     }
                     Ordering::Greater => {
                         let max_chroma = self.max_chroma_prop_for_sum(sum)?;
                         if c_prop > max_chroma {
-                            Some(self.trim_overs(sum, max_chroma))
+                            Some(self.trim_overs(sum, max_chroma)?)
                         } else {
-                            Some(self.trim_overs(sum, c_prop))
+                            Some(self.trim_overs(sum, c_prop)?)
                         }
                     }
                 }
@@ -917,7 +918,7 @@ impl OrderedTriplets for Hue {
 }
 
 impl ColourModificationHelpers for Hue {
-    fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> (Chroma, UFDRNumber) {
+    fn trim_overs(&self, sum: UFDRNumber, c_prop: Prop) -> Option<(Chroma, UFDRNumber)> {
         match self {
             Self::Primary(primary_hue) => primary_hue.trim_overs(sum, c_prop),
             Self::Secondary(secondary_hue) => secondary_hue.trim_overs(sum, c_prop),
