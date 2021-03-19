@@ -408,6 +408,7 @@ impl ColourManipulator {
                             } {
                                 HCV::new(Some((new_hue, chroma)), sum)
                             } else {
+                                self.saved_hue = new_hue;
                                 HCV::new_grey((self.hcv.sum / 3).into())
                             }
                         }
