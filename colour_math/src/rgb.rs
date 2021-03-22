@@ -17,7 +17,7 @@ use crate::{
     fdrn::UFDRNumber,
     hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
     Angle, Chroma, ColourBasics, Float, HueConstants, LightLevel, ManipulatedColour, Prop,
-    RGBConstants, Value, CCI, HCV,
+    RGBConstants, Value, HCV,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -162,15 +162,12 @@ impl<L: LightLevel> ManipulatedColour for RGB<L> {
     }
 }
 
-impl<T: LightLevel> Index<CCI> for RGB<T> {
+impl<T: LightLevel> Index<usize> for RGB<T> {
     type Output = T;
 
-    fn index(&self, index: CCI) -> &T {
-        match index {
-            CCI::Red => &self.0[0],
-            CCI::Green => &self.0[1],
-            CCI::Blue => &self.0[2],
-        }
+    fn index(&self, index: usize) -> &T {
+        debug_assert!(index < 3);
+        self.0.index(index)
     }
 }
 

@@ -5,7 +5,7 @@ use super::*;
 use num_traits_plus::assert_approx_eq;
 
 use crate::attributes::Chroma;
-use crate::{hue::Hue, rgb::RGB, ColourBasics, RGBConstants, CCI};
+use crate::{hue::Hue, rgb::RGB, ColourBasics, RGBConstants};
 
 const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
 const VALID_OTHER_SUMS: [f64; 20] = [
@@ -34,46 +34,46 @@ const VALID_OTHER_SUMS: [f64; 20] = [
 const SECOND_VALUES: [f64; 11] = [0.001, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99];
 
 impl RGBHue {
-    fn indices(&self) -> (CCI, CCI, CCI) {
+    fn indices(&self) -> (usize, usize, usize) {
         match self {
-            RGBHue::Red => (CCI::Red, CCI::Green, CCI::Blue),
-            RGBHue::Green => (CCI::Green, CCI::Red, CCI::Blue),
-            RGBHue::Blue => (CCI::Blue, CCI::Red, CCI::Green),
+            RGBHue::Red => (0, 1, 2),
+            RGBHue::Green => (1, 0, 2),
+            RGBHue::Blue => (2, 0, 1),
         }
     }
 }
 
 impl CMYHue {
-    fn indices(&self) -> (CCI, CCI, CCI) {
+    fn indices(&self) -> (usize, usize, usize) {
         match self {
-            CMYHue::Magenta => (CCI::Red, CCI::Blue, CCI::Green),
-            CMYHue::Yellow => (CCI::Red, CCI::Green, CCI::Blue),
-            CMYHue::Cyan => (CCI::Green, CCI::Blue, CCI::Red),
+            CMYHue::Magenta => (0, 2, 1),
+            CMYHue::Yellow => (0, 1, 2),
+            CMYHue::Cyan => (1, 2, 0),
         }
     }
 }
 
 impl Sextant {
-    fn indices(&self) -> (CCI, CCI, CCI) {
+    fn indices(&self) -> (usize, usize, usize) {
         match self {
-            Sextant::RedYellow => (CCI::Red, CCI::Green, CCI::Blue),
-            Sextant::RedMagenta => (CCI::Red, CCI::Blue, CCI::Green),
-            Sextant::GreenYellow => (CCI::Green, CCI::Red, CCI::Blue),
-            Sextant::GreenCyan => (CCI::Green, CCI::Blue, CCI::Red),
-            Sextant::BlueMagenta => (CCI::Blue, CCI::Red, CCI::Green),
-            Sextant::BlueCyan => (CCI::Blue, CCI::Green, CCI::Red),
+            Sextant::RedYellow => (0, 1, 2),
+            Sextant::RedMagenta => (0, 2, 1),
+            Sextant::GreenYellow => (1, 0, 2),
+            Sextant::GreenCyan => (1, 2, 0),
+            Sextant::BlueMagenta => (2, 0, 1),
+            Sextant::BlueCyan => (2, 1, 0),
         }
     }
 }
 
 impl SextantHue {
-    fn indices(&self) -> (CCI, CCI, CCI) {
+    fn indices(&self) -> (usize, usize, usize) {
         self.0.indices()
     }
 }
 
 impl Hue {
-    fn indices(&self) -> (CCI, CCI, CCI) {
+    fn indices(&self) -> (usize, usize, usize) {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.indices(),
             Self::Secondary(cmy_hue) => cmy_hue.indices(),

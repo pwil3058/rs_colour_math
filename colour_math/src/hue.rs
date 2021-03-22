@@ -4,18 +4,21 @@ use std::{
     cmp::Ordering,
     convert::{From, Into, TryFrom},
     fmt::Debug,
+    ops::{Add, Sub},
 };
+
+use num_traits_plus::{debug_assert_approx_eq, float_plus::FloatPlus};
 
 pub mod angle;
 
 use crate::{
-    attributes::Warmth, fdrn::UFDRNumber, hue::angle::Angle, Chroma, ColourBasics, HueConstants,
-    LightLevel, Prop, HCV, RGB,
+    attributes::{Chroma, Warmth},
+    fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
+    hcv::HCV,
+    hue::angle::Angle,
+    rgb::RGB,
+    ColourBasics, HueConstants, LightLevel,
 };
-
-use crate::fdrn::{FDRNumber, IntoProp};
-use num_traits_plus::{debug_assert_approx_eq, float_plus::FloatPlus};
-use std::ops::{Add, Sub};
 
 pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
     fn sum_for_max_chroma(&self) -> UFDRNumber;

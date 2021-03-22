@@ -7,7 +7,7 @@ use pw_gix::cairo;
 use colour_math::beigui::DrawShapes;
 use colour_math::{
     beigui::{self, Draw, DrawIsosceles},
-    ColourBasics, Prop, RGBConstants, UFDRNumber, CCI, HCV, RGB,
+    ColourBasics, Prop, RGBConstants, UFDRNumber, HCV, RGB,
 };
 use std::ops::Sub;
 
@@ -125,7 +125,7 @@ pub trait CairoSetColour {
 
 impl CairoSetColour for pw_gix::cairo::Context {
     fn set_source_colour_rgb(&self, rgb: &RGB<f64>) {
-        self.set_source_rgb(rgb[CCI::Red], rgb[CCI::Green], rgb[CCI::Blue]);
+        self.set_source_rgb(rgb[0], rgb[1], rgb[2]);
     }
 }
 
@@ -256,12 +256,7 @@ impl<'a> Draw for Drawer<'a> {
         );
         for colour_stop in colour_stops.iter() {
             let rgb = colour_stop.0.rgb::<f64>();
-            linear_gradient.add_color_stop_rgb(
-                colour_stop.1.into(),
-                rgb[CCI::Red],
-                rgb[CCI::Green],
-                rgb[CCI::Blue],
-            );
+            linear_gradient.add_color_stop_rgb(colour_stop.1.into(), rgb[0], rgb[1], rgb[2]);
         }
         self.cairo_context.rectangle(
             posn.x.into(),

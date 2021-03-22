@@ -17,7 +17,7 @@ pub mod colour {
         },
         manipulator::{ColourManipulator, ColourManipulatorBuilder},
         Angle, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute, UnsignedLightLevel,
-        Value, CCI, HCV, RGB,
+        Value, HCV, RGB,
     };
     use pw_gix::gdk;
 
@@ -25,9 +25,9 @@ pub mod colour {
         fn gdk_rgba(&self) -> gdk::RGBA {
             let rgb = self.rgb::<f64>();
             gdk::RGBA {
-                red: rgb[CCI::Red],
-                green: rgb[CCI::Green],
-                blue: rgb[CCI::Blue],
+                red: rgb[0],
+                green: rgb[1],
+                blue: rgb[2],
                 alpha: 1.0,
             }
         }

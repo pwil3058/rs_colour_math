@@ -17,33 +17,14 @@ pub mod manipulator;
 pub mod mixing;
 pub mod rgb;
 
-use crate::fdrn::IntoProp;
 pub use crate::{
     attributes::{Chroma, Greyness, Value, Warmth},
-    fdrn::{Prop, UFDRNumber},
+    fdrn::{IntoProp, Prop, UFDRNumber},
     hcv::HCV,
     hue::{angle::Angle, Hue},
     rgb::RGB,
 };
 use hue::HueIfce;
-
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum CCI {
-    Red,
-    Green,
-    Blue,
-}
-
-impl From<usize> for CCI {
-    fn from(index: usize) -> Self {
-        match index {
-            0 => CCI::Red,
-            1 => CCI::Green,
-            2 => CCI::Blue,
-            _ => panic!("Illegal usize -> CCI"),
-        }
-    }
-}
 
 pub trait Float: FloatPlus + std::iter::Sum + FloatApproxEq<Self> {}
 
