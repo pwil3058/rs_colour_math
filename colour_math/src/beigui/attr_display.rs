@@ -1,10 +1,12 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
 use crate::{
+    attributes::{Chroma, Greyness, Value, Warmth},
     beigui::{Dirn, Draw, DrawIsosceles, Point, TextPosn},
     fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
-    hue::HueIfce,
-    Chroma, ColourBasics, Greyness, Hue, HueConstants, RGBConstants, Value, Warmth, HCV,
+    hcv::HCV,
+    hue::{Hue, HueIfce},
+    ColourBasics, HueConstants, RGBConstants,
 };
 
 pub trait ColourAttributeDisplayIfce {

@@ -11,8 +11,7 @@ use crate::{impl_prop_to_from_float, impl_to_from_number};
 
 use crate::{
     fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
-    hue::HueBasics,
-    Hue,
+    hue::{Hue, HueBasics},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]

@@ -2,7 +2,9 @@
 
 use crate::{
     fdrn::{Prop, UFDRNumber},
-    ColourBasics, LightLevel, HCV, RGB,
+    hcv::HCV,
+    rgb::RGB,
+    ColourBasics, LightLevel,
 };
 
 #[derive(Default, Debug)]

@@ -3,7 +3,9 @@ use std::ops::{Add, Mul, Sub};
 
 use crate::{
     fdrn::{FDRNumber, Prop, UFDRNumber},
-    Angle, ColourBasics, HCV,
+    hcv::HCV,
+    hue::angle::Angle,
+    ColourBasics,
 };
 
 #[cfg(test)]

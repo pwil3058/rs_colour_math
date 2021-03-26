@@ -4,8 +4,7 @@ use std::convert::From;
 use super::*;
 use num_traits_plus::assert_approx_eq;
 
-use crate::attributes::Chroma;
-use crate::{hue::Hue, rgb::RGB, ColourBasics, RGBConstants};
+use crate::{attributes::Chroma, hue::Hue, rgb::RGB, ColourBasics, RGBConstants};
 
 const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
 const VALID_OTHER_SUMS: [f64; 20] = [

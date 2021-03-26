@@ -2,10 +2,7 @@
 
 use num_traits_plus::{assert_approx_eq, float_plus::FloatApproxEq};
 
-use crate::{
-    fdrn::{FDRNumber, Prop},
-    UFDRNumber,
-};
+use crate::fdrn::{FDRNumber, Prop, UFDRNumber};
 
 #[test]
 fn sqrt_2() {

@@ -1,6 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 
-use std::{cell::Cell, ops::Add};
+use std::{cell::Cell, ops::Add, ops::Sub};
 
 use pw_gix::cairo;
 
@@ -9,7 +9,6 @@ use colour_math::{
     beigui::{self, Draw, DrawIsosceles},
     ColourBasics, Prop, RGBConstants, UFDRNumber, HCV, RGB,
 };
-use std::ops::Sub;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Point {

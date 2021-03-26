@@ -2,11 +2,13 @@
 use std::cmp::Ordering;
 
 use crate::{
+    attributes::Value,
     beigui::{DrawShapes, Point},
     fdrn::{FDRNumber, UFDRNumber},
-    hue::HueIfce,
-    ColourAttributes, ColourBasics, Hue, HueConstants, LightLevel, RGBConstants, ScalarAttribute,
-    Value, HCV, RGB,
+    hcv::HCV,
+    hue::{Hue, HueIfce},
+    rgb::RGB,
+    ColourAttributes, ColourBasics, HueConstants, LightLevel, RGBConstants, ScalarAttribute,
 };
 
 #[derive(Debug)]

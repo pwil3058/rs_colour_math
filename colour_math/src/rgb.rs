@@ -12,12 +12,12 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::{
-    attributes::Warmth,
+    attributes::{Chroma, Value, Warmth},
     debug::ApproxEq,
-    fdrn::UFDRNumber,
-    hue::{CMYHue, Hue, HueIfce, RGBHue, Sextant},
-    Angle, Chroma, ColourBasics, Float, HueConstants, LightLevel, ManipulatedColour, Prop,
-    RGBConstants, Value, HCV,
+    fdrn::{Prop, UFDRNumber},
+    hcv::HCV,
+    hue::{angle::Angle, CMYHue, Hue, HueIfce, RGBHue, Sextant},
+    ColourBasics, Float, HueConstants, LightLevel, ManipulatedColour, RGBConstants,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]

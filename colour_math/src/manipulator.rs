@@ -1,8 +1,12 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use crate::fdrn::IntoProp;
-use crate::hue::{ColourModificationHelpers, HueBasics, HueIfce, SumChromaCompatibility};
 use crate::{
-    fdrn::UFDRNumber, Angle, Chroma, ColourBasics, Hue, HueConstants, LightLevel, Prop, HCV, RGB,
+    attributes::Chroma,
+    fdrn::{IntoProp, Prop, UFDRNumber},
+    hcv::HCV,
+    hue::Hue,
+    hue::{angle::Angle, ColourModificationHelpers, HueBasics, HueIfce, SumChromaCompatibility},
+    rgb::RGB,
+    ColourBasics, HueConstants, LightLevel,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
