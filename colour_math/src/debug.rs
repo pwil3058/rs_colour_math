@@ -1,12 +1,9 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
-use std::{
-    cmp::{PartialEq, PartialOrd},
-    ops::Sub,
-};
+use std::{cmp::PartialOrd, ops::Sub};
 
-pub trait ApproxEq: Copy + PartialEq + PartialOrd + Sized + Sub<Output = Self> {
-    const DEFAULT_MAX_DIFF: Self;
+use crate::fdrn::{Prop, UFDRNumber};
 
+pub trait AbsDiff: Copy + Sized + PartialOrd + Sub<Output = Self> {
     fn abs_diff(&self, other: &Self) -> Self {
         if self > other {
             *self - *other
@@ -14,8 +11,66 @@ pub trait ApproxEq: Copy + PartialEq + PartialOrd + Sized + Sub<Output = Self> {
             *other - *self
         }
     }
+}
 
-    fn approx_eq(&self, other: &Self, max_diff: Option<Self>) -> bool {
+impl AbsDiff for u8 {}
+impl AbsDiff for u16 {}
+impl AbsDiff for u32 {}
+impl AbsDiff for u64 {}
+impl AbsDiff for u128 {}
+impl AbsDiff for f32 {}
+impl AbsDiff for f64 {}
+
+pub trait PropDiff: AbsDiff + Into<UFDRNumber> {
+    fn prop_diff(&self, other: &Self) -> Prop;
+}
+
+impl PropDiff for u8 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) as u128 * u64::MAX as u128 / *self.max(other) as u128) as u64)
+    }
+}
+
+impl PropDiff for u16 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) as u128 * u64::MAX as u128 / *self.max(other) as u128) as u64)
+    }
+}
+
+impl PropDiff for u32 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) as u128 * u64::MAX as u128 / *self.max(other) as u128) as u64)
+    }
+}
+
+impl PropDiff for u64 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) as u128 * u64::MAX as u128 / *self.max(other) as u128) as u64)
+    }
+}
+
+impl PropDiff for u128 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) * u64::MAX as u128 / self.max(other)) as u64)
+    }
+}
+
+impl PropDiff for f32 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) * u64::MAX as f32 / self.max(*other)) as u64)
+    }
+}
+
+impl PropDiff for f64 {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        Prop((self.abs_diff(other) * u64::MAX as f64 / self.max(*other)) as u64)
+    }
+}
+
+pub trait ApproxEq: Copy + PropDiff {
+    const DEFAULT_MAX_DIFF: Prop = Prop(0x0000000000001000);
+
+    fn approx_eq(&self, other: &Self, max_diff: Option<Prop>) -> bool {
         if self.eq(other) {
             true
         } else {
@@ -24,35 +79,21 @@ pub trait ApproxEq: Copy + PartialEq + PartialOrd + Sized + Sub<Output = Self> {
             } else {
                 Self::DEFAULT_MAX_DIFF
             };
-            self.abs_diff(other) <= max_diff
+            self.prop_diff(other) <= max_diff
         }
     }
 }
 
-impl ApproxEq for u8 {
-    const DEFAULT_MAX_DIFF: Self = 0x02;
-}
+impl ApproxEq for u8 {}
 
-impl ApproxEq for u16 {
-    const DEFAULT_MAX_DIFF: Self = 0x0004;
-}
+impl ApproxEq for u16 {}
 
-impl ApproxEq for u32 {
-    const DEFAULT_MAX_DIFF: Self = 0x000000010;
-}
+impl ApproxEq for u32 {}
 
-impl ApproxEq for u64 {
-    const DEFAULT_MAX_DIFF: Self = 0x0000000000001000;
-}
+impl ApproxEq for u64 {}
 
-impl ApproxEq for u128 {
-    const DEFAULT_MAX_DIFF: Self = 6;
-}
+impl ApproxEq for u128 {}
 
-impl ApproxEq for f32 {
-    const DEFAULT_MAX_DIFF: Self = f32::EPSILON;
-}
+impl ApproxEq for f32 {}
 
-impl ApproxEq for f64 {
-    const DEFAULT_MAX_DIFF: Self = f64::EPSILON;
-}
+impl ApproxEq for f64 {}

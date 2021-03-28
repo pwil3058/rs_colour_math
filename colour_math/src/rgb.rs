@@ -212,7 +212,7 @@ where
 }
 
 impl<T: LightLevel + ApproxEq> RGB<T> {
-    pub fn approx_eq(&self, other: &Self, max_diff: Option<T>) -> bool {
+    pub fn approx_eq(&self, other: &Self, max_diff: Option<Prop>) -> bool {
         for i in 0..3 {
             if !self.0[i].approx_eq(&other.0[i], max_diff) {
                 return false;

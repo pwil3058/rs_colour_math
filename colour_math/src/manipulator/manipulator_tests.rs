@@ -220,11 +220,7 @@ fn round_trip_chroma() {
     while manipulator.decr_chroma(0.01.into()) {}
     assert!(manipulator.hcv.is_grey());
     while manipulator.incr_chroma(0.01.into()) {}
-    assert_approx_eq!(
-        manipulator.rgb::<u64>(),
-        crate::rgb::RGB::<u64>::CYAN,
-        0x0000000000001000
-    );
+    assert_approx_eq!(manipulator.rgb::<u64>(), crate::rgb::RGB::<u64>::CYAN,);
 }
 
 #[test]
