@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{cmp::PartialOrd, ops::Sub};
 
-use crate::fdrn::{Prop, UFDRNumber};
+use crate::fdrn::Prop;
 
 pub trait AbsDiff: Copy + Sized + PartialOrd + Sub<Output = Self> {
     fn abs_diff(&self, other: &Self) -> Self {
@@ -21,7 +21,7 @@ impl AbsDiff for u128 {}
 impl AbsDiff for f32 {}
 impl AbsDiff for f64 {}
 
-pub trait PropDiff: AbsDiff + Into<UFDRNumber> {
+pub trait PropDiff {
     fn prop_diff(&self, other: &Self) -> Prop;
 }
 
@@ -67,7 +67,7 @@ impl PropDiff for f64 {
     }
 }
 
-pub trait ApproxEq: Copy + PropDiff {
+pub trait ApproxEq: Copy + PropDiff + PartialEq {
     const DEFAULT_MAX_DIFF: Prop = Prop(0x0000000000001000);
 
     fn approx_eq(&self, other: &Self, max_diff: Option<Prop>) -> bool {
