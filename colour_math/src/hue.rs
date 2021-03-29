@@ -1129,5 +1129,5 @@ impl Ord for Hue {
     }
 }
 
-// #[cfg(test)]
-// mod hue_tests;
+#[cfg(test)]
+mod hue_tests;

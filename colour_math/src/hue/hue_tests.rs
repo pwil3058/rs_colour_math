@@ -429,10 +429,9 @@ fn primary_max_chroma_rgbs() {
 
 #[test]
 fn secondary_max_chroma_rgbs() {
-    for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
+    for (hue, expected_rgb) in Hue::SECONDARIES.iter().zip(RGB::<u64>::SECONDARIES.iter()) {
         assert_approx_eq!(
-            hue.max_chroma_rgb_for_sum::<f64>(UFDRNumber::from(2.0_f64))
-                .unwrap(),
+            hue.max_chroma_rgb_for_sum::<u64>(UFDRNumber::TWO).unwrap(),
             *expected_rgb
         );
         assert!(hue
@@ -455,8 +454,8 @@ fn secondary_max_chroma_rgbs() {
             let mut array = [Prop::ZERO, Prop::ZERO, Prop::ZERO];
             array[hue.indices().0 as usize] = (*sum / 2).into();
             array[hue.indices().1 as usize] = (*sum / 2).into();
-            let expected: RGB<f64> = array.into();
-            assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
+            let expected: RGB<u64> = array.into();
+            assert_eq!(hue.max_chroma_rgb_for_sum::<u64>(*sum).unwrap(), expected);
         }
         for sum in [
             UFDRNumber::from(2.0001_f64),
@@ -468,9 +467,9 @@ fn secondary_max_chroma_rgbs() {
         .iter()
         {
             let mut array = [Prop::ONE, Prop::ONE, Prop::ONE];
-            array[hue.indices().2 as usize] = (*sum - UFDRNumber::from(2.0_f64)).into();
-            let expected: RGB<f64> = array.into();
-            assert_approx_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
+            array[hue.indices().2 as usize] = (*sum - UFDRNumber::TWO).into();
+            let expected: RGB<u64> = array.into();
+            assert_approx_eq!(hue.max_chroma_rgb_for_sum::<u64>(*sum).unwrap(), expected);
         }
     }
 }
