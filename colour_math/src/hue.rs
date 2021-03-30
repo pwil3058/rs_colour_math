@@ -13,6 +13,7 @@ pub mod angle;
 
 use crate::{
     attributes::{Chroma, Warmth},
+    debug::{ApproxEq, PropDiff},
     fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
     hcv::HCV,
     hue::angle::Angle,
@@ -333,6 +334,18 @@ impl From<RGBHue> for Hue {
     }
 }
 
+impl PropDiff for RGBHue {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        if self == other {
+            Prop::ZERO
+        } else {
+            Prop::ONE
+        }
+    }
+}
+
+impl ApproxEq for RGBHue {}
+
 impl HueBasics for RGBHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
         UFDRNumber::ONE
@@ -398,6 +411,18 @@ impl From<CMYHue> for Hue {
         Hue::Secondary(cmy_hue)
     }
 }
+
+impl PropDiff for CMYHue {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        if self == other {
+            Prop::ZERO
+        } else {
+            Prop::ONE
+        }
+    }
+}
+
+impl ApproxEq for CMYHue {}
 
 impl HueBasics for CMYHue {
     fn sum_for_max_chroma(&self) -> UFDRNumber {
@@ -470,6 +495,18 @@ impl From<SextantHue> for Hue {
         Hue::Sextant(sextant_hue)
     }
 }
+
+impl PropDiff for SextantHue {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        if self.0 == other.0 {
+            self.1.prop_diff(&other.1)
+        } else {
+            Prop::ONE
+        }
+    }
+}
+
+impl ApproxEq for SextantHue {}
 
 impl Eq for SextantHue {}
 
@@ -1036,38 +1073,30 @@ impl HueIfce for Hue {
     }
 }
 
-impl Hue {
-    pub fn ord_index(&self) -> u8 {
-        0
-    }
-
-    pub fn abs_diff(&self, other: &Self) -> Prop {
+impl PropDiff for Hue {
+    fn prop_diff(&self, other: &Self) -> Prop {
         match self {
-            Self::Primary(rgb_hue) => match other {
-                Self::Primary(other_rgb_hue) => {
-                    if rgb_hue == other_rgb_hue {
-                        Prop::ZERO
-                    } else {
-                        Prop::ONE
-                    }
-                }
+            Self::Primary(self_hue) => match other {
+                Self::Primary(other_hue) => self_hue.prop_diff(other_hue),
                 _ => Prop::ONE,
             },
-            Self::Secondary(cmy_hue) => match other {
-                Self::Secondary(other_cmy_hue) => {
-                    if cmy_hue == other_cmy_hue {
-                        Prop::ZERO
-                    } else {
-                        Prop::ONE
-                    }
-                }
+            Self::Secondary(self_hue) => match other {
+                Self::Secondary(other_hue) => self_hue.prop_diff(other_hue),
                 _ => Prop::ONE,
             },
-            Self::Sextant(sextant_hue) => match other {
-                Self::Sextant(other_sextant_hue) => sextant_hue.1.abs_diff(&other_sextant_hue.1),
+            Self::Sextant(self_hue) => match other {
+                Self::Sextant(other_hue) => self_hue.prop_diff(other_hue),
                 _ => Prop::ONE,
             },
         }
+    }
+}
+
+impl ApproxEq for Hue {}
+
+impl Hue {
+    pub fn ord_index(&self) -> u8 {
+        0
     }
 }
 
@@ -1092,28 +1121,6 @@ impl Sub for Hue {
 
     fn sub(self, other: Self) -> Angle {
         self.angle().sub(other.angle())
-    }
-}
-
-#[cfg(test)]
-impl Hue {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        match self {
-            Self::Primary(rgb_hue) => match other {
-                Self::Primary(other_rgb_hue) => rgb_hue == other_rgb_hue,
-                _ => false,
-            },
-            Self::Secondary(cmy_hue) => match other {
-                Self::Secondary(other_cmy_hue) => cmy_hue == other_cmy_hue,
-                _ => false,
-            },
-            Self::Sextant(sextant_hue) => match other {
-                Self::Sextant(other_sextant_hue) => {
-                    sextant_hue.approx_eq(other_sextant_hue, acceptable_rounding_error)
-                }
-                _ => false,
-            },
-        }
     }
 }
 

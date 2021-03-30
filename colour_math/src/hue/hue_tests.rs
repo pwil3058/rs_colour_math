@@ -2,9 +2,16 @@
 use std::convert::From;
 
 use super::*;
+
 use num_traits_plus::assert_approx_eq;
 
-use crate::{attributes::Chroma, hue::Hue, rgb::RGB, ColourBasics, RGBConstants};
+use crate::hue::Sextant::GreenYellow;
+use crate::{
+    attributes::Chroma,
+    hue::{Hue, Sextant::RedYellow},
+    rgb::RGB,
+    ColourBasics, RGBConstants,
+};
 
 const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
 const VALID_OTHER_SUMS: [f64; 20] = [
@@ -82,6 +89,32 @@ impl Hue {
 }
 
 #[test]
+fn hue_approx_eq() {
+    assert!(Hue::RED.approx_eq(&Hue::RED, None));
+    assert!(!Hue::RED.approx_eq(&Hue::BLUE, None));
+    assert!(Hue::RED.approx_eq(&Hue::BLUE, Some(Prop::ONE)));
+
+    assert!(
+        !Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
+            &Hue::Sextant(SextantHue(GreenYellow, Prop(0x1000000000))),
+            None
+        )
+    );
+    assert!(
+        !Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
+            &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffffffff))),
+            None
+        )
+    );
+    assert!(
+        Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
+            &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffffffff))),
+            Some(Prop(0x010000000))
+        )
+    );
+}
+
+#[test]
 fn hue_from_rgb() {
     for rgb in &[
         RGB::<f64>::BLACK,
@@ -141,7 +174,7 @@ fn hue_from_rgb() {
             Prop::from(array[2]),
         ]);
         let hue = Hue::Sextant(SextantHue(*sextant, *second));
-        assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0xF);
+        assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, Prop(0xF));
     }
 }
 
@@ -216,7 +249,7 @@ fn hue_to_from_angle() {
         (-Angle::from((135, 0, 0)), BlueCyan),
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, second));
-        assert_approx_eq!(Hue::from(*angle), hue, 10000);
+        assert_approx_eq!(Hue::from(*angle), hue, Prop(10000));
         assert_approx_eq!(hue.angle(), *angle, 0x0000000000000100);
     }
 }
@@ -688,7 +721,7 @@ fn general_rgb_for_sum_and_chroma() {
                 for sum in VALID_OTHER_SUMS.iter().map(|a| UFDRNumber::from(*a)) {
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                         assert_approx_eq!(rgb.sum(), sum, 0x100);
-                        assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, 0x100);
+                        assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, Prop(0x100));
                         match sum.cmp(&rgb.hue().unwrap().sum_for_max_chroma()) {
                             Ordering::Less => assert_eq!(rgb.chroma(), Chroma::Shade(prop)),
                             Ordering::Equal => assert_eq!(rgb.chroma(), Chroma::Neither(prop)),

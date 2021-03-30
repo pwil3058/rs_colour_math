@@ -7,6 +7,8 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
+use crate::debug::PropDiff;
+
 macro_rules! impl_to_from_float {
     ($float:ty, $core:ty, $number:ty) => {
         impl From<$float> for $number {
@@ -456,6 +458,12 @@ impl Prop {
             Ordering::Less => Prop(other.0 - self.0),
             Ordering::Equal => Prop(0),
         }
+    }
+}
+
+impl PropDiff for Prop {
+    fn prop_diff(&self, other: &Self) -> Prop {
+        self.0.prop_diff(&other.0)
     }
 }
 
