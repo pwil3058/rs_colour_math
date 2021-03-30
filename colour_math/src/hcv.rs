@@ -232,6 +232,24 @@ impl RGBConstants for HCV {
         sum: UFDRNumber::THREE,
     };
 
+    const LIGHT_GREY: Self = Self {
+        hue: None,
+        chroma: Chroma::ZERO,
+        sum: UFDRNumber::ZERO_PT_75,
+    };
+
+    const MEDIUM_GREY: Self = Self {
+        hue: None,
+        chroma: Chroma::ZERO,
+        sum: UFDRNumber::ONE_PT_5,
+    };
+
+    const DARK_GREY: Self = Self {
+        hue: None,
+        chroma: Chroma::ZERO,
+        sum: UFDRNumber::TWO_PT_25,
+    };
+
     const BLACK: Self = Self {
         hue: None,
         chroma: Chroma::ZERO,

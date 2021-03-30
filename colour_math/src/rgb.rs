@@ -44,6 +44,9 @@ impl<T: LightLevel> HueConstants for RGB<T> {
 
 impl<T: LightLevel> RGBConstants for RGB<T> {
     const WHITE: Self = Self([T::ONE, T::ONE, T::ONE]);
+    const LIGHT_GREY: Self = Self([T::ONE_QUARTER, T::ONE_QUARTER, T::ONE_QUARTER]);
+    const MEDIUM_GREY: Self = Self([T::HALF, T::HALF, T::HALF]);
+    const DARK_GREY: Self = Self([T::THREE_QUARTERS, T::THREE_QUARTERS, T::THREE_QUARTERS]);
     const BLACK: Self = Self([T::ZERO, T::ZERO, T::ZERO]);
 }
 

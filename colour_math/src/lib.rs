@@ -36,42 +36,57 @@ pub trait LightLevel:
 {
     const ZERO: Self;
     const ONE: Self;
+    const ONE_QUARTER: Self;
     const HALF: Self;
+    const THREE_QUARTERS: Self;
 }
 
 impl LightLevel for f32 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
+    const ONE_QUARTER: Self = 0.25;
     const HALF: Self = 0.5;
+    const THREE_QUARTERS: Self = 0.75;
 }
+
 impl LightLevel for f64 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
+    const ONE_QUARTER: Self = 0.25;
     const HALF: Self = 0.5;
+    const THREE_QUARTERS: Self = 0.75;
 }
 
 impl LightLevel for u8 {
     const ZERO: Self = 0;
-    const ONE: Self = u8::MAX;
-    const HALF: Self = u8::MAX / 2;
+    const ONE: Self = Self::MAX;
+    const ONE_QUARTER: Self = Self::MAX / 4;
+    const HALF: Self = Self::MAX / 2;
+    const THREE_QUARTERS: Self = Self::MAX / 4 * 3;
 }
 
 impl LightLevel for u16 {
     const ZERO: Self = 0;
-    const ONE: Self = u16::MAX;
-    const HALF: Self = u16::MAX / 2;
+    const ONE: Self = Self::MAX;
+    const ONE_QUARTER: Self = Self::MAX / 4;
+    const HALF: Self = Self::MAX / 2;
+    const THREE_QUARTERS: Self = Self::MAX / 4 * 3;
 }
 
 impl LightLevel for u32 {
     const ZERO: Self = 0;
-    const ONE: Self = u32::MAX;
-    const HALF: Self = u32::MAX / 2;
+    const ONE: Self = Self::MAX;
+    const ONE_QUARTER: Self = Self::MAX / 4;
+    const HALF: Self = Self::MAX / 2;
+    const THREE_QUARTERS: Self = Self::MAX / 4 * 3;
 }
 
 impl LightLevel for u64 {
     const ZERO: Self = 0;
-    const ONE: Self = u64::MAX;
-    const HALF: Self = u64::MAX / 2;
+    const ONE: Self = Self::MAX;
+    const ONE_QUARTER: Self = Self::MAX / 4;
+    const HALF: Self = Self::MAX / 2;
+    const THREE_QUARTERS: Self = Self::MAX / 4 * 3;
 }
 
 pub trait FloatLightLevel: LightLevel + Signed + Float + LowerExp + UpperExp {}
@@ -116,9 +131,18 @@ pub trait HueConstants: Sized + Copy {
 
 pub trait RGBConstants: HueConstants + Copy {
     const WHITE: Self;
+    const LIGHT_GREY: Self;
+    const MEDIUM_GREY: Self;
+    const DARK_GREY: Self;
     const BLACK: Self;
 
-    const GREYS: [Self; 2] = [Self::BLACK, Self::WHITE];
+    const GREYS: [Self; 5] = [
+        Self::BLACK,
+        Self::DARK_GREY,
+        Self::MEDIUM_GREY,
+        Self::LIGHT_GREY,
+        Self::WHITE,
+    ];
 }
 
 pub trait ColourBasics {

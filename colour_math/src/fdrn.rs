@@ -237,8 +237,10 @@ impl UFDRNumber {
     pub const TWO: Self = Self(u64::MAX as u128 * 2);
     pub const THREE: Self = Self(u64::MAX as u128 * 3);
 
-    // NB: make sure this is evenly divisible by 3
+    // NB: make sure these is evenly divisible by 3
+    pub(crate) const ZERO_PT_75: Self = Self(u64::MAX as u128 / 4 * 3);
     pub(crate) const ONE_PT_5: Self = Self(u64::MAX as u128 + u64::MAX as u128 / 6 * 3);
+    pub(crate) const TWO_PT_25: Self = Self(u64::MAX as u128 * 2 + u64::MAX as u128 / 12 * 3);
 
     pub const SQRT_2: Self = Self(FDRNumber::SQRT_2.0 as u128);
     pub const SQRT_3: Self = Self(FDRNumber::SQRT_3.0 as u128);
