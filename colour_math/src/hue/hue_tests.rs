@@ -92,7 +92,7 @@ impl Hue {
 fn hue_approx_eq() {
     assert!(Hue::RED.approx_eq(&Hue::RED, None));
     assert!(!Hue::RED.approx_eq(&Hue::BLUE, None));
-    assert!(Hue::RED.approx_eq(&Hue::BLUE, Some(Prop::ONE)));
+    assert!(!Hue::RED.approx_eq(&Hue::BLUE, Some(Prop::ONE)));
 
     assert!(
         !Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(

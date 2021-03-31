@@ -335,11 +335,11 @@ impl From<RGBHue> for Hue {
 }
 
 impl PropDiff for RGBHue {
-    fn prop_diff(&self, other: &Self) -> Prop {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         if self == other {
-            Prop::ZERO
+            Some(Prop::ZERO)
         } else {
-            Prop::ONE
+            None
         }
     }
 }
@@ -413,11 +413,11 @@ impl From<CMYHue> for Hue {
 }
 
 impl PropDiff for CMYHue {
-    fn prop_diff(&self, other: &Self) -> Prop {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         if self == other {
-            Prop::ZERO
+            Some(Prop::ZERO)
         } else {
-            Prop::ONE
+            None
         }
     }
 }
@@ -497,11 +497,11 @@ impl From<SextantHue> for Hue {
 }
 
 impl PropDiff for SextantHue {
-    fn prop_diff(&self, other: &Self) -> Prop {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         if self.0 == other.0 {
             self.1.prop_diff(&other.1)
         } else {
-            Prop::ONE
+            None
         }
     }
 }
@@ -1074,19 +1074,19 @@ impl HueIfce for Hue {
 }
 
 impl PropDiff for Hue {
-    fn prop_diff(&self, other: &Self) -> Prop {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         match self {
             Self::Primary(self_hue) => match other {
                 Self::Primary(other_hue) => self_hue.prop_diff(other_hue),
-                _ => Prop::ONE,
+                _ => None,
             },
             Self::Secondary(self_hue) => match other {
                 Self::Secondary(other_hue) => self_hue.prop_diff(other_hue),
-                _ => Prop::ONE,
+                _ => None,
             },
             Self::Sextant(self_hue) => match other {
                 Self::Sextant(other_hue) => self_hue.prop_diff(other_hue),
-                _ => Prop::ONE,
+                _ => None,
             },
         }
     }

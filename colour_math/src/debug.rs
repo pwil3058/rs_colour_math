@@ -23,26 +23,32 @@ impl AbsDiff for f32 {}
 impl AbsDiff for f64 {}
 
 pub trait PropDiff {
-    fn prop_diff(&self, other: &Self) -> Prop;
+    fn prop_diff(&self, _other: &Self) -> Option<Prop> {
+        None
+    }
 }
 
 macro_rules! impl_prop_diff_for_unsigned {
     (u128) => {
         impl PropDiff for u128 {
-            fn prop_diff(&self, other: &Self) -> Prop {
+            fn prop_diff(&self, other: &Self) -> Option<Prop> {
                 match self.max(other) {
-                    0 => Prop::ZERO,
-                    denom => Prop((self.abs_diff(other) * u64::MAX as u128 / denom) as u64),
+                    0 => Some(Prop::ZERO),
+                    denom => Some(Prop(
+                        (self.abs_diff(other) * u64::MAX as u128 / denom) as u64,
+                    )),
                 }
             }
         }
     };
     ($unsigned:ty) => {
         impl PropDiff for $unsigned {
-            fn prop_diff(&self, other: &Self) -> Prop {
+            fn prop_diff(&self, other: &Self) -> Option<Prop> {
                 match *self.max(other) as u128 {
-                    0 => Prop::ZERO,
-                    denom => Prop((self.abs_diff(other) as u128 * u64::MAX as u128 / denom) as u64),
+                    0 => Some(Prop::ZERO),
+                    denom => Some(Prop(
+                        (self.abs_diff(other) as u128 * u64::MAX as u128 / denom) as u64,
+                    )),
                 }
             }
         }
@@ -58,12 +64,14 @@ impl_prop_diff_for_unsigned!(u128);
 macro_rules! impl_prop_diff_for_float {
     ($float:ty) => {
         impl PropDiff for $float {
-            fn prop_diff(&self, other: &Self) -> Prop {
+            fn prop_diff(&self, other: &Self) -> Option<Prop> {
                 let denom = self.max(*other);
                 if denom == 0.0 {
-                    Prop::ZERO
+                    Some(Prop::ZERO)
                 } else {
-                    Prop((self.abs_diff(other) * u64::MAX as $float / denom) as u64)
+                    Some(Prop(
+                        (self.abs_diff(other) * u64::MAX as $float / denom) as u64,
+                    ))
                 }
             }
         }
@@ -85,7 +93,10 @@ pub trait ApproxEq: Copy + PropDiff + PartialEq {
             } else {
                 Self::DEFAULT_MAX_DIFF
             };
-            self.prop_diff(other) <= max_diff
+            match self.prop_diff(other) {
+                None => false,
+                Some(prop_diff) => prop_diff <= max_diff,
+            }
         }
     }
 }

@@ -462,7 +462,7 @@ impl Prop {
 }
 
 impl PropDiff for Prop {
-    fn prop_diff(&self, other: &Self) -> Prop {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         self.0.prop_diff(&other.0)
     }
 }
