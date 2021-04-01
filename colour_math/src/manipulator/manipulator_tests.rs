@@ -3,6 +3,7 @@ use num_traits_plus::assert_approx_eq;
 
 use crate::{
     attributes::Chroma,
+    debug::ApproxEq,
     fdrn::{IntoProp, Prop, UFDRNumber},
     hcv::*,
     hue::{angle::*, Hue, HueBasics},
@@ -381,8 +382,8 @@ fn rotate_rgb_favouring_value() {
             assert!(manipulator.rotate((*delta).into()));
             let max_chroma = manipulator.hcv.max_chroma_for_current_sum();
             assert!(
-                cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x00010))
-                    || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x00010))
+                cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(Prop(0x00010)))
+                    || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(Prop(0x00010)))
             );
             assert_approx_eq!(cur_sum, manipulator.hcv.sum, 0x10);
             let expected_angle = cur_angle + (*delta).into();
@@ -416,8 +417,8 @@ fn rotate_rgb_favouring_value() {
             assert!(manipulator.rotate((*delta).into()));
             let max_chroma = manipulator.hcv.max_chroma_for_current_sum();
             assert!(
-                cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x1))
-                    || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(0x1))
+                cur_chroma.approx_eq(&manipulator.hcv.chroma, Some(Prop(0x1)))
+                    || max_chroma.approx_eq(&manipulator.hcv.chroma, Some(Prop(0x1)))
             );
             assert_approx_eq!(cur_sum, manipulator.hcv.sum);
             let expected_angle = cur_angle + (*delta).into();

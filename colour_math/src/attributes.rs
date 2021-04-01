@@ -10,6 +10,7 @@ use std::{
 use crate::{impl_prop_to_from_float, impl_to_from_number};
 
 use crate::{
+    debug::{ApproxEq, PropDiff},
     fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
     hue::{Hue, HueBasics},
 };
@@ -37,13 +38,6 @@ impl Chroma {
             }
         }
     }
-
-    // pub fn prop(&self) -> Prop {
-    //     use Chroma::*;
-    //     match self {
-    //         Shade(proportion) | Tint(proportion) | Neither(proportion) => *proportion,
-    //     }
-    // }
 
     pub fn abs_diff(&self, other: &Self) -> Prop {
         self.into_prop().abs_diff(&other.into_prop())
@@ -108,29 +102,27 @@ impl Ord for Chroma {
     }
 }
 
-#[cfg(test)]
-impl Chroma {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+impl PropDiff for Chroma {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         use Chroma::*;
         match self {
-            Shade(proportion) => match other {
-                Shade(other_proportion) | Neither(other_proportion) => {
-                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
-                }
-                Tint(_) => false,
+            Shade(my_prop) => match other {
+                Shade(other_prop) => my_prop.prop_diff(other_prop),
+                _ => None,
             },
-            Tint(proportion) => match other {
-                Shade(_) => false,
-                Tint(other_proportion) | Neither(other_proportion) => {
-                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
-                }
+            Tint(my_prop) => match other {
+                Tint(other_prop) => my_prop.prop_diff(other_prop),
+                _ => None,
             },
-            Neither(proportion) => {
-                proportion.approx_eq(&other.into_prop(), acceptable_rounding_error)
-            }
+            Neither(my_prop) => match other {
+                Neither(other_prop) => my_prop.prop_diff(other_prop),
+                _ => None,
+            },
         }
     }
 }
+
+impl ApproxEq for Chroma {}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Greyness {

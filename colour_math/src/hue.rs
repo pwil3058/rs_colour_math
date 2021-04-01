@@ -76,9 +76,13 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
                     Some(Chroma::Shade(temp.into()))
                 }
                 Ordering::Greater => {
-                    let temp =
-                        (UFDRNumber::THREE - sum) / (UFDRNumber::THREE - self.sum_for_max_chroma());
-                    Some(Chroma::Tint(temp.into()))
+                    // NB: may round to one
+                    match (UFDRNumber::THREE - sum)
+                        / (UFDRNumber::THREE - self.sum_for_max_chroma())
+                    {
+                        UFDRNumber::ONE => Some(Chroma::ONE),
+                        temp => Some(Chroma::Tint(temp.into())),
+                    }
                 }
             }
         } else {
@@ -233,6 +237,7 @@ pub(crate) trait HueIfce:
             sum => match chroma.into_prop() {
                 Prop::ZERO => None,
                 c_prop => {
+                    // TODO: Do we need this
                     let (chroma, sum) = self.trim_overs(sum, c_prop)?;
                     let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
                     Some(RGB::<T>::from(triplet))
