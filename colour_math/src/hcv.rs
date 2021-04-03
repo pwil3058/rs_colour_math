@@ -151,6 +151,8 @@ impl HCV {
     }
 }
 
+const ONE_PT_5: UFDRNumber = UFDRNumber(u64::MAX as u128 + u64::MAX as u128 / 2);
+
 impl HueConstants for HCV {
     const RED: Self = Self {
         hue: Some(Hue::RED),
@@ -191,37 +193,37 @@ impl HueConstants for HCV {
     const BLUE_CYAN: Self = Self {
         hue: Some(Hue::BLUE_CYAN),
         chroma: Chroma::ONE,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: ONE_PT_5,
     };
 
     const BLUE_MAGENTA: Self = Self {
         hue: Some(Hue::BLUE_MAGENTA),
         chroma: Chroma::ONE,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: ONE_PT_5,
     };
 
     const RED_MAGENTA: Self = Self {
         hue: Some(Hue::RED_MAGENTA),
         chroma: Chroma::ONE,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: ONE_PT_5,
     };
 
     const RED_YELLOW: Self = Self {
         hue: Some(Hue::RED_YELLOW),
         chroma: Chroma::ONE,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: ONE_PT_5,
     };
 
     const GREEN_YELLOW: Self = Self {
         hue: Some(Hue::GREEN_YELLOW),
         chroma: Chroma::ONE,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: ONE_PT_5,
     };
 
     const GREEN_CYAN: Self = Self {
         hue: Some(Hue::GREEN_CYAN),
         chroma: Chroma::ONE,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: ONE_PT_5,
     };
 }
 
@@ -235,19 +237,19 @@ impl RGBConstants for HCV {
     const LIGHT_GREY: Self = Self {
         hue: None,
         chroma: Chroma::ZERO,
-        sum: UFDRNumber::ZERO_PT_75,
+        sum: UFDRNumber(u64::MAX as u128 / 4 * 3),
     };
 
     const MEDIUM_GREY: Self = Self {
         hue: None,
         chroma: Chroma::ZERO,
-        sum: UFDRNumber::ONE_PT_5,
+        sum: UFDRNumber(u64::MAX as u128 + u64::MAX as u128 / 6 * 3),
     };
 
     const DARK_GREY: Self = Self {
         hue: None,
         chroma: Chroma::ZERO,
-        sum: UFDRNumber::TWO_PT_25,
+        sum: UFDRNumber(u64::MAX as u128 * 2 + u64::MAX as u128 / 12 * 3),
     };
 
     const BLACK: Self = Self {

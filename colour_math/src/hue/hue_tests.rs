@@ -115,6 +115,26 @@ fn hue_approx_eq() {
 }
 
 #[test]
+fn new_hue_from_rgb_u64() {
+    for rgb in RGB::<u64>::GREYS.iter() {
+        assert!(Hue::try_from(rgb).is_err());
+    }
+    let rgb_iter = RGB::<u64>::PRIMARIES.iter().chain(
+        RGB::<u64>::SECONDARIES
+            .iter()
+            .chain(RGB::<u64>::IN_BETWEENS.iter()),
+    );
+    let hue_iter = Hue::PRIMARIES
+        .iter()
+        .chain(Hue::SECONDARIES.iter().chain(Hue::IN_BETWEENS.iter()));
+    for (rgb, hue) in rgb_iter.zip(hue_iter) {
+        assert_eq!(Hue::try_from(rgb), Ok(*hue));
+        //println!("{:?}: {:?} :: {:?}", hue, rgb, *rgb * Prop::from(0.1));
+        //assert_eq!(Hue::try_from(&(*rgb * Prop::from(0.1))), Ok(*hue));
+    }
+}
+
+#[test]
 fn hue_from_rgb() {
     for rgb in &[
         RGB::<f64>::BLACK,

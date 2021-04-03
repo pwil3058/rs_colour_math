@@ -159,3 +159,14 @@ fn prop_sub() {
         assert_approx_eq!(f64::from(result), &(a - b), 0.000_000_01);
     }
 }
+
+#[test]
+fn from_fraction() {
+    assert_eq!(Prop::from([1, 2]), Prop::HALF);
+}
+
+#[test]
+fn from_unsigned() {
+    assert_eq!(Prop::from(u32::MAX), Prop::ONE);
+    assert_eq!(Prop::from(u8::MAX / 2), Prop::from([127, 255]));
+}

@@ -17,7 +17,7 @@ use crate::{
     fdrn::{Prop, UFDRNumber},
     hcv::HCV,
     hue::{angle::Angle, CMYHue, Hue, HueIfce, RGBHue, Sextant},
-    ColourBasics, Float, HueConstants, LightLevel, ManipulatedColour, RGBConstants,
+    ColourBasics, HueConstants, LightLevel, ManipulatedColour, RGBConstants,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -278,7 +278,7 @@ impl<T: LightLevel + From<Prop>> From<&RGB<T>> for [Prop; 3] {
 }
 
 // Arithmetic
-impl<F: Float + LightLevel + From<Prop>> Mul<Prop> for RGB<F> {
+impl<L: LightLevel + From<Prop>> Mul<Prop> for RGB<L> {
     type Output = Self;
 
     fn mul(self, scalar: Prop) -> Self {
