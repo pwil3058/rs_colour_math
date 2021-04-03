@@ -443,7 +443,7 @@ impl Prop {
     pub const ONE: Self = Self(u64::MAX);
 
     //pub(crate) const ALMOST_ZERO: Self = Self(1);
-    //pub(crate) const ALMOST_ONE: Self = Self(u64::MAX - 1);
+    pub(crate) const ALMOST_ONE: Self = Self(u64::MAX - 1);
     pub(crate) const HALF: Self = Self(u64::MAX / 2);
 
     pub fn abs_diff(&self, other: &Self) -> Prop {

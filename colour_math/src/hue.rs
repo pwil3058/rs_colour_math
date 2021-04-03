@@ -76,13 +76,12 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
                     Some(Chroma::Shade(temp.into()))
                 }
                 Ordering::Greater => {
-                    // NB: may round to one
-                    match (UFDRNumber::THREE - sum)
-                        / (UFDRNumber::THREE - self.sum_for_max_chroma())
-                    {
-                        UFDRNumber::ONE => Some(Chroma::ONE),
-                        temp => Some(Chroma::Tint(temp.into())),
-                    }
+                    // NB: make sure it doesn't round to one
+                    let c_prop = ((UFDRNumber::THREE - sum)
+                        / (UFDRNumber::THREE - self.sum_for_max_chroma()))
+                    .into_prop()
+                    .min(Prop::ALMOST_ONE);
+                    Some(Chroma::Tint(c_prop))
                 }
             }
         } else {
