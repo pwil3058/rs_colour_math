@@ -115,86 +115,39 @@ fn hue_approx_eq() {
 }
 
 #[test]
-fn new_hue_from_rgb_u64() {
+fn hue_from_rgb() {
     for rgb in RGB::<u64>::GREYS.iter() {
         assert!(Hue::try_from(rgb).is_err());
     }
-    let rgb_iter = RGB::<u64>::PRIMARIES.iter().chain(
-        RGB::<u64>::SECONDARIES
-            .iter()
-            .chain(RGB::<u64>::IN_BETWEENS.iter()),
-    );
-    let hue_iter = Hue::PRIMARIES
+    let fractions = [
+        [1_u64, 10],
+        [2, 10],
+        [3, 10],
+        [4, 10],
+        [5, 10],
+        [6, 10],
+        [7, 10],
+        [8, 10],
+        [9, 10],
+    ];
+    let rgb_iter = RGB::<u64>::PRIMARIES
         .iter()
-        .chain(Hue::SECONDARIES.iter().chain(Hue::IN_BETWEENS.iter()));
+        .chain(RGB::<u64>::SECONDARIES.iter());
+    let hue_iter = Hue::PRIMARIES.iter().chain(Hue::SECONDARIES.iter());
     for (rgb, hue) in rgb_iter.zip(hue_iter) {
         assert_eq!(Hue::try_from(rgb), Ok(*hue));
-        //println!("{:?}: {:?} :: {:?}", hue, rgb, *rgb * Prop::from(0.1));
-        //assert_eq!(Hue::try_from(&(*rgb * Prop::from(0.1))), Ok(*hue));
+        for fraction in &fractions {
+            assert_eq!(Hue::try_from(&(*rgb * Prop::from(*fraction))), Ok(*hue));
+        }
     }
-}
-
-#[test]
-fn hue_from_rgb() {
-    for rgb in &[
-        RGB::<f64>::BLACK,
-        RGB::WHITE,
-        RGB::from([0.5_f64, 0.5_f64, 0.5_f64]),
-    ] {
-        assert!(Hue::try_from(rgb).is_err());
-    }
-    for (rgb, hue) in RGB::<f64>::PRIMARIES.iter().zip(Hue::PRIMARIES.iter()) {
+    for (rgb, hue) in RGB::<u64>::IN_BETWEENS.iter().zip(Hue::IN_BETWEENS.iter()) {
         assert_eq!(Hue::try_from(rgb), Ok(*hue));
-        assert_eq!(Hue::try_from(&(*rgb * Prop::from(0.5))), Ok(*hue));
-    }
-    for (rgb, hue) in RGB::<f64>::SECONDARIES.iter().zip(Hue::SECONDARIES.iter()) {
-        assert_eq!(Hue::try_from(rgb), Ok(*hue));
-        assert_eq!(Hue::try_from(&(*rgb * Prop::from(0.5))), Ok(*hue));
-    }
-    for (array, sextant, second) in &[
-        (
-            [Prop::ONE, Prop::from(0.5_f64), Prop::ZERO],
-            Sextant::RedYellow,
-            Prop::from(0.5),
-        ),
-        (
-            [Prop::ZERO, Prop::from(0.25_f64), Prop::from(0.5_f64)],
-            Sextant::BlueCyan,
-            Prop::from(0.5),
-        ),
-        (
-            [Prop::from(0.2_f64), Prop::ZERO, Prop::from(0.4_f64)],
-            Sextant::BlueMagenta,
-            Prop::from(0.5),
-        ),
-        (
-            [Prop::from(0.5_f64), Prop::ZERO, Prop::ONE],
-            Sextant::BlueMagenta,
-            Prop::from(0.5),
-        ),
-        (
-            [Prop::ONE, Prop::ZERO, Prop::from(0.5_f64)],
-            Sextant::RedMagenta,
-            Prop::from(0.5),
-        ),
-        (
-            [Prop::from(0.5_f64), Prop::ONE, Prop::ZERO],
-            Sextant::GreenYellow,
-            Prop::from(0.5),
-        ),
-        (
-            [Prop::ZERO, Prop::ONE, Prop::from(0.5_f64)],
-            Sextant::GreenCyan,
-            Prop::from(0.5),
-        ),
-    ] {
-        let rgb = RGB::<f64>::from([
-            Prop::from(array[0]),
-            Prop::from(array[1]),
-            Prop::from(array[2]),
-        ]);
-        let hue = Hue::Sextant(SextantHue(*sextant, *second));
-        assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, Prop(0xF));
+        for fraction in &fractions {
+            assert_approx_eq!(
+                Hue::try_from(&(*rgb * Prop::from(*fraction))).unwrap(),
+                *hue
+            );
+        }
     }
 }
 
