@@ -59,11 +59,42 @@ fn from_to_secondary() {
 }
 
 #[test]
-fn from_to_rgb_f64() {
+fn round_trip_from_to_rgb_constants() {
+    for rgb in RGB::<u64>::PRIMARIES.iter().chain(
+        RGB::<u64>::SECONDARIES
+            .iter()
+            .chain(RGB::<u64>::IN_BETWEENS.iter()),
+    ) {
+        let [red, green, blue] = <[Prop; 3]>::from(rgb);
+        let rgb_in: RGB<u64> = [red, green, blue].into();
+        let hcv = HCV::from(&rgb_in);
+        let rgb_out = RGB::<u64>::from(&hcv);
+        assert_eq!(rgb_in, rgb_out);
+        let rgb_in: RGB<u8> = [red, green, blue].into();
+        let hcv = HCV::from(&rgb_in);
+        let rgb_out = RGB::<u8>::from(&hcv);
+        assert_eq!(rgb_in, rgb_out);
+        let rgb_in: RGB<f64> = [red, green, blue].into();
+        let hcv = HCV::from(&rgb_in);
+        let rgb_out = RGB::<f64>::from(&hcv);
+        assert_eq!(rgb_in, rgb_out);
+    }
+}
+
+#[test]
+fn round_trip_from_to_rgb() {
     let values = vec![0.0_f64, 0.001, 0.01, 0.499, 0.5, 0.99, 0.999, 1.0];
     for red in values.iter().map(|l| Prop::from(*l)) {
         for green in values.iter().map(|l| Prop::from(*l)) {
             for blue in values.iter().map(|l| Prop::from(*l)) {
+                let rgb_in: RGB<u64> = [red, green, blue].into();
+                let hcv = HCV::from(&rgb_in);
+                let rgb_out = RGB::<u64>::from(&hcv);
+                assert_eq!(rgb_in, rgb_out);
+                let rgb_in: RGB<u8> = [red, green, blue].into();
+                let hcv = HCV::from(&rgb_in);
+                let rgb_out = RGB::<u8>::from(&hcv);
+                assert_eq!(rgb_in, rgb_out);
                 let rgb_in: RGB<f64> = [red, green, blue].into();
                 let hcv = HCV::from(&rgb_in);
                 let rgb_out = RGB::<f64>::from(&hcv);

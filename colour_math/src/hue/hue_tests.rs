@@ -222,7 +222,7 @@ fn hue_to_from_angle() {
         (-Angle::from((135, 0, 0)), BlueCyan),
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, second));
-        assert_approx_eq!(Hue::from(*angle), hue, Prop(10000));
+        assert_approx_eq!(Hue::from(*angle), hue, Prop(0x0000000000010000));
         assert_approx_eq!(hue.angle(), *angle, 0x0000000000000100);
     }
 }
