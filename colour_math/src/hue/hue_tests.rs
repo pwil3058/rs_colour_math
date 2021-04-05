@@ -542,6 +542,38 @@ fn other_max_chroma_rgbs() {
 }
 
 #[test]
+fn lightest_darkest_hcv_for_chroma() {
+    let hues: Vec<Hue> = Hue::PRIMARIES
+        .iter()
+        .chain(Hue::SECONDARIES.iter())
+        .cloned()
+        .collect();
+    let hcvs: Vec<HCV> = HCV::PRIMARIES
+        .iter()
+        .chain(HCV::SECONDARIES.iter())
+        .cloned()
+        .collect();
+    for (hue, hcv) in hues.iter().zip(hcvs.iter()) {
+        assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ONE), Some(*hcv));
+        assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ONE), Some(*hcv));
+        for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
+            let shade_chroma = Chroma::Shade(prop);
+            let darkest_shade = hue.darkest_hcv_for_chroma(shade_chroma).unwrap();
+            assert_eq!(darkest_shade.chroma, shade_chroma);
+            let lightest_shade = hue.lightest_hcv_for_chroma(shade_chroma).unwrap();
+            assert_eq!(lightest_shade.chroma, shade_chroma);
+            assert!(darkest_shade.sum < lightest_shade.sum);
+            let tint_chroma = Chroma::Tint(prop);
+            let darkest_tint = hue.darkest_hcv_for_chroma(tint_chroma).unwrap();
+            assert_eq!(darkest_tint.chroma, tint_chroma);
+            let lightest_tint = hue.lightest_hcv_for_chroma(tint_chroma).unwrap();
+            assert_eq!(lightest_tint.chroma, tint_chroma);
+            assert!(darkest_tint.sum < lightest_tint.sum);
+        }
+    }
+}
+
+#[test]
 fn min_max_sum_rgb_for_chroma() {
     for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<f64>::PRIMARIES.iter()) {
         assert_eq!(

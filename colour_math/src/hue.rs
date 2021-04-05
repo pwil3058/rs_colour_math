@@ -176,7 +176,13 @@ pub(crate) trait HueIfce:
             Chroma::ZERO => None,
             Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
             Chroma::Shade(c_prop) => self.min_sum_for_chroma_prop(c_prop),
-            Chroma::Tint(_) => Some(self.sum_for_max_chroma() + UFDRNumber(1)),
+            Chroma::Tint(c_prop) => {
+                let mut sum = self.sum_for_max_chroma() + UFDRNumber(1);
+                while !self.sum_and_chroma_prop_are_compatible(sum, c_prop) {
+                    sum = sum + UFDRNumber(1);
+                }
+                Some(sum)
+            }
         }
     }
 
@@ -185,7 +191,13 @@ pub(crate) trait HueIfce:
         match chroma {
             Chroma::ZERO => None,
             Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
-            Chroma::Shade(_) => Some(self.sum_for_max_chroma() - UFDRNumber(1)),
+            Chroma::Shade(c_prop) => {
+                let mut sum = self.sum_for_max_chroma() - UFDRNumber(1);
+                while !self.sum_and_chroma_prop_are_compatible(sum, c_prop) {
+                    sum = sum - UFDRNumber(1);
+                }
+                Some(sum)
+            }
             Chroma::Tint(c_prop) => self.max_sum_for_chroma_prop(c_prop),
         }
     }
@@ -215,12 +227,33 @@ pub(crate) trait HueIfce:
         }
     }
 
+    fn darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
+        debug_assert!(chroma.is_valid());
+        let sum = self.min_sum_for_chroma(chroma)?;
+        debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
+        Some(HCV {
+            hue: Some((*self).into()),
+            chroma,
+            sum,
+        })
+    }
+
+    fn lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
+        debug_assert!(chroma.is_valid());
+        let sum = self.max_sum_for_chroma(chroma)?;
+        debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
+        Some(HCV {
+            hue: Some((*self).into()),
+            chroma,
+            sum,
+        })
+    }
+
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(chroma.is_valid());
         let min_sum = self.min_sum_for_chroma(chroma)?;
         debug_assert!(self.sum_and_chroma_are_compatible(min_sum, chroma));
-        let (chroma, sum) = self.adjusted_favouring_chroma(min_sum, chroma)?;
-        let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
+        let triplet = self.rgb_ordered_triplet(min_sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
@@ -228,8 +261,7 @@ pub(crate) trait HueIfce:
         debug_assert!(chroma.is_valid());
         let max_sum = self.max_sum_for_chroma(chroma)?;
         debug_assert!(self.sum_and_chroma_are_compatible(max_sum, chroma));
-        let (chroma, sum) = self.adjusted_favouring_chroma(max_sum, chroma)?;
-        let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
+        let triplet = self.rgb_ordered_triplet(max_sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
