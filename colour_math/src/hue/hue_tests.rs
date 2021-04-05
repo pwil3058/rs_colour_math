@@ -13,8 +13,9 @@ use crate::{
     ColourBasics, RGBConstants,
 };
 
-const NON_ZERO_CHROMAS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
-const VALID_OTHER_SUMS: [f64; 20] = [
+const NON_ZERO_CHROMA_PROPS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
+const SHADE_TINT_CHROMA_PROPS: [f64; 8] = [0.001, 0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 0.999];
+const VALID_HUE_SUMS: [f64; 20] = [
     0.01,
     0.025,
     0.5,
@@ -37,7 +38,9 @@ const VALID_OTHER_SUMS: [f64; 20] = [
     2.99,
 ];
 // "second" should never be 0.0 or 1.0
-const SECOND_VALUES: [f64; 11] = [0.001, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99];
+const SECOND_VALUES: [f64; 12] = [
+    0.001, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999,
+];
 
 impl RGBHue {
     fn indices(&self) -> (usize, usize, usize) {
@@ -343,7 +346,7 @@ fn max_chroma_and_sum_ranges() {
             hue.sum_range_for_chroma_prop(Prop::ONE),
             Some((UFDRNumber::ONE, UFDRNumber::ONE))
         );
-        for item in NON_ZERO_CHROMAS.iter() {
+        for item in NON_ZERO_CHROMA_PROPS.iter() {
             let prop = Prop::from(*item);
             match prop {
                 Prop::ONE => {
@@ -368,7 +371,7 @@ fn max_chroma_and_sum_ranges() {
             hue.sum_range_for_chroma_prop(Prop::ONE),
             Some((UFDRNumber::TWO, UFDRNumber::TWO))
         );
-        for item in NON_ZERO_CHROMAS.iter() {
+        for item in NON_ZERO_CHROMA_PROPS.iter() {
             let prop = Prop::from(*item);
             match prop {
                 Prop::ONE => {
@@ -521,7 +524,7 @@ fn other_max_chroma_rgbs() {
             assert!(hue
                 .max_chroma_rgb_for_sum::<f64>(UFDRNumber::THREE)
                 .is_none());
-            for item in VALID_OTHER_SUMS.iter() {
+            for item in VALID_HUE_SUMS.iter() {
                 let sum = UFDRNumber::from(*item);
                 let rgb = hue.max_chroma_rgb_for_sum::<u64>(sum).unwrap();
                 assert_approx_eq!(sum, rgb.sum());
@@ -600,32 +603,19 @@ fn min_max_sum_rgb_for_chroma() {
             let hue = Hue::Sextant(SextantHue(*sextant, second));
             assert_eq!(hue.min_sum_rgb_for_chroma::<u64>(Chroma::ZERO), None);
             assert_eq!(hue.max_sum_rgb_for_chroma::<u64>(Chroma::ZERO), None);
-            for prop in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
-                let shade_chroma = if prop == Prop::ONE {
-                    Chroma::ONE
-                } else {
-                    Chroma::Shade(prop)
-                };
+            for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
+                let shade_chroma = Chroma::Shade(prop);
                 let shade = hue.min_sum_rgb_for_chroma::<u64>(shade_chroma).unwrap();
-                let tint_chroma = if prop == Prop::ONE {
-                    Chroma::ONE
-                } else {
-                    Chroma::Tint(prop)
-                };
+                let tint_chroma = Chroma::Tint(prop);
                 let tint = hue.max_sum_rgb_for_chroma::<u64>(tint_chroma).unwrap();
-                match prop {
-                    Prop::ONE => assert_eq!(shade, tint),
-                    _ => {
-                        assert!(shade.value() < tint.value());
-                        assert_approx_eq!(shade.chroma(), shade_chroma, Prop(0xF));
-                        assert_approx_eq!(tint.chroma(), tint_chroma, Prop(0xF));
-                        assert_approx_eq!(
-                            shade.max_chroma_rgb(),
-                            tint.max_chroma_rgb(),
-                            0.000_001.into()
-                        );
-                    }
-                }
+                assert!(shade.value() < tint.value());
+                assert_approx_eq!(shade.chroma(), shade_chroma, Prop(0xF));
+                assert_approx_eq!(tint.chroma(), tint_chroma, Prop(0xF));
+                assert_approx_eq!(
+                    shade.max_chroma_rgb(),
+                    tint.max_chroma_rgb(),
+                    0.000_001.into()
+                );
             }
         }
     }
@@ -646,8 +636,8 @@ fn primary_rgb_for_sum_and_chroma() {
         assert!(hue
             .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
             .is_none());
-        for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
-            for sum in VALID_OTHER_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
+        for prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
+            for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
                 let chroma = Chroma::from((prop, *hue, sum));
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     // NB: expect rounding error due to divide by 3 in the maths
@@ -683,8 +673,8 @@ fn secondary_rgb_for_sum_and_chroma() {
         assert!(hue
             .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
             .is_none());
-        for prop in NON_ZERO_CHROMAS.iter().map(|item| Prop::from(*item)) {
-            for sum in VALID_OTHER_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
+        for prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
+            for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
                 let chroma = Chroma::from((prop, *hue, sum));
                 if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                     assert_approx_eq!(rgb.sum(), sum);
@@ -729,9 +719,9 @@ fn general_rgb_for_sum_and_chroma() {
             assert!(hue
                 .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
                 .is_none());
-            for prop in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
+            for prop in NON_ZERO_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
                 let chroma = Chroma::Neither(prop);
-                for sum in VALID_OTHER_SUMS.iter().map(|a| UFDRNumber::from(*a)) {
+                for sum in VALID_HUE_SUMS.iter().map(|a| UFDRNumber::from(*a)) {
                     if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
                         assert_approx_eq!(rgb.sum(), sum, 0x100);
                         assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, Prop(0x100));
