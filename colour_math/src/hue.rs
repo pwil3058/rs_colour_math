@@ -249,19 +249,19 @@ pub(crate) trait HueIfce:
         })
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
+    fn darkest_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(chroma.is_valid());
-        let min_sum = self.min_sum_for_chroma(chroma)?;
-        debug_assert!(self.sum_and_chroma_are_compatible(min_sum, chroma));
-        let triplet = self.rgb_ordered_triplet(min_sum, chroma.into_prop())?;
+        let sum = self.min_sum_for_chroma(chroma)?;
+        debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
+        let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
+    fn lightest_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(chroma.is_valid());
-        let max_sum = self.max_sum_for_chroma(chroma)?;
-        debug_assert!(self.sum_and_chroma_are_compatible(max_sum, chroma));
-        let triplet = self.rgb_ordered_triplet(max_sum, chroma.into_prop())?;
+        let sum = self.max_sum_for_chroma(chroma)?;
+        debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
+        let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
@@ -1093,19 +1093,19 @@ impl HueIfce for Hue {
         }
     }
 
-    fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
+    fn darkest_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.min_sum_rgb_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.min_sum_rgb_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.min_sum_rgb_for_chroma(chroma),
+            Self::Primary(rgb_hue) => rgb_hue.darkest_rgb_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.darkest_rgb_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.darkest_rgb_for_chroma(chroma),
         }
     }
 
-    fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
+    fn lightest_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.max_sum_rgb_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.max_sum_rgb_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.max_sum_rgb_for_chroma(chroma),
+            Self::Primary(rgb_hue) => rgb_hue.lightest_rgb_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.lightest_rgb_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.lightest_rgb_for_chroma(chroma),
         }
     }
 
