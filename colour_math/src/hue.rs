@@ -53,6 +53,7 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
     }
 
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+        debug_assert!(chroma.is_valid());
         let (min_sum, max_sum) = self.sum_range_for_chroma_prop(chroma.into_prop())?;
         match chroma {
             Chroma::ZERO => None,
@@ -102,6 +103,7 @@ pub(crate) trait SumChromaCompatibility: HueBasics {
     }
 
     fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
+        debug_assert!(chroma.is_valid());
         if let Some((min_sum, max_sum)) = self.sum_range_for_chroma(chroma) {
             sum >= min_sum
                 && sum <= max_sum
@@ -169,6 +171,7 @@ pub(crate) trait HueIfce:
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
 
     fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
+        debug_assert!(chroma.is_valid());
         match chroma {
             Chroma::ZERO => None,
             Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
@@ -178,6 +181,7 @@ pub(crate) trait HueIfce:
     }
 
     fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
+        debug_assert!(chroma.is_valid());
         match chroma {
             Chroma::ZERO => None,
             Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
@@ -212,14 +216,18 @@ pub(crate) trait HueIfce:
     }
 
     fn min_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
+        debug_assert!(chroma.is_valid());
         let min_sum = self.min_sum_for_chroma(chroma)?;
+        debug_assert!(self.sum_and_chroma_are_compatible(min_sum, chroma));
         let (chroma, sum) = self.adjusted_favouring_chroma(min_sum, chroma)?;
         let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
     }
 
     fn max_sum_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
+        debug_assert!(chroma.is_valid());
         let max_sum = self.max_sum_for_chroma(chroma)?;
+        debug_assert!(self.sum_and_chroma_are_compatible(max_sum, chroma));
         let (chroma, sum) = self.adjusted_favouring_chroma(max_sum, chroma)?;
         let triplet = self.rgb_ordered_triplet(sum, chroma.into_prop())?;
         Some(RGB::<T>::from(triplet))
@@ -230,6 +238,7 @@ pub(crate) trait HueIfce:
         sum: UFDRNumber,
         chroma: Chroma,
     ) -> Option<RGB<T>> {
+        debug_assert!(chroma.is_valid() && sum.is_valid_sum());
         let (min_sum, max_sum) = self.sum_range_for_chroma(chroma)?;
         match sum {
             sum if sum < min_sum || sum > max_sum => None,
@@ -268,7 +277,7 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
         sum: UFDRNumber,
         chroma: Chroma,
     ) -> Option<(Chroma, UFDRNumber)> {
-        debug_assert!(sum.is_valid_sum());
+        debug_assert!(chroma.is_valid() && sum.is_valid_sum());
         match chroma {
             Chroma::ZERO => None,
             Chroma::ONE => Some((Chroma::ONE, self.sum_for_max_chroma())),
@@ -296,7 +305,7 @@ pub(crate) trait ColourModificationHelpers: HueBasics + Debug + Sized {
         sum: UFDRNumber,
         chroma: Chroma,
     ) -> Option<(Chroma, UFDRNumber)> {
-        debug_assert!(sum.is_valid_sum());
+        debug_assert!(chroma.is_valid() && sum.is_valid_sum());
         match chroma {
             Chroma::ZERO => None,
             Chroma::Neither(c_prop) | Chroma::Tint(c_prop) | Chroma::Shade(c_prop) => {
@@ -395,6 +404,7 @@ impl HueIfce for RGBHue {
     }
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
+        debug_assert!(chroma.is_valid());
         let x_dash = match self {
             RGBHue::Red => ((UFDRNumber::ONE + chroma.into_prop()) / 2).into(),
             RGBHue::Green | RGBHue::Blue => ((UFDRNumber::TWO - chroma.into_prop()) / 4).into(),
@@ -473,6 +483,7 @@ impl HueIfce for CMYHue {
     }
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
+        debug_assert!(chroma.is_valid());
         let x_dash = match self {
             CMYHue::Cyan => (UFDRNumber::ONE - chroma.into_prop()) / 2,
             CMYHue::Magenta | CMYHue::Yellow => (UFDRNumber::TWO + chroma.into_prop()) / 4,
@@ -563,6 +574,7 @@ impl SumChromaCompatibility for SextantHue {
     }
 
     fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
+        debug_assert!(chroma.is_valid());
         if let Some((min_sum, max_sum)) = self.sum_range_for_chroma(chroma) {
             sum >= min_sum && sum <= max_sum
         } else {
@@ -659,6 +671,7 @@ impl HueIfce for SextantHue {
     }
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
+        debug_assert!(chroma.is_valid());
         let kc = chroma.into_prop() * self.1;
         let x_dash = match self.0 {
             // TODO: take tint and shade into account

@@ -601,9 +601,17 @@ fn min_max_sum_rgb_for_chroma() {
             assert_eq!(hue.min_sum_rgb_for_chroma::<u64>(Chroma::ZERO), None);
             assert_eq!(hue.max_sum_rgb_for_chroma::<u64>(Chroma::ZERO), None);
             for prop in NON_ZERO_CHROMAS.iter().map(|a| Prop::from(*a)) {
-                let shade_chroma = Chroma::Shade(prop);
+                let shade_chroma = if prop == Prop::ONE {
+                    Chroma::ONE
+                } else {
+                    Chroma::Shade(prop)
+                };
                 let shade = hue.min_sum_rgb_for_chroma::<u64>(shade_chroma).unwrap();
-                let tint_chroma = Chroma::Tint(prop);
+                let tint_chroma = if prop == Prop::ONE {
+                    Chroma::ONE
+                } else {
+                    Chroma::Tint(prop)
+                };
                 let tint = hue.max_sum_rgb_for_chroma::<u64>(tint_chroma).unwrap();
                 match prop {
                     Prop::ONE => assert_eq!(shade, tint),
