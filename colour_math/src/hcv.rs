@@ -16,50 +16,11 @@ use crate::{
     ColourBasics, HueConstants, LightLevel, ManipulatedColour, RGBConstants,
 };
 
-#[derive(Debug, Clone, Copy, Eq, Ord, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct HCV {
     pub(crate) hue: Option<Hue>,
     pub(crate) chroma: Chroma,
     pub(crate) sum: UFDRNumber,
-}
-
-impl PartialEq for HCV {
-    fn eq(&self, rhs: &Self) -> bool {
-        if self.sum != rhs.sum {
-            false
-        } else if self.chroma != rhs.chroma {
-            false
-        } else {
-            match self.chroma {
-                Chroma::ZERO => true,
-                _ => self.hue == rhs.hue,
-            }
-        }
-    }
-}
-
-impl PartialOrd for HCV {
-    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        match self.chroma {
-            Chroma::ZERO => {
-                if rhs.chroma != Chroma::ZERO {
-                    Some(Ordering::Less)
-                } else {
-                    match self.chroma.cmp(&rhs.chroma) {
-                        Ordering::Equal => self.sum.partial_cmp(&rhs.sum),
-                        ordering => Some(ordering),
-                    }
-                }
-            }
-            _ => match self.hue.cmp(&rhs.hue) {
-                Ordering::Equal => match self.chroma.cmp(&rhs.chroma) {
-                    Ordering::Equal => self.sum.partial_cmp(&rhs.sum),
-                    ordering => Some(ordering),
-                },
-                ordering => Some(ordering),
-            },
-        }
-    }
 }
 
 impl HCV {
