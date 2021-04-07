@@ -2,20 +2,21 @@
 //use std::cmp::Ordering;
 
 use std::{
+    cmp::Eq,
     cmp::Ordering,
     fmt::Debug,
-    ops::{Div, Mul},
+    ops::{Div, Mul, Sub},
 };
 
-use crate::{impl_prop_to_from_float, impl_to_from_number};
+use crate::{impl_prop_to_from_float, impl_to_from_number, impl_wrapped_op};
 
 use crate::{
-    debug::{ApproxEq, PropDiff},
-    fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
-    hue::{Hue, HueBasics},
+    debug::{AbsDiff, ApproxEq, PropDiff},
+    real::{IntoProp, Prop, Real},
+    //hue::{Hue, HueBasics},
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Chroma {
     Shade(Prop),
     Tint(Prop),
@@ -32,7 +33,7 @@ impl Chroma {
 
     pub fn is_valid(self) -> bool {
         match self {
-            Chroma::Neither(_) => true,
+            Chroma::Neither(c_prop) => c_prop.is_valid(),
             Chroma::Shade(c_prop) | Chroma::Tint(c_prop) => {
                 c_prop > Prop::ZERO && c_prop < Prop::ONE
             }
@@ -61,19 +62,19 @@ impl Default for Chroma {
     }
 }
 
-impl From<(Prop, Hue, UFDRNumber)> for Chroma {
-    fn from((prop, hue, sum): (Prop, Hue, UFDRNumber)) -> Self {
-        match prop {
-            Prop::ZERO => Chroma::ZERO,
-            Prop::ONE => Chroma::ONE,
-            prop => match sum.cmp(&hue.sum_for_max_chroma()) {
-                Ordering::Greater => Self::Tint(prop),
-                Ordering::Less => Self::Shade(prop),
-                Ordering::Equal => Self::Neither(prop),
-            },
-        }
-    }
-}
+// impl From<(Prop, Hue, Real)> for Chroma {
+//     fn from((prop, hue, sum): (Prop, Hue, Real)) -> Self {
+//         match prop {
+//             Prop::ZERO => Chroma::ZERO,
+//             Prop::ONE => Chroma::ONE,
+//             prop => match sum.cmp(&hue.sum_for_max_chroma()) {
+//                 Ordering::Greater => Self::Tint(prop),
+//                 Ordering::Less => Self::Shade(prop),
+//                 Ordering::Equal => Self::Neither(prop),
+//             },
+//         }
+//     }
+// }
 
 impl PartialOrd for Chroma {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
@@ -124,7 +125,7 @@ impl PropDiff for Chroma {
 
 impl ApproxEq for Chroma {}
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Greyness {
     Shade(Prop),
     Tint(Prop),
@@ -190,7 +191,7 @@ impl Ord for Greyness {
 
 #[cfg(test)]
 impl Greyness {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+    fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<Prop>) -> bool {
         use Greyness::*;
         match self {
             Shade(proportion) => match other {
@@ -222,53 +223,59 @@ impl From<Chroma> for Greyness {
     }
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
-)]
-pub struct Warmth(pub(crate) u64);
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, PartialOrd, Default, Debug)]
+pub struct Warmth(pub(crate) f64);
+
+impl Eq for Warmth {}
+
+impl Ord for Warmth {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.partial_cmp(rhs).unwrap()
+    }
+}
 
 impl Warmth {
-    pub const ZERO: Self = Self(0);
-    pub const ONE: Self = Self(u64::MAX);
+    pub const ZERO: Self = Self(0.0);
+    pub const ONE: Self = Self(1.0);
 
-    const K: Prop = Prop(u64::MAX / 3);
-    const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
-    const B: UFDRNumber = UFDRNumber(u64::MAX as u128 / 2);
+    const K: Prop = Prop(1.0 / 3.0);
+    const K_COMP: Prop = Prop(1.0 - Self::K.0);
+    const B: Real = Real(1.0 / 2.0);
+
+    pub fn is_valid(self) -> bool {
+        self.0 >= 0.0 && self.0 <= 1.0
+    }
 
     pub fn calculate(chroma: Chroma, x_dash: Prop) -> Self {
         debug_assert_ne!(chroma, Chroma::ZERO);
         let temp = (Self::K + Self::K_COMP * x_dash) * chroma.into_prop();
-        debug_assert!(temp <= UFDRNumber::ONE);
+        debug_assert!(temp <= Real::ONE);
         match chroma {
             Chroma::Shade(prop) => {
                 let warmth = Self::B - Self::B * prop + temp;
-                debug_assert!(warmth <= UFDRNumber::ONE);
+                debug_assert!(warmth <= Real::ONE);
                 warmth.into()
             }
             _ => temp.into(),
         }
     }
 
-    pub(crate) fn calculate_monochrome_fm_sum(sum: UFDRNumber) -> Self {
-        ((UFDRNumber::THREE - sum) / 6).into()
+    pub(crate) fn calculate_monochrome_fm_sum(sum: Real) -> Self {
+        ((Real::THREE - sum) / Real(6.0)).into()
     }
 
     pub fn calculate_monochrome(value: Value) -> Self {
-        ((Prop::ONE - Prop::from(value)) / 2).into()
-    }
-
-    pub fn abs_diff(&self, other: &Self) -> Warmth {
-        match self.cmp(other) {
-            Ordering::Greater => Warmth(self.0 - other.0),
-            Ordering::Less => Warmth(other.0 - self.0),
-            Ordering::Equal => Warmth(0),
-        }
+        ((Prop::ONE - Prop::from(value)) / Real(2.0)).into()
     }
 }
 
+impl_wrapped_op!(Sub, sub, Warmth);
+
+impl AbsDiff for Warmth {}
+
 #[cfg(test)]
 impl Warmth {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<Prop>) -> bool {
         (*self)
             .into_prop()
             .approx_eq(&(*other).into_prop(), acceptable_rounding_error)
@@ -292,30 +299,35 @@ impl From<Warmth> for Prop {
 
 impl IntoProp for Warmth {}
 
-impl_to_from_number!(UFDRNumber, u128, Warmth);
-impl_to_from_number!(FDRNumber, i128, Warmth);
+impl_to_from_number!(Real, Warmth);
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Debug,
-)]
-pub struct Value(pub(crate) u64);
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, PartialOrd, Default, Debug)]
+pub struct Value(pub(crate) f64);
 
-impl Value {
-    pub const ZERO: Self = Self(0);
-    pub const ONE: Self = Self(u64::MAX);
+impl Eq for Value {}
 
-    pub fn abs_diff(&self, other: &Self) -> Value {
-        match self.cmp(other) {
-            Ordering::Greater => Value(self.0 - other.0),
-            Ordering::Less => Value(other.0 - self.0),
-            Ordering::Equal => Value(0),
-        }
+impl Ord for Value {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.partial_cmp(rhs).unwrap()
     }
 }
 
+impl Value {
+    pub const ZERO: Self = Self(0.0);
+    pub const ONE: Self = Self(1.0);
+
+    pub fn is_valid(self) -> bool {
+        self.0 >= 0.0 && self.0 <= 1.0
+    }
+}
+
+impl_wrapped_op!(Sub, sub, Value);
+
+impl AbsDiff for Value {}
+
 #[cfg(test)]
 impl Value {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<Prop>) -> bool {
         (*self)
             .into_prop()
             .approx_eq(&(*other).into_prop(), acceptable_rounding_error)
@@ -327,16 +339,16 @@ impl Div<i32> for Value {
 
     fn div(self, rhs: i32) -> Self {
         debug_assert!(rhs >= 0);
-        Self(self.0 / rhs as u64)
+        Self(self.0 / rhs as f64)
     }
 }
 
 impl Mul<i32> for Value {
-    type Output = UFDRNumber;
+    type Output = Real;
 
-    fn mul(self, rhs: i32) -> UFDRNumber {
+    fn mul(self, rhs: i32) -> Real {
         debug_assert!(rhs >= 0);
-        UFDRNumber(self.0 as u128 * rhs as u128)
+        Real(self.0 * rhs as f64)
     }
 }
 
@@ -357,5 +369,4 @@ impl From<Value> for Prop {
 
 impl IntoProp for Value {}
 
-impl_to_from_number!(UFDRNumber, u128, Value);
-impl_to_from_number!(FDRNumber, i128, Value);
+impl_to_from_number!(Real, Value);

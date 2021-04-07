@@ -8,23 +8,24 @@ use num_traits::{Signed, Unsigned};
 use num_traits_plus::float_plus::*;
 
 pub mod attributes;
-pub mod beigui;
+//pub mod beigui;
 pub mod debug;
-pub mod fdrn;
-pub mod hcv;
-pub mod hue;
-pub mod manipulator;
-pub mod mixing;
-pub mod rgb;
+//pub mod fdrn;
+//pub mod hcv;
+//pub mod hue;
+//pub mod manipulator;
+//pub mod mixing;
+pub mod real;
+//pub mod rgb;
 
 pub use crate::{
     attributes::{Chroma, Greyness, Value, Warmth},
-    fdrn::{IntoProp, Prop, UFDRNumber},
-    hcv::HCV,
-    hue::{angle::Angle, Hue},
-    rgb::RGB,
+    real::{IntoProp, Prop, Real},
+    //hcv::HCV,
+    //hue::{angle::Angle, Hue},
+    //rgb::RGB,
 };
-use hue::HueIfce;
+//use hue::HueIfce;
 
 pub trait Float: FloatPlus + std::iter::Sum + FloatApproxEq<Self> {}
 
@@ -146,23 +147,23 @@ pub trait RGBConstants: HueConstants + Copy {
 }
 
 pub trait ColourBasics {
-    fn hue(&self) -> Option<Hue>;
+    // fn hue(&self) -> Option<Hue>;
 
-    fn hue_angle(&self) -> Option<Angle> {
-        Some(self.hue()?.angle())
-    }
-
-    fn hue_rgb<L: LightLevel>(&self) -> Option<RGB<L>> {
-        Some(self.hue()?.max_chroma_rgb())
-    }
-    fn hue_hcv(&self) -> Option<HCV> {
-        Some(self.hue()?.max_chroma_hcv())
-    }
-
-    fn is_grey(&self) -> bool {
-        self.chroma() == Chroma::ZERO
-    }
-
+    // fn hue_angle(&self) -> Option<Angle> {
+    //     Some(self.hue()?.angle())
+    // }
+    //
+    // fn hue_rgb<L: LightLevel>(&self) -> Option<RGB<L>> {
+    //     Some(self.hue()?.max_chroma_rgb())
+    // }
+    // fn hue_hcv(&self) -> Option<HCV> {
+    //     Some(self.hue()?.max_chroma_hcv())
+    // }
+    //
+    // fn is_grey(&self) -> bool {
+    //     self.chroma() == Chroma::ZERO
+    // }
+    //
     fn chroma(&self) -> Chroma;
     fn value(&self) -> Value;
 
@@ -170,43 +171,44 @@ pub trait ColourBasics {
         self.chroma().into()
     }
 
-    fn warmth(&self) -> Warmth {
-        if let Some(hue) = self.hue() {
-            hue.warmth_for_chroma(self.chroma())
-        } else {
-            Warmth::calculate_monochrome(self.value())
-        }
-    }
+    fn warmth(&self) -> Warmth;
+    // {
+    //     if let Some(hue) = self.hue() {
+    //         hue.warmth_for_chroma(self.chroma())
+    //     } else {
+    //         Warmth::calculate_monochrome(self.value())
+    //     }
+    // }
 
-    fn hcv(&self) -> HCV;
-    fn rgb<L: LightLevel>(&self) -> RGB<L>;
-
-    fn monochrome_hcv(&self) -> HCV {
-        HCV::new_grey(self.value())
-    }
-
-    fn monochrome_rgb<L: LightLevel>(&self) -> RGB<L> {
-        RGB::<L>::new_grey(self.value())
-    }
-
-    fn best_foreground(&self) -> HCV {
-        match self.chroma() {
-            Chroma::Shade(_) => HCV::WHITE,
-            Chroma::Tint(_) => HCV::BLACK,
-            _ => {
-                if self.value() < Value::ONE / 2 {
-                    HCV::WHITE
-                } else {
-                    HCV::BLACK
-                }
-            }
-        }
-    }
-
-    fn pango_string(&self) -> String {
-        let rgb = self.rgb::<u8>();
-        format!("#{:02X}{:02X}{:02X}", rgb.0[0], rgb.0[1], rgb.0[2])
-    }
+    // fn hcv(&self) -> HCV;
+    // fn rgb<L: LightLevel>(&self) -> RGB<L>;
+    //
+    // fn monochrome_hcv(&self) -> HCV {
+    //     HCV::new_grey(self.value())
+    // }
+    //
+    // fn monochrome_rgb<L: LightLevel>(&self) -> RGB<L> {
+    //     RGB::<L>::new_grey(self.value())
+    // }
+    //
+    // fn best_foreground(&self) -> HCV {
+    //     match self.chroma() {
+    //         Chroma::Shade(_) => HCV::WHITE,
+    //         Chroma::Tint(_) => HCV::BLACK,
+    //         _ => {
+    //             if self.value() < Value::ONE / 2 {
+    //                 HCV::WHITE
+    //             } else {
+    //                 HCV::BLACK
+    //             }
+    //         }
+    //     }
+    // }
+    //
+    // fn pango_string(&self) -> String {
+    //     let rgb = self.rgb::<u8>();
+    //     format!("#{:02X}{:02X}{:02X}", rgb.0[0], rgb.0[1], rgb.0[2])
+    // }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
@@ -238,29 +240,29 @@ pub trait ColourAttributes: ColourBasics {
         }
     }
 
-    fn scalar_attribute_rgb<T: LightLevel>(&self, attr: ScalarAttribute) -> RGB<T> {
-        match attr {
-            ScalarAttribute::Chroma => self.rgb(),
-            ScalarAttribute::Greyness => self.rgb(),
-            ScalarAttribute::Value => RGB::<T>::new_grey(self.value()),
-            ScalarAttribute::Warmth => RGB::<T>::new_warmth_rgb(self.warmth()),
-        }
-    }
+    // fn scalar_attribute_rgb<T: LightLevel>(&self, attr: ScalarAttribute) -> RGB<T> {
+    //     match attr {
+    //         ScalarAttribute::Chroma => self.rgb(),
+    //         ScalarAttribute::Greyness => self.rgb(),
+    //         ScalarAttribute::Value => RGB::<T>::new_grey(self.value()),
+    //         ScalarAttribute::Warmth => RGB::<T>::new_warmth_rgb(self.warmth()),
+    //     }
+    // }
 }
 
-impl ColourAttributes for HCV {}
-impl<L: LightLevel> ColourAttributes for RGB<L> {}
+// impl ColourAttributes for HCV {}
+// impl<L: LightLevel> ColourAttributes for RGB<L> {}
+//
+// pub trait ColourIfce: ColourBasics + ColourAttributes {}
+//
+// impl ColourIfce for HCV {}
+// impl<L: LightLevel> ColourIfce for RGB<L> {}
 
-pub trait ColourIfce: ColourBasics + ColourAttributes {}
-
-impl ColourIfce for HCV {}
-impl<L: LightLevel> ColourIfce for RGB<L> {}
-
-pub trait ManipulatedColour: ColourBasics {
-    // TODO: modify Manipulated colour to make it more widely applicable
-    fn lightened(&self, prop: Prop) -> Self;
-    fn darkened(&self, prop: Prop) -> Self;
-    fn saturated(&self, prop: Prop) -> Self;
-    fn greyed(&self, prop: Prop) -> Self;
-    fn rotated(&self, angle: Angle) -> Self;
-}
+// pub trait ManipulatedColour: ColourBasics {
+//     // TODO: modify Manipulated colour to make it more widely applicable
+//     fn lightened(&self, prop: Prop) -> Self;
+//     fn darkened(&self, prop: Prop) -> Self;
+//     fn saturated(&self, prop: Prop) -> Self;
+//     fn greyed(&self, prop: Prop) -> Self;
+//     fn rotated(&self, angle: Angle) -> Self;
+// }

@@ -455,12 +455,6 @@ impl Prop {
     }
 }
 
-impl PropDiff for Prop {
-    fn prop_diff(&self, other: &Self) -> Option<Prop> {
-        self.0.prop_diff(&other.0)
-    }
-}
-
 #[cfg(test)]
 impl Prop {
     pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
@@ -479,6 +473,12 @@ impl Prop {
         } else {
             scaled_diff < u64::MAX / 1_000_000_000_000_000
         }
+    }
+}
+
+impl PropDiff for Prop {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
+        self.0.prop_diff(&other.0)
     }
 }
 

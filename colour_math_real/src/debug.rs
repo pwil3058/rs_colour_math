@@ -1,7 +1,7 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use std::{cmp::PartialOrd, ops::Sub};
 
-use crate::fdrn::Prop;
+use crate::real::Prop;
 
 pub trait AbsDiff: Copy + Sized + PartialOrd + Sub<Output = Self> {
     fn abs_diff(&self, other: &Self) -> Self {
@@ -34,9 +34,7 @@ macro_rules! impl_prop_diff_for_unsigned {
             fn prop_diff(&self, other: &Self) -> Option<Prop> {
                 match self.max(other) {
                     0 => Some(Prop::ZERO),
-                    denom => Some(Prop(
-                        (self.abs_diff(other) * u64::MAX as u128 / denom) as u64,
-                    )),
+                    denom => Some(Prop((self.abs_diff(other) as f64 / *denom as f64))),
                 }
             }
         }
@@ -46,9 +44,7 @@ macro_rules! impl_prop_diff_for_unsigned {
             fn prop_diff(&self, other: &Self) -> Option<Prop> {
                 match *self.max(other) as u128 {
                     0 => Some(Prop::ZERO),
-                    denom => Some(Prop(
-                        (self.abs_diff(other) as u128 * u64::MAX as u128 / denom) as u64,
-                    )),
+                    denom => Some(Prop((self.abs_diff(other) as f64 / denom as f64))),
                 }
             }
         }
@@ -69,9 +65,7 @@ macro_rules! impl_prop_diff_for_float {
                 if denom == 0.0 {
                     Some(Prop::ZERO)
                 } else {
-                    Some(Prop(
-                        (self.abs_diff(other) * u64::MAX as $float / denom) as u64,
-                    ))
+                    Some(Prop((self.abs_diff(other) / denom) as f64))
                 }
             }
         }
@@ -82,7 +76,7 @@ impl_prop_diff_for_float!(f32);
 impl_prop_diff_for_float!(f64);
 
 pub trait ApproxEq: Copy + PropDiff + PartialEq {
-    const DEFAULT_MAX_DIFF: Prop = Prop(0x0000000000001000);
+    const DEFAULT_MAX_DIFF: Prop = Prop(f64::EPSILON);
 
     fn approx_eq(&self, other: &Self, max_diff: Option<Prop>) -> bool {
         if self.eq(other) {
