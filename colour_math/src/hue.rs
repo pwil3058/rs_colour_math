@@ -664,6 +664,7 @@ impl ColourModificationHelpers for SextantHue {}
 
 impl SumChromaCompatibility for SextantHue {
     fn sum_and_chroma_prop_are_compatible(&self, sum: UFDRNumber, c_prop: Prop) -> bool {
+        debug_assert!(sum.is_valid_sum());
         match c_prop + self.1 * c_prop {
             min_sum if sum < min_sum || min_sum == UFDRNumber::ZERO => false,
             min_sum => {
@@ -692,13 +693,13 @@ impl SumChromaCompatibility for SextantHue {
     }
 
     fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
-        // TODO: make compatible with sum_and_chroma_prop_are_compatible()
-        debug_assert!(chroma.is_valid());
-        if let Some((min_sum, max_sum)) = self.sum_range_for_chroma(chroma) {
-            sum >= min_sum && sum <= max_sum
-        } else {
-            false
-        }
+        debug_assert!(chroma.is_valid() && sum.is_valid_sum());
+        let chroma_ok = match sum.cmp(&self.sum_for_max_chroma()) {
+            Ordering::Equal => chroma.is_neither(),
+            Ordering::Less => chroma.is_shade(),
+            Ordering::Greater => chroma.is_tint(),
+        };
+        chroma_ok && self.sum_and_chroma_prop_are_compatible(sum, chroma.into_prop())
     }
 }
 

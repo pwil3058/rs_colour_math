@@ -30,6 +30,27 @@ impl Chroma {
         self.into_prop() == Prop::ZERO
     }
 
+    pub fn is_shade(self) -> bool {
+        match self {
+            Chroma::Shade(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_tint(self) -> bool {
+        match self {
+            Chroma::Tint(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_neither(self) -> bool {
+        match self {
+            Chroma::Neither(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_valid(self) -> bool {
         match self {
             Chroma::Neither(_) => true,
@@ -134,6 +155,27 @@ pub enum Greyness {
 impl Greyness {
     pub const ZERO: Self = Self::Neither(Prop::ZERO);
     pub const ONE: Self = Self::Neither(Prop::ONE);
+
+    pub fn is_shade(self) -> bool {
+        match self {
+            Greyness::Shade(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_tint(self) -> bool {
+        match self {
+            Greyness::Tint(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_neither(self) -> bool {
+        match self {
+            Greyness::Neither(_) => true,
+            _ => false,
+        }
+    }
 
     pub fn is_zero(&self) -> bool {
         self.into_prop() == Prop::ZERO

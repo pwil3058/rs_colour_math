@@ -74,7 +74,10 @@ impl ColourManipulator {
         if let Some(hue) = self.hcv.hue {
             self.saved_hue = hue; // Just in case we end up grey (which is possible)
             if hue.sum_and_chroma_are_compatible(self.hcv.sum, new_chroma) {
-                self.hcv = HCV::new(Some((hue, new_chroma)), self.hcv.sum);
+                self.hcv = match HCV::new(Some((hue, new_chroma)), self.hcv.sum) {
+                    Ok(hcv) => hcv,
+                    Err(hcv) => hcv,
+                };
                 if cur_chroma == self.hcv.chroma {
                     Outcome::NoChange
                 } else {
@@ -98,7 +101,10 @@ impl ColourManipulator {
                                 if chroma == Chroma::ZERO {
                                     HCV::new_grey((sum / 3).into())
                                 } else {
-                                    HCV::new(Some((hue, chroma)), sum)
+                                    match HCV::new(Some((hue, chroma)), sum) {
+                                        Ok(hcv) => hcv,
+                                        Err(hcv) => hcv,
+                                    }
                                 }
                             } else {
                                 HCV::new_grey((self.hcv.sum / 3).into())
@@ -119,7 +125,10 @@ impl ColourManipulator {
                             if chroma == Chroma::ZERO {
                                 self.hcv = HCV::new_grey((self.hcv.sum / 3).into());
                             } else {
-                                self.hcv = HCV::new(Some((hue, chroma)), sum);
+                                self.hcv = match HCV::new(Some((hue, chroma)), sum) {
+                                    Ok(hcv) => hcv,
+                                    Err(hcv) => hcv,
+                                };
                             }
                         } else {
                             self.hcv = HCV::new_grey((self.hcv.sum / 3).into())
@@ -140,7 +149,10 @@ impl ColourManipulator {
                 .saved_hue
                 .sum_and_chroma_are_compatible(self.hcv.sum, new_chroma)
             {
-                self.hcv = HCV::new(Some((self.saved_hue, new_chroma)), self.hcv.sum);
+                self.hcv = match HCV::new(Some((self.saved_hue, new_chroma)), self.hcv.sum) {
+                    Ok(hcv) => hcv,
+                    Err(hcv) => hcv,
+                };
                 if cur_chroma == self.hcv.chroma {
                     Outcome::NoChange
                 } else {
@@ -162,7 +174,10 @@ impl ColourManipulator {
                                 .saved_hue
                                 .adjusted_favouring_sum(self.hcv.sum, clamped_new_chroma)
                             {
-                                HCV::new(Some((self.saved_hue, chroma)), sum)
+                                match HCV::new(Some((self.saved_hue, chroma)), sum) {
+                                    Ok(hcv) => hcv,
+                                    Err(hcv) => hcv,
+                                }
                             } else {
                                 self.hcv
                             };
@@ -180,7 +195,10 @@ impl ColourManipulator {
                             .saved_hue
                             .adjusted_favouring_chroma(self.hcv.sum, new_chroma)
                         {
-                            self.hcv = HCV::new(Some((self.saved_hue, chroma)), sum);
+                            self.hcv = match HCV::new(Some((self.saved_hue, chroma)), sum) {
+                                Ok(hcv) => hcv,
+                                Err(hcv) => hcv,
+                            };
                         } else {
                             self.hcv = HCV::new_grey((self.hcv.sum / 3).into())
                         }
@@ -277,7 +295,10 @@ impl ColourManipulator {
         if let Some(hue) = self.hcv.hue {
             self.saved_hue = hue;
             if hue.sum_and_chroma_are_compatible(new_sum, self.hcv.chroma) {
-                self.hcv = HCV::new(Some((hue, self.hcv.chroma)), new_sum);
+                self.hcv = match HCV::new(Some((hue, self.hcv.chroma)), new_sum) {
+                    Ok(hcv) => hcv,
+                    Err(hcv) => hcv,
+                };
                 if cur_sum == self.hcv.sum {
                     Outcome::NoChange
                 } else {
@@ -289,7 +310,10 @@ impl ColourManipulator {
                         if let Some((chroma, sum)) =
                             hue.adjusted_favouring_chroma(new_sum, self.hcv.chroma)
                         {
-                            self.hcv = HCV::new(Some((hue, chroma)), sum);
+                            self.hcv = match HCV::new(Some((hue, chroma)), sum) {
+                                Ok(hcv) => hcv,
+                                Err(hcv) => hcv,
+                            };
                         } else {
                             self.hcv = HCV::new_grey((new_sum / 3).into());
                         };
@@ -303,7 +327,10 @@ impl ColourManipulator {
                         if let Some((chroma, sum)) =
                             hue.adjusted_favouring_sum(new_sum, self.hcv.chroma)
                         {
-                            self.hcv = HCV::new(Some((hue, chroma)), sum);
+                            self.hcv = match HCV::new(Some((hue, chroma)), sum) {
+                                Ok(hcv) => hcv,
+                                Err(hcv) => hcv,
+                            };
                         } else {
                             self.hcv = HCV::new_grey((new_sum / 3).into());
                         }
@@ -388,12 +415,18 @@ impl ColourManipulator {
                     let (chroma, sum) = new_hue
                         .adjusted_favouring_sum(self.hcv.sum, chroma)
                         .unwrap();
-                    self.hcv = HCV::new(Some((new_hue, chroma)), sum);
+                    self.hcv = match HCV::new(Some((new_hue, chroma)), sum) {
+                        Ok(hcv) => hcv,
+                        Err(hcv) => hcv,
+                    };
                 }
             },
             chroma => {
                 if new_hue.sum_and_chroma_are_compatible(self.hcv.sum, chroma) {
-                    self.hcv = HCV::new(Some((new_hue, chroma)), self.hcv.sum);
+                    self.hcv = match HCV::new(Some((new_hue, chroma)), self.hcv.sum) {
+                        Ok(hcv) => hcv,
+                        Err(hcv) => hcv,
+                    };
                 } else {
                     self.hcv = match policy {
                         SetHue::FavourChroma => {
@@ -410,7 +443,10 @@ impl ColourManipulator {
                             } else {
                                 new_hue.trim_overs(self.hcv.sum, chroma.into_prop())
                             } {
-                                HCV::new(Some((new_hue, chroma)), sum)
+                                match HCV::new(Some((new_hue, chroma)), sum) {
+                                    Ok(hcv) => hcv,
+                                    Err(hcv) => hcv,
+                                }
                             } else {
                                 self.saved_hue = new_hue;
                                 HCV::new_grey((self.hcv.sum / 3).into())
@@ -428,7 +464,10 @@ impl ColourManipulator {
                             let (chroma, sum) = new_hue
                                 .adjusted_favouring_sum(self.hcv.sum, chroma)
                                 .unwrap();
-                            HCV::new(Some((new_hue, chroma)), sum)
+                            match HCV::new(Some((new_hue, chroma)), sum) {
+                                Ok(hcv) => hcv,
+                                Err(hcv) => hcv,
+                            }
                         }
                     }
                 }
