@@ -12,8 +12,8 @@ use crate::{impl_prop_to_from_float, impl_to_from_number, impl_wrapped_op};
 
 use crate::{
     debug::{AbsDiff, ApproxEq, PropDiff},
+    hue::{Hue, HueBasics},
     real::{IntoProp, Prop, Real},
-    //hue::{Hue, HueBasics},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,19 +62,19 @@ impl Default for Chroma {
     }
 }
 
-// impl From<(Prop, Hue, Real)> for Chroma {
-//     fn from((prop, hue, sum): (Prop, Hue, Real)) -> Self {
-//         match prop {
-//             Prop::ZERO => Chroma::ZERO,
-//             Prop::ONE => Chroma::ONE,
-//             prop => match sum.cmp(&hue.sum_for_max_chroma()) {
-//                 Ordering::Greater => Self::Tint(prop),
-//                 Ordering::Less => Self::Shade(prop),
-//                 Ordering::Equal => Self::Neither(prop),
-//             },
-//         }
-//     }
-// }
+impl From<(Prop, Hue, Real)> for Chroma {
+    fn from((prop, hue, sum): (Prop, Hue, Real)) -> Self {
+        match prop {
+            prop if prop == Prop::ZERO => Chroma::ZERO,
+            prop if prop == Prop::ONE => Chroma::ONE,
+            prop => match sum.cmp(&hue.sum_for_max_chroma()) {
+                Ordering::Greater => Self::Tint(prop),
+                Ordering::Less => Self::Shade(prop),
+                Ordering::Equal => Self::Neither(prop),
+            },
+        }
+    }
+}
 
 impl PartialOrd for Chroma {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {

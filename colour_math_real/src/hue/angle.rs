@@ -5,7 +5,7 @@ use std::{
     ops::{Add, Neg, Sub},
 };
 
-use crate::{fdrn::FDRNumber, HueConstants};
+use crate::{real::Real, HueConstants};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Angle(i64);
@@ -19,16 +19,16 @@ impl Angle {
     pub(crate) const MIN: Self = Self(Self::DEGREE.0 * -180);
     pub(crate) const MAX: Self = Self(Self::DEGREE.0 * 180);
 
-    pub fn asin(arg: FDRNumber) -> Self {
+    pub fn asin(arg: Real) -> Self {
         Self::from(f64::from(arg).asin().to_degrees())
     }
 
-    pub fn cos(self) -> FDRNumber {
-        FDRNumber::from(f64::from(self).to_radians().cos())
+    pub fn cos(self) -> Real {
+        Real::from(f64::from(self).to_radians().cos())
     }
 
-    pub fn sin(self) -> FDRNumber {
-        FDRNumber::from(f64::from(self).to_radians().sin())
+    pub fn sin(self) -> Real {
+        Real::from(f64::from(self).to_radians().sin())
     }
 
     pub fn is_valid(self) -> bool {
@@ -185,10 +185,10 @@ impl From<Angle> for f64 {
     }
 }
 
-impl From<Angle> for FDRNumber {
+impl From<Angle> for Real {
     fn from(angle: Angle) -> Self {
         debug_assert!(angle.is_valid());
-        Self(angle.0 as i128 * u64::MAX as i128 / Angle::DEGREE.0 as i128)
+        Self(angle.0 as f64 / Angle::DEGREE.0 as f64)
     }
 }
 
@@ -196,6 +196,8 @@ impl From<Angle> for FDRNumber {
 mod angle_tests {
     use super::*;
     use num_traits_plus::assert_approx_eq;
+
+    use crate::debug::ApproxEq;
 
     #[test]
     fn convert() {
@@ -205,8 +207,8 @@ mod angle_tests {
         assert_approx_eq!(Angle::from(180.0), Angle::from(-180.0), 16);
         assert_approx_eq!(Angle::from(120.0), Angle::from(120), 2000);
 
-        assert_eq!(FDRNumber::from(Angle::DEGREE), FDRNumber::ONE);
-        assert_eq!(FDRNumber::from(Angle::from(12)), FDRNumber::ONE * 12);
+        assert_eq!(Real::from(Angle::DEGREE), Real::ONE);
+        assert_eq!(Real::from(Angle::from(12)), Real::ONE * Real(12.0));
     }
 
     #[test]
@@ -221,11 +223,7 @@ mod angle_tests {
 
     #[test]
     fn trigonometry() {
-        assert_approx_eq!(Angle::from(30).sin(), FDRNumber::from(0.5_f64), 10000);
-        assert_approx_eq!(
-            Angle::asin(FDRNumber::from(0.5_f64)),
-            Angle::from(30),
-            10000
-        );
+        assert_approx_eq!(Angle::from(30).sin(), Real::from(0.5_f64), 10000);
+        assert_approx_eq!(Angle::asin(Real::from(0.5_f64)), Angle::from(30), 10000);
     }
 }

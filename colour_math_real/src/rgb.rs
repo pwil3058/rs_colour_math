@@ -14,10 +14,14 @@ use regex::Regex;
 use crate::{
     attributes::{Chroma, Value, Warmth},
     debug::ApproxEq,
-    fdrn::{Prop, UFDRNumber},
-    hcv::HCV,
     hue::{angle::Angle, CMYHue, Hue, HueIfce, RGBHue, Sextant},
-    ColourBasics, HueConstants, LightLevel, ManipulatedColour, RGBConstants,
+    //hcv::HCV,
+    real::{Prop, Real},
+    ColourBasics,
+    HueConstants,
+    LightLevel,
+    //ManipulatedColour,
+    RGBConstants,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -63,7 +67,7 @@ impl<T: LightLevel + Copy + From<Prop>> RGB<T> {
 }
 
 impl<T: LightLevel + Into<Prop>> RGB<T> {
-    pub fn sum(&self) -> UFDRNumber {
+    pub fn sum(&self) -> Real {
         let [red, green, blue] = <[Prop; 3]>::from(*self);
         red + green + blue
     }
@@ -118,52 +122,52 @@ impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
         }
     }
     fn value(&self) -> Value {
-        (self.sum() / 3).into()
+        (self.sum() / Real(3.0)).into()
     }
 
-    fn hcv(&self) -> HCV {
-        self.into()
-    }
+    // fn hcv(&self) -> HCV {
+    //     self.into()
+    // }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {
         <[Prop; 3]>::from(*self).into()
     }
 }
 
-impl<L: LightLevel> ManipulatedColour for RGB<L> {
-    fn lightened(&self, prop: Prop) -> Self {
-        let compl = Prop::ONE - prop;
-        let mut array = <[Prop; 3]>::from(self);
-        for item in &mut array {
-            *item = (*item * compl + prop).into();
-        }
-        RGB::<L>::from(array)
-    }
-
-    fn darkened(&self, prop: Prop) -> Self {
-        let compl = Prop::ONE - prop;
-        let mut array = <[Prop; 3]>::from(self);
-        for item in &mut array {
-            *item = *item * compl;
-        }
-        RGB::<L>::from(array)
-    }
-
-    fn saturated(&self, prop: Prop) -> Self {
-        let hcv = HCV::from(self).saturated(prop);
-        RGB::<L>::from(hcv)
-    }
-
-    fn greyed(&self, prop: Prop) -> Self {
-        let hcv = HCV::from(self).greyed(prop);
-        RGB::<L>::from(hcv)
-    }
-
-    fn rotated(&self, angle: Angle) -> Self {
-        let hcv = HCV::from(self).rotated(angle);
-        RGB::<L>::from(hcv)
-    }
-}
+// impl<L: LightLevel> ManipulatedColour for RGB<L> {
+//     fn lightened(&self, prop: Prop) -> Self {
+//         let compl = Prop::ONE - prop;
+//         let mut array = <[Prop; 3]>::from(self);
+//         for item in &mut array {
+//             *item = (*item * compl + prop).into();
+//         }
+//         RGB::<L>::from(array)
+//     }
+//
+//     fn darkened(&self, prop: Prop) -> Self {
+//         let compl = Prop::ONE - prop;
+//         let mut array = <[Prop; 3]>::from(self);
+//         for item in &mut array {
+//             *item = *item * compl;
+//         }
+//         RGB::<L>::from(array)
+//     }
+//
+//     fn saturated(&self, prop: Prop) -> Self {
+//         let hcv = HCV::from(self).saturated(prop);
+//         RGB::<L>::from(hcv)
+//     }
+//
+//     fn greyed(&self, prop: Prop) -> Self {
+//         let hcv = HCV::from(self).greyed(prop);
+//         RGB::<L>::from(hcv)
+//     }
+//
+//     fn rotated(&self, angle: Angle) -> Self {
+//         let hcv = HCV::from(self).rotated(angle);
+//         RGB::<L>::from(hcv)
+//     }
+// }
 
 impl<T: LightLevel> Index<usize> for RGB<T> {
     type Output = T;

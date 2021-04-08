@@ -12,20 +12,20 @@ pub mod attributes;
 pub mod debug;
 //pub mod fdrn;
 //pub mod hcv;
-//pub mod hue;
+pub mod hue;
 //pub mod manipulator;
 //pub mod mixing;
 pub mod real;
-//pub mod rgb;
+pub mod rgb;
 
 pub use crate::{
     attributes::{Chroma, Greyness, Value, Warmth},
-    real::{IntoProp, Prop, Real},
     //hcv::HCV,
-    //hue::{angle::Angle, Hue},
-    //rgb::RGB,
+    hue::{angle::Angle, Hue},
+    real::{IntoProp, Prop, Real},
+    rgb::RGB,
 };
-//use hue::HueIfce;
+use hue::HueIfce;
 
 pub trait Float: FloatPlus + std::iter::Sum + FloatApproxEq<Self> {}
 
@@ -147,23 +147,24 @@ pub trait RGBConstants: HueConstants + Copy {
 }
 
 pub trait ColourBasics {
-    // fn hue(&self) -> Option<Hue>;
+    fn hue(&self) -> Option<Hue>;
 
-    // fn hue_angle(&self) -> Option<Angle> {
-    //     Some(self.hue()?.angle())
-    // }
-    //
-    // fn hue_rgb<L: LightLevel>(&self) -> Option<RGB<L>> {
-    //     Some(self.hue()?.max_chroma_rgb())
-    // }
+    fn hue_angle(&self) -> Option<Angle> {
+        Some(self.hue()?.angle())
+    }
+
+    fn hue_rgb<L: LightLevel>(&self) -> Option<RGB<L>> {
+        Some(self.hue()?.max_chroma_rgb())
+    }
+
     // fn hue_hcv(&self) -> Option<HCV> {
     //     Some(self.hue()?.max_chroma_hcv())
     // }
     //
-    // fn is_grey(&self) -> bool {
-    //     self.chroma() == Chroma::ZERO
-    // }
-    //
+    fn is_grey(&self) -> bool {
+        self.chroma() == Chroma::ZERO
+    }
+
     fn chroma(&self) -> Chroma;
     fn value(&self) -> Value;
 
@@ -171,17 +172,16 @@ pub trait ColourBasics {
         self.chroma().into()
     }
 
-    fn warmth(&self) -> Warmth;
-    // {
-    //     if let Some(hue) = self.hue() {
-    //         hue.warmth_for_chroma(self.chroma())
-    //     } else {
-    //         Warmth::calculate_monochrome(self.value())
-    //     }
-    // }
+    fn warmth(&self) -> Warmth {
+        if let Some(hue) = self.hue() {
+            hue.warmth_for_chroma(self.chroma())
+        } else {
+            Warmth::calculate_monochrome(self.value())
+        }
+    }
 
     // fn hcv(&self) -> HCV;
-    // fn rgb<L: LightLevel>(&self) -> RGB<L>;
+    fn rgb<L: LightLevel>(&self) -> RGB<L>;
     //
     // fn monochrome_hcv(&self) -> HCV {
     //     HCV::new_grey(self.value())
