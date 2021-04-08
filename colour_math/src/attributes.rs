@@ -60,6 +60,19 @@ impl Chroma {
         }
     }
 
+    pub fn is_valid_re(self, hue: Hue, sum: UFDRNumber) -> bool {
+        debug_assert!(sum.is_valid_sum());
+        match self {
+            Chroma::Neither(_) => sum == hue.sum_for_max_chroma(),
+            Chroma::Shade(c_prop) => {
+                c_prop > Prop::ZERO && c_prop < Prop::ONE && sum < hue.sum_for_max_chroma()
+            }
+            Chroma::Tint(c_prop) => {
+                c_prop > Prop::ZERO && c_prop < Prop::ONE && sum > hue.sum_for_max_chroma()
+            }
+        }
+    }
+
     pub fn abs_diff(&self, other: &Self) -> Prop {
         self.into_prop().abs_diff(&other.into_prop())
     }

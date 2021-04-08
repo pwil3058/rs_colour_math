@@ -24,10 +24,12 @@ pub struct HCV {
 }
 
 impl HCV {
-    pub(crate) fn new(hue_data: Option<(Hue, Chroma)>, sum: UFDRNumber) -> Result<Self, Self> {
+    pub(crate) fn try_new(hue_data: Option<(Hue, Chroma)>, sum: UFDRNumber) -> Result<Self, Self> {
         debug_assert!(sum.is_valid_sum());
         if let Some((hue, chroma)) = hue_data {
-            debug_assert!(chroma.is_valid() && chroma != Chroma::ZERO && sum.is_hue_valid());
+            debug_assert!(
+                chroma.is_valid_re(hue, sum) && chroma != Chroma::ZERO && sum.is_hue_valid()
+            );
             //if hue.sum_and_chroma_are_compatible(sum, chroma)
             match hue
                 .try_rgb_ordered_triplet(sum, chroma.into_prop())
@@ -411,7 +413,7 @@ impl ManipulatedColour for HCV {
             };
             if let Some((chroma, sum)) = hue.adjusted_favouring_chroma(new_sum, new_chroma) {
                 // near enough is good enough
-                match HCV::new(Some((hue, chroma)), sum) {
+                match HCV::try_new(Some((hue, chroma)), sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 }
@@ -446,7 +448,7 @@ impl ManipulatedColour for HCV {
             };
             if let Some((chroma, sum)) = hue.adjusted_favouring_chroma(new_sum, new_chroma) {
                 // near enough is good enough
-                match HCV::new(Some((hue, chroma)), sum) {
+                match HCV::try_new(Some((hue, chroma)), sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 }
@@ -471,7 +473,7 @@ impl Add<Angle> for HCV {
             let new_hue = hue + angle;
             if let Some((chroma, sum)) = new_hue.adjusted_favouring_chroma(self.sum, self.chroma) {
                 // near enough is good enough
-                match HCV::new(Some((new_hue, chroma)), sum) {
+                match HCV::try_new(Some((new_hue, chroma)), sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 }
@@ -492,7 +494,7 @@ impl Sub<Angle> for HCV {
             let new_hue = hue - angle;
             if let Some((chroma, sum)) = new_hue.adjusted_favouring_chroma(self.sum, self.chroma) {
                 // near enough is good enough
-                match HCV::new(Some((new_hue, chroma)), sum) {
+                match HCV::try_new(Some((new_hue, chroma)), sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 }
