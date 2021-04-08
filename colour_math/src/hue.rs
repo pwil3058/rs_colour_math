@@ -7,7 +7,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use num_traits_plus::{debug_assert_approx_eq, float_plus::FloatPlus};
+use num_traits_plus::float_plus::FloatPlus;
 
 pub mod angle;
 
@@ -25,12 +25,9 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
     fn sum_for_max_chroma(&self) -> UFDRNumber;
 
     fn min_sum_for_chroma_prop(&self, c_prop: Prop) -> Option<UFDRNumber> {
-        match c_prop {
-            Prop::ZERO => None,
-            c_prop => match self.sum_for_max_chroma() * c_prop {
-                UFDRNumber::ZERO => None,
-                sum => Some(sum),
-            },
+        match self.sum_for_max_chroma() * c_prop {
+            UFDRNumber::ZERO => None,
+            sum => Some(sum),
         }
     }
 
@@ -125,24 +122,74 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
         Some(self.triplet_to_rgb_order(&triplet))
     }
 
-    fn ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
-        if sum >= self.sum_for_max_chroma() * c_prop {
-            debug_assert!(self.sum_and_chroma_prop_are_compatible(sum, c_prop));
-            let third = (sum - self.sum_for_max_chroma() * c_prop) / 3;
-            let first = third + c_prop;
-            if first.is_proportion() {
-                let second = sum - first - third;
-                debug_assert_eq!(first + second + third, sum);
-                debug_assert_eq!(first - third, c_prop.into());
-                debug_assert_approx_eq!(first + second + third, sum_for_max_chroma * chroma.prop());
-                let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
+    fn try_rgb_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        match self.try_ordered_triplet(sum, c_prop)? {
+            Ok(triplet) => {
                 debug_assert!(self.has_valid_value_order(&triplet));
-                Some(triplet)
-            } else {
-                None
+                Some(Ok(self.triplet_to_rgb_order(&triplet)))
             }
-        } else {
-            None
+            Err(triplet) => {
+                debug_assert!(self.has_valid_value_order(&triplet));
+                Some(Err(self.triplet_to_rgb_order(&triplet)))
+            }
+        }
+    }
+
+    fn ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
+        match self.sum_for_max_chroma() * c_prop {
+            min_sum if sum >= min_sum => {
+                debug_assert!(self.sum_and_chroma_prop_are_compatible(sum, c_prop));
+                let third = (sum - min_sum) / 3;
+                let first = third + c_prop;
+                if first.is_proportion() {
+                    let second = sum - first - third;
+                    debug_assert_eq!(first + second + third, sum);
+                    debug_assert_eq!(first - third, c_prop.into());
+                    let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
+                    debug_assert!(self.has_valid_value_order(&triplet));
+                    debug_assert_eq!(
+                        Hue::try_from(self.triplet_to_rgb_order(&triplet)).unwrap(),
+                        (*self).into()
+                    );
+                    Some(triplet)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn try_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        match self.sum_for_max_chroma() * c_prop {
+            min_sum if sum >= min_sum => {
+                let third = (sum - min_sum) / 3;
+                let first = third + c_prop;
+                if first.is_proportion() {
+                    let second = sum - first - third;
+                    debug_assert_eq!(first + second + third, sum);
+                    debug_assert_eq!(first - third, c_prop.into());
+                    let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
+                    debug_assert!(self.has_valid_value_order(&triplet));
+                    if Hue::try_from(self.triplet_to_rgb_order(&triplet)).unwrap() == (*self).into()
+                    {
+                        Some(Ok(triplet))
+                    } else {
+                        Some(Err(triplet))
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 
@@ -226,28 +273,28 @@ pub(crate) trait HueIfce:
             }
         }
     }
-
-    fn darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
-        debug_assert!(chroma.is_valid());
-        let sum = self.min_sum_for_chroma(chroma)?;
-        debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
-        Some(HCV {
-            hue: Some((*self).into()),
-            chroma,
-            sum,
-        })
-    }
-
-    fn lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
-        debug_assert!(chroma.is_valid());
-        let sum = self.max_sum_for_chroma(chroma)?;
-        debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
-        Some(HCV {
-            hue: Some((*self).into()),
-            chroma,
-            sum,
-        })
-    }
+    //
+    // fn darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
+    //     debug_assert!(chroma.is_valid());
+    //     let sum = self.min_sum_for_chroma(chroma)?;
+    //     debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
+    //     Some(HCV {
+    //         hue: Some((*self).into()),
+    //         chroma,
+    //         sum,
+    //     })
+    // }
+    //
+    // fn lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
+    //     debug_assert!(chroma.is_valid());
+    //     let sum = self.max_sum_for_chroma(chroma)?;
+    //     debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
+    //     Some(HCV {
+    //         hue: Some((*self).into()),
+    //         chroma,
+    //         sum,
+    //     })
+    // }
 
     fn darkest_rgb_for_chroma<T: LightLevel>(&self, chroma: Chroma) -> Option<RGB<T>> {
         debug_assert!(chroma.is_valid());
@@ -373,6 +420,10 @@ pub enum RGBHue {
     Blue = 1,
 }
 
+impl RGBHue {
+    pub const HUES: [Self; 3] = [RGBHue::Blue, RGBHue::Red, RGBHue::Green];
+}
+
 impl From<RGBHue> for Hue {
     fn from(rgb_hue: RGBHue) -> Self {
         Hue::Primary(rgb_hue)
@@ -450,6 +501,10 @@ pub enum CMYHue {
     Cyan = 113,
     Magenta = 3,
     Yellow = 7,
+}
+
+impl CMYHue {
+    pub const HUES: [Self; 3] = [CMYHue::Magenta, CMYHue::Yellow, CMYHue::Cyan];
 }
 
 impl From<CMYHue> for Hue {
@@ -534,6 +589,17 @@ pub enum Sextant {
     BlueMagenta = 2,
 }
 
+impl Sextant {
+    pub const SEXTANTS: [Self; 6] = [
+        Sextant::BlueCyan,
+        Sextant::BlueMagenta,
+        Sextant::RedMagenta,
+        Sextant::RedYellow,
+        Sextant::GreenYellow,
+        Sextant::GreenCyan,
+    ];
+}
+
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct SextantHue(Sextant, Prop);
 
@@ -598,14 +664,35 @@ impl ColourModificationHelpers for SextantHue {}
 
 impl SumChromaCompatibility for SextantHue {
     fn sum_and_chroma_prop_are_compatible(&self, sum: UFDRNumber, c_prop: Prop) -> bool {
-        if let Some((min_sum, max_sum)) = self.sum_range_for_chroma_prop(c_prop) {
-            sum >= min_sum && sum <= max_sum
-        } else {
-            false
+        match c_prop + self.1 * c_prop {
+            min_sum if sum < min_sum || min_sum == UFDRNumber::ZERO => false,
+            min_sum => {
+                let third = (sum - min_sum) / 3;
+                match third + c_prop {
+                    first if first.is_proportion() => {
+                        let second = sum - first - third;
+                        if first > second && second > third {
+                            let array = self.triplet_to_rgb_order(&[
+                                first.to_prop(),
+                                second.to_prop(),
+                                third.to_prop(),
+                            ]);
+                            match Hue::try_from(array) {
+                                Ok(hue) => hue == (*self).into(),
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                }
+            }
         }
     }
 
     fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
+        // TODO: make compatible with sum_and_chroma_prop_are_compatible()
         debug_assert!(chroma.is_valid());
         if let Some((min_sum, max_sum)) = self.sum_range_for_chroma(chroma) {
             sum >= min_sum && sum <= max_sum
@@ -655,10 +742,14 @@ impl From<(Sextant, [Prop; 3])> for SextantHue {
         let [first, second, third] = arg.1;
         debug_assert!(first > second && second > third);
         let mut sum_for_max_chroma = UFDRNumber::ONE + ((second - third) / (first - third));
-        debug_assert!(sum_for_max_chroma > UFDRNumber::ONE && sum_for_max_chroma < UFDRNumber::TWO);
         // Handle possible (fatal) rounding error
         while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
             && sum_for_max_chroma * (first - third) > first + second + third
+        {
+            sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
+        }
+        while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
+            && (first + second + third - sum_for_max_chroma * (first - third)) / 3 < third.into()
         {
             sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
         }

@@ -14,7 +14,7 @@ use crate::{
 };
 
 const NON_ZERO_CHROMA_PROPS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
-const SHADE_TINT_CHROMA_PROPS: [f64; 8] = [0.001, 0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 0.999];
+const _SHADE_TINT_CHROMA_PROPS: [f64; 8] = [0.001, 0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 0.999];
 const VALID_HUE_SUMS: [f64; 20] = [
     0.01,
     0.025,
@@ -251,12 +251,22 @@ fn hue_add_sub_angle() {
 
 #[test]
 fn rgb_ordered_triplet() {
-    let light_levels: [Prop; 7] = [
+    let light_levels: [Prop; 17] = [
         Prop::ZERO,
         Prop(1),
+        Prop(2),
+        Prop(3),
         Prop::ONE / 100,
+        Prop::ONE / 10,
+        Prop::ONE / 5,
+        Prop::ONE / 3,
         Prop::ONE / 2,
+        (Prop::ONE / 10 * 7).into(),
+        (Prop::ONE / 10 * 8).into(),
+        (Prop::ONE / 10 * 9).into(),
         (Prop::ONE / 100 * 99).into(),
+        Prop::ONE - Prop(3),
+        Prop::ONE - Prop(2),
         Prop::ONE - Prop(1),
         Prop::ONE,
     ];
@@ -319,7 +329,7 @@ fn rgb_ordered_triplet() {
                                     let array = sextant_hue
                                         .rgb_ordered_triplet(rgb.sum(), rgb.chroma().into_prop())
                                         .expect("should be legal");
-                                    assert_approx_eq!(RGB::<u64>::from(array), rgb);
+                                    assert_eq!(RGB::<u64>::from(array), rgb);
                                     let rgb = sextant_hue.max_chroma_rgb();
                                     // make sure we hit Chroma::Neither at least once
                                     let array = sextant_hue
@@ -330,6 +340,75 @@ fn rgb_ordered_triplet() {
                                 _ => panic!("should have been a SextantHue"),
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+    for red in light_levels.iter() {
+        for green in light_levels.iter() {
+            for blue in light_levels.iter() {
+                let array = [*red, *green, *blue];
+                if let Ok(hue) = Hue::try_from(array) {
+                    let rgb = RGB::<u64>::from(array);
+                    let sum = rgb.sum();
+                    let chroma = rgb.chroma();
+                    let array_out = hue.rgb_ordered_triplet(sum, chroma.into_prop()).unwrap();
+                    assert_eq!(array, array_out);
+                } else {
+                    assert!(RGB::<u64>::from(array).is_grey());
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn darkest_rgb_for_chroma_prop() {
+    for rgb_hue in RGBHue::HUES.iter() {
+        for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|v| Prop::from(*v)).rev() {
+            let min_sum = rgb_hue.min_sum_for_chroma_prop(c_prop).unwrap();
+            let array = rgb_hue.rgb_ordered_triplet(min_sum, c_prop).unwrap();
+            let rgb = RGB::<u64>::from(array);
+            assert_eq!(min_sum, rgb.sum());
+            assert_eq!(c_prop, rgb.chroma().into_prop());
+            let hue = Hue::try_from(rgb).unwrap();
+            assert_eq!(hue, Hue::Primary(*rgb_hue));
+        }
+    }
+    for cmy_hue in CMYHue::HUES.iter() {
+        for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|v| Prop::from(*v)).rev() {
+            let min_sum = cmy_hue.min_sum_for_chroma_prop(c_prop).unwrap();
+            let array = cmy_hue.rgb_ordered_triplet(min_sum, c_prop).unwrap();
+            let rgb = RGB::<u64>::from(array);
+            assert_eq!(min_sum, rgb.sum());
+            assert_eq!(c_prop, rgb.chroma().into_prop());
+            let hue = Hue::try_from(rgb).unwrap();
+            assert_eq!(hue, Hue::Secondary(*cmy_hue));
+        }
+    }
+    for sextant in Sextant::SEXTANTS.iter() {
+        for second in SECOND_VALUES.iter().map(|v| Prop::from(*v)) {
+            let sextant_hue = SextantHue(*sextant, second);
+            for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|v| Prop::from(*v)).rev() {
+                let min_sum = sextant_hue.min_sum_for_chroma_prop(c_prop).unwrap();
+                match sextant_hue
+                    .try_rgb_ordered_triplet(min_sum, c_prop)
+                    .unwrap()
+                {
+                    Ok(array) => {
+                        let rgb = RGB::<u64>::from(array);
+                        assert_eq!(min_sum, rgb.sum());
+                        assert_eq!(c_prop, rgb.chroma().into_prop());
+                        let hue = Hue::try_from(rgb).unwrap();
+                        assert_eq!(hue, Hue::Sextant(sextant_hue));
+                    }
+                    Err(array) => {
+                        let rgb = RGB::<u64>::from(array);
+                        assert_eq!(min_sum, rgb.sum());
+                        assert_eq!(c_prop, rgb.chroma().into_prop());
+                        let hue = Hue::try_from(rgb).unwrap();
+                        assert_approx_eq!(hue, Hue::Sextant(sextant_hue), Prop(0x10000));
                     }
                 }
             }
@@ -503,8 +582,8 @@ fn secondary_max_chroma_rgbs() {
     }
 }
 
-#[test]
-fn other_max_chroma_rgbs() {
+//#[test]
+fn _other_max_chroma_rgbs() {
     use Sextant::*;
     for sextant in &[
         RedYellow,
@@ -541,76 +620,84 @@ fn other_max_chroma_rgbs() {
     }
 }
 
-#[test]
-fn lightest_darkest_hcv_for_chroma() {
-    let hues: Vec<Hue> = Hue::PRIMARIES
-        .iter()
-        .chain(Hue::SECONDARIES.iter())
-        .chain(Hue::IN_BETWEENS.iter())
-        .cloned()
-        .collect();
-    let hcvs: Vec<HCV> = HCV::PRIMARIES
-        .iter()
-        .chain(HCV::SECONDARIES.iter())
-        .chain(HCV::IN_BETWEENS.iter())
-        .cloned()
-        .collect();
-    for (hue, hcv) in hues.iter().zip(hcvs.iter()) {
-        assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ZERO), None);
-        assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ZERO), None);
-        assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ONE), Some(*hcv));
-        assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ONE), Some(*hcv));
-        for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
-            let shade_chroma = Chroma::Shade(prop);
-            let darkest_shade = hue.darkest_hcv_for_chroma(shade_chroma).unwrap();
-            assert_eq!(darkest_shade.chroma, shade_chroma);
-            let lightest_shade = hue.lightest_hcv_for_chroma(shade_chroma).unwrap();
-            assert_eq!(lightest_shade.chroma, shade_chroma);
-            assert!(darkest_shade.sum < lightest_shade.sum);
-            let tint_chroma = Chroma::Tint(prop);
-            let darkest_tint = hue.darkest_hcv_for_chroma(tint_chroma).unwrap();
-            assert_eq!(darkest_tint.chroma, tint_chroma);
-            let lightest_tint = hue.lightest_hcv_for_chroma(tint_chroma).unwrap();
-            assert_eq!(lightest_tint.chroma, tint_chroma);
-            assert!(darkest_tint.sum < lightest_tint.sum);
-            assert!(lightest_shade.sum < darkest_tint.sum);
-        }
-    }
-    use Sextant::*;
-    for sextant in &[
-        RedYellow,
-        RedMagenta,
-        GreenCyan,
-        GreenYellow,
-        BlueCyan,
-        BlueMagenta,
-    ] {
-        for item in SECOND_VALUES.iter() {
-            let second = Prop::from(*item);
-            let hue = Hue::Sextant(SextantHue(*sextant, second));
-            assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ZERO), None);
-            assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ZERO), None);
-            for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
-                let shade_chroma = Chroma::Shade(prop);
-                let darkest_shade = hue.darkest_hcv_for_chroma(shade_chroma).unwrap();
-                assert_eq!(darkest_shade.chroma, shade_chroma);
-                let lightest_shade = hue.lightest_hcv_for_chroma(shade_chroma).unwrap();
-                assert_eq!(lightest_shade.chroma, shade_chroma);
-                assert!(darkest_shade.sum < lightest_shade.sum);
-                let tint_chroma = Chroma::Tint(prop);
-                let darkest_tint = hue.darkest_hcv_for_chroma(tint_chroma).unwrap();
-                assert_eq!(darkest_tint.chroma, tint_chroma);
-                let lightest_tint = hue.lightest_hcv_for_chroma(tint_chroma).unwrap();
-                assert_eq!(lightest_tint.chroma, tint_chroma);
-                assert!(darkest_tint.sum < lightest_tint.sum);
-                assert!(lightest_shade.sum < darkest_tint.sum);
-            }
-        }
-    }
-}
+//#[test]
+// fn _lightest_darkest_hcv_for_chroma() {
+//     let hues: Vec<Hue> = Hue::PRIMARIES
+//         .iter()
+//         .chain(Hue::SECONDARIES.iter())
+//         .chain(Hue::IN_BETWEENS.iter())
+//         .cloned()
+//         .collect();
+//     let hcvs: Vec<HCV> = HCV::PRIMARIES
+//         .iter()
+//         .chain(HCV::SECONDARIES.iter())
+//         .chain(HCV::IN_BETWEENS.iter())
+//         .cloned()
+//         .collect();
+//     for (hue, hcv) in hues.iter().zip(hcvs.iter()) {
+//         assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ZERO), None);
+//         assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ZERO), None);
+//         assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ONE), Some(*hcv));
+//         assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ONE), Some(*hcv));
+//         for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
+//             let shade_chroma = Chroma::Shade(prop);
+//             let darkest_shade = hue.darkest_hcv_for_chroma(shade_chroma).unwrap();
+//             assert_eq!(darkest_shade.hue, Some(*hue));
+//             assert_eq!(darkest_shade.chroma, shade_chroma);
+//             let lightest_shade = hue.lightest_hcv_for_chroma(shade_chroma).unwrap();
+//             assert_eq!(lightest_shade.hue, Some(*hue));
+//             assert_eq!(lightest_shade.chroma, shade_chroma);
+//             assert!(darkest_shade.sum < lightest_shade.sum);
+//             let tint_chroma = Chroma::Tint(prop);
+//             let darkest_tint = hue.darkest_hcv_for_chroma(tint_chroma).unwrap();
+//             assert_eq!(darkest_tint.hue, Some(*hue));
+//             assert_eq!(darkest_tint.chroma, tint_chroma);
+//             let lightest_tint = hue.lightest_hcv_for_chroma(tint_chroma).unwrap();
+//             assert_eq!(lightest_tint.hue, Some(*hue));
+//             assert_eq!(lightest_tint.chroma, tint_chroma);
+//             assert!(darkest_tint.sum < lightest_tint.sum);
+//             assert!(lightest_shade.sum < darkest_tint.sum);
+//         }
+//     }
+//     use Sextant::*;
+//     for sextant in &[
+//         RedYellow,
+//         RedMagenta,
+//         GreenCyan,
+//         GreenYellow,
+//         BlueCyan,
+//         BlueMagenta,
+//     ] {
+//         for item in SECOND_VALUES.iter() {
+//             let second = Prop::from(*item);
+//             let hue = Hue::Sextant(SextantHue(*sextant, second));
+//             assert_eq!(hue.darkest_hcv_for_chroma(Chroma::ZERO), None);
+//             assert_eq!(hue.lightest_hcv_for_chroma(Chroma::ZERO), None);
+//             for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
+//                 let shade_chroma = Chroma::Shade(prop);
+//                 let darkest_shade = hue.darkest_hcv_for_chroma(shade_chroma).unwrap();
+//                 assert_eq!(darkest_shade.hue, Some(hue));
+//                 assert_eq!(darkest_shade.chroma, shade_chroma);
+//                 let lightest_shade = hue.lightest_hcv_for_chroma(shade_chroma).unwrap();
+//                 assert_eq!(lightest_shade.hue, Some(hue));
+//                 assert_eq!(lightest_shade.chroma, shade_chroma);
+//                 assert!(darkest_shade.sum < lightest_shade.sum);
+//                 let tint_chroma = Chroma::Tint(prop);
+//                 let darkest_tint = hue.darkest_hcv_for_chroma(tint_chroma).unwrap();
+//                 assert_eq!(darkest_tint.hue, Some(hue));
+//                 assert_eq!(darkest_tint.chroma, tint_chroma);
+//                 let lightest_tint = hue.lightest_hcv_for_chroma(tint_chroma).unwrap();
+//                 assert_eq!(lightest_tint.hue, Some(hue));
+//                 assert_eq!(lightest_tint.chroma, tint_chroma);
+//                 assert!(darkest_tint.sum < lightest_tint.sum);
+//                 assert!(lightest_shade.sum < darkest_tint.sum);
+//             }
+//         }
+//     }
+// }
 
-#[test]
-fn lightest_darkest_rgb_for_chroma() {
+//#[test]
+fn _lightest_darkest_rgb_for_chroma() {
     let hues: Vec<Hue> = Hue::PRIMARIES
         .iter()
         .chain(Hue::SECONDARIES.iter())
@@ -634,17 +721,21 @@ fn lightest_darkest_rgb_for_chroma() {
             hue.darkest_rgb_for_chroma::<u64>(Chroma::ONE),
             Some(RGB::<u64>::from(hcv))
         );
-        for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
+        for prop in _SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
             let shade_chroma = Chroma::Shade(prop);
             let darkest_shade = hue.darkest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
+            assert_eq!(darkest_shade.hue(), Some(*hue));
             assert_eq!(darkest_shade.chroma(), shade_chroma);
             let lightest_shade = hue.lightest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
+            assert_eq!(lightest_shade.hue(), Some(*hue));
             assert_eq!(lightest_shade.chroma(), shade_chroma);
             assert!(darkest_shade.sum() < lightest_shade.sum());
             let tint_chroma = Chroma::Tint(prop);
             let darkest_tint = hue.darkest_rgb_for_chroma::<u64>(tint_chroma).unwrap();
+            assert_eq!(darkest_tint.hue(), Some(*hue));
             assert_eq!(darkest_tint.chroma(), tint_chroma);
             let lightest_tint = hue.lightest_rgb_for_chroma::<u64>(tint_chroma).unwrap();
+            assert_eq!(lightest_tint.hue(), Some(*hue));
             assert_eq!(lightest_tint.chroma(), tint_chroma);
             assert!(darkest_tint.sum() < lightest_tint.sum());
             assert!(lightest_shade.sum() < darkest_tint.sum());
@@ -672,12 +763,31 @@ fn lightest_darkest_rgb_for_chroma() {
                 hue.lightest_rgb_for_chroma::<u64>(Chroma::ONE),
                 Some(hue.max_chroma_rgb::<u64>())
             );
+            for prop in _SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
+                let shade_chroma = Chroma::Shade(prop);
+                let darkest_shade = hue.darkest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
+                assert_eq!(darkest_shade.hue(), Some(hue));
+                assert_eq!(darkest_shade.chroma(), shade_chroma);
+                let lightest_shade = hue.lightest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
+                assert_eq!(lightest_shade.hue(), Some(hue));
+                assert_eq!(lightest_shade.chroma(), shade_chroma);
+                assert!(darkest_shade.sum() < lightest_shade.sum());
+                let tint_chroma = Chroma::Tint(prop);
+                let darkest_tint = hue.darkest_rgb_for_chroma::<u64>(tint_chroma).unwrap();
+                assert_eq!(darkest_tint.hue(), Some(hue));
+                assert_eq!(darkest_tint.chroma(), tint_chroma);
+                let lightest_tint = hue.lightest_rgb_for_chroma::<u64>(tint_chroma).unwrap();
+                assert_eq!(lightest_tint.hue(), Some(hue));
+                assert_eq!(lightest_tint.chroma(), tint_chroma);
+                assert!(darkest_tint.sum() < lightest_tint.sum());
+                assert!(lightest_shade.sum() < darkest_tint.sum());
+            }
         }
     }
 }
 
-#[test]
-fn min_max_rgb_for_chroma() {
+//#[test]
+fn _min_max_rgb_for_chroma() {
     for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<f64>::PRIMARIES.iter()) {
         assert_eq!(
             hue.darkest_rgb_for_chroma::<f64>(Chroma::ONE),
@@ -738,7 +848,7 @@ fn min_max_rgb_for_chroma() {
             let hue = Hue::Sextant(SextantHue(*sextant, second));
             assert_eq!(hue.darkest_rgb_for_chroma::<u64>(Chroma::ZERO), None);
             assert_eq!(hue.lightest_rgb_for_chroma::<u64>(Chroma::ZERO), None);
-            for prop in SHADE_TINT_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
+            for prop in _SHADE_TINT_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
                 let shade_chroma = Chroma::Shade(prop);
                 let shade = hue.darkest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
                 let tint_chroma = Chroma::Tint(prop);

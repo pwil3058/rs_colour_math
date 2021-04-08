@@ -59,12 +59,24 @@ fn from_to_secondary() {
 }
 
 #[test]
+fn from_to_in_betweens() {
+    for (rgbf64, rgbu16) in RGB::<f64>::IN_BETWEENS.iter().zip(&RGB::<u16>::IN_BETWEENS) {
+        let hcv: HCV = rgbf64.into();
+        assert_eq!(rgbf64, &RGB::<f64>::from(&hcv));
+        assert_eq!(rgbu16, &RGB::<u16>::from(&hcv));
+        let hcv: HCV = rgbu16.into();
+        assert_approx_eq!(rgbf64, &RGB::<f64>::from(&hcv), Prop(0x0010000000000000));
+        assert_eq!(rgbu16, &RGB::<u16>::from(&hcv));
+    }
+}
+
+#[test]
 fn round_trip_from_to_rgb_constants() {
-    for rgb in RGB::<u64>::PRIMARIES.iter().chain(
-        RGB::<u64>::SECONDARIES
-            .iter()
-            .chain(RGB::<u64>::IN_BETWEENS.iter()),
-    ) {
+    for rgb in RGB::<u64>::PRIMARIES
+        .iter()
+        .chain(RGB::<u64>::SECONDARIES.iter())
+        .chain(RGB::<u64>::IN_BETWEENS.iter())
+    {
         let [red, green, blue] = <[Prop; 3]>::from(rgb);
         let rgb_in: RGB<u64> = [red, green, blue].into();
         let hcv = HCV::from(&rgb_in);
@@ -83,12 +95,30 @@ fn round_trip_from_to_rgb_constants() {
 
 #[test]
 fn round_trip_from_to_rgb() {
-    let values = vec![0.0_f64, 0.001, 0.01, 0.499, 0.5, 0.99, 0.999, 1.0];
+    let values: Vec<[u64; 2]> = vec![
+        [0, 1],
+        [1, u64::MAX],
+        [2, u64::MAX],
+        [3, u64::MAX],
+        [1, 1000],
+        [1, 100],
+        [499, 1000],
+        [1, 2],
+        [99, 100],
+        [999, 1000],
+        [u64::MAX - 3, u64::MAX],
+        [u64::MAX - 2, u64::MAX],
+        [u64::MAX - 1, u64::MAX],
+        [1, 1],
+    ];
     for red in values.iter().map(|l| Prop::from(*l)) {
         for green in values.iter().map(|l| Prop::from(*l)) {
             for blue in values.iter().map(|l| Prop::from(*l)) {
+                let expect_grey = red == green && green == blue;
                 let rgb_in: RGB<u64> = [red, green, blue].into();
+                assert_eq!(rgb_in.is_grey(), expect_grey);
                 let hcv = HCV::from(&rgb_in);
+                assert_eq!(hcv.is_grey(), expect_grey);
                 let rgb_out = RGB::<u64>::from(&hcv);
                 assert_eq!(rgb_in, rgb_out);
                 let rgb_in: RGB<u8> = [red, green, blue].into();

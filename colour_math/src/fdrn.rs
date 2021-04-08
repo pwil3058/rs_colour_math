@@ -627,7 +627,7 @@ impl Div for Prop {
         if rhs == Self::ONE {
             self
         } else {
-            Self(((self.0 as u128 * u64::MAX as u128) / rhs.0 as u128) as u64)
+            Self((((u128::MAX / rhs.0 as u128) * self.0 as u128) / u64::MAX as u128) as u64)
         }
     }
 }
