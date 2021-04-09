@@ -49,15 +49,37 @@ pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
         Some((min, max))
     }
 
-    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+    fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
         debug_assert!(chroma.is_valid());
-        let (min_sum, max_sum) = self.sum_range_for_chroma_prop(chroma.into_prop())?;
         match chroma {
             Chroma::ZERO => None,
-            Chroma::Neither(_) => Some((self.sum_for_max_chroma(), self.sum_for_max_chroma())),
-            Chroma::Shade(_) => Some((min_sum, self.sum_for_max_chroma() - UFDRNumber(1))),
-            Chroma::Tint(_) => Some((self.sum_for_max_chroma() + UFDRNumber(1), max_sum)),
+            Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
+            Chroma::Shade(c_prop) => self.min_sum_for_chroma_prop(c_prop),
+            Chroma::Tint(_) => {
+                let sum = self.sum_for_max_chroma() + UFDRNumber(1);
+                Some(sum)
+            }
         }
+    }
+
+    fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
+        debug_assert!(chroma.is_valid());
+        match chroma {
+            Chroma::ZERO => None,
+            Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
+            Chroma::Shade(_) => {
+                let sum = self.sum_for_max_chroma() - UFDRNumber(1);
+                Some(sum)
+            }
+            Chroma::Tint(c_prop) => self.max_sum_for_chroma_prop(c_prop),
+        }
+    }
+
+    fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
+        debug_assert!(chroma.is_valid());
+        let min = self.min_sum_for_chroma(chroma)?;
+        let max = self.max_sum_for_chroma(chroma)?;
+        Some((min, max))
     }
 
     fn max_chroma_prop_for_sum(&self, sum: UFDRNumber) -> Option<Prop> {
@@ -216,38 +238,6 @@ pub(crate) trait HueIfce:
     fn angle(&self) -> Angle;
 
     fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
-
-    fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        debug_assert!(chroma.is_valid());
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
-            Chroma::Shade(c_prop) => self.min_sum_for_chroma_prop(c_prop),
-            Chroma::Tint(c_prop) => {
-                let mut sum = self.sum_for_max_chroma() + UFDRNumber(1);
-                while !self.sum_and_chroma_prop_are_compatible(sum, c_prop) {
-                    sum = sum + UFDRNumber(1);
-                }
-                Some(sum)
-            }
-        }
-    }
-
-    fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        debug_assert!(chroma.is_valid());
-        match chroma {
-            Chroma::ZERO => None,
-            Chroma::Neither(_) => Some(self.sum_for_max_chroma()),
-            Chroma::Shade(c_prop) => {
-                let mut sum = self.sum_for_max_chroma() - UFDRNumber(1);
-                while !self.sum_and_chroma_prop_are_compatible(sum, c_prop) {
-                    sum = sum - UFDRNumber(1);
-                }
-                Some(sum)
-            }
-            Chroma::Tint(c_prop) => self.max_sum_for_chroma_prop(c_prop),
-        }
-    }
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
         self.max_chroma_hcv().rgb::<T>()
@@ -999,6 +989,22 @@ impl HueBasics for Hue {
         }
     }
 
+    fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
+        match self {
+            Self::Primary(primary_hue) => primary_hue.min_sum_for_chroma(chroma),
+            Self::Secondary(secondary_hue) => secondary_hue.min_sum_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.min_sum_for_chroma(chroma),
+        }
+    }
+
+    fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
+        match self {
+            Self::Primary(primary_hue) => primary_hue.max_sum_for_chroma(chroma),
+            Self::Secondary(secondary_hue) => secondary_hue.max_sum_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.max_sum_for_chroma(chroma),
+        }
+    }
+
     fn sum_range_for_chroma(&self, chroma: Chroma) -> Option<(UFDRNumber, UFDRNumber)> {
         match self {
             Self::Primary(primary_hue) => primary_hue.sum_range_for_chroma(chroma),
@@ -1142,22 +1148,6 @@ impl HueIfce for Hue {
             Self::Primary(rgb_hue) => rgb_hue.warmth_for_chroma(chroma),
             Self::Secondary(cmy_hue) => cmy_hue.warmth_for_chroma(chroma),
             Self::Sextant(sextant_hue) => sextant_hue.warmth_for_chroma(chroma),
-        }
-    }
-
-    fn min_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match self {
-            Self::Primary(primary_hue) => primary_hue.min_sum_for_chroma(chroma),
-            Self::Secondary(secondary_hue) => secondary_hue.min_sum_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.min_sum_for_chroma(chroma),
-        }
-    }
-
-    fn max_sum_for_chroma(&self, chroma: Chroma) -> Option<UFDRNumber> {
-        match self {
-            Self::Primary(primary_hue) => primary_hue.max_sum_for_chroma(chroma),
-            Self::Secondary(secondary_hue) => secondary_hue.max_sum_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.max_sum_for_chroma(chroma),
         }
     }
 
