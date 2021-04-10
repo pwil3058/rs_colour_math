@@ -162,41 +162,8 @@ fn hue_max_chroma_rgb() {
     for (hue, rgb) in Hue::SECONDARIES.iter().zip(RGB::<f64>::SECONDARIES.iter()) {
         assert_eq!(hue.max_chroma_rgb(), *rgb);
     }
-    for (array, sextant, second) in &[
-        (
-            [Prop::ONE, Prop::from(0.5_f64), Prop::ZERO],
-            Sextant::RedYellow,
-            Prop::from(0.5_f64),
-        ),
-        (
-            [Prop::ZERO, Prop::from(0.5_f64), Prop::ONE],
-            Sextant::BlueCyan,
-            Prop::from(0.5_f64),
-        ),
-        (
-            [Prop::from(0.5_f64), Prop::ZERO, Prop::ONE],
-            Sextant::BlueMagenta,
-            Prop::from(0.5_f64),
-        ),
-        (
-            [Prop::ONE, Prop::ZERO, Prop::from(0.5_f64)],
-            Sextant::RedMagenta,
-            Prop::from(0.5_f64),
-        ),
-        (
-            [Prop::from(0.5_f64), Prop::ONE, Prop::ZERO],
-            Sextant::GreenYellow,
-            Prop::from(0.5_f64),
-        ),
-        (
-            [Prop::ZERO, Prop::ONE, Prop::from(0.5_f64)],
-            Sextant::GreenCyan,
-            Prop::from(0.5_f64),
-        ),
-    ] {
-        let rgb = RGB::<f64>::from(*array);
-        let hue = Hue::Sextant(SextantHue(*sextant, *second));
-        assert_eq!(Hue::try_from(&rgb), Ok(hue));
+    for (hue, rgb) in Hue::IN_BETWEENS.iter().zip(RGB::<f64>::IN_BETWEENS.iter()) {
+        assert_eq!(hue.max_chroma_rgb(), *rgb);
     }
 }
 
