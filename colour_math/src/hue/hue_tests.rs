@@ -512,15 +512,7 @@ fn max_chroma_and_sum_ranges() {
             }
         }
     }
-    use Sextant::*;
-    for sextant in &[
-        RedYellow,
-        RedMagenta,
-        GreenCyan,
-        GreenYellow,
-        BlueCyan,
-        BlueMagenta,
-    ] {
+    for sextant in Sextant::SEXTANTS.iter() {
         for item in SECOND_VALUES.iter() {
             let other = Prop::from(*item);
             let hue = Hue::Sextant(SextantHue(*sextant, other));
@@ -627,15 +619,7 @@ fn secondary_max_chroma_rgbs() {
 
 //#[test]
 fn _other_max_chroma_rgbs() {
-    use Sextant::*;
-    for sextant in &[
-        RedYellow,
-        RedMagenta,
-        GreenCyan,
-        GreenYellow,
-        BlueCyan,
-        BlueMagenta,
-    ] {
+    for sextant in Sextant::SEXTANTS.iter() {
         for item in SECOND_VALUES.iter() {
             let second = Prop::from(*item);
             let sextant_hue = SextantHue(*sextant, second);
@@ -702,15 +686,7 @@ fn _other_max_chroma_rgbs() {
 //             assert!(lightest_shade.sum < darkest_tint.sum);
 //         }
 //     }
-//     use Sextant::*;
-//     for sextant in &[
-//         RedYellow,
-//         RedMagenta,
-//         GreenCyan,
-//         GreenYellow,
-//         BlueCyan,
-//         BlueMagenta,
-//     ] {
+//     for sextant in Sextant::SEXTANTS.iter() {
 //         for item in SECOND_VALUES.iter() {
 //             let second = Prop::from(*item);
 //             let hue = Hue::Sextant(SextantHue(*sextant, second));
@@ -816,15 +792,7 @@ fn lightest_darkest_rgb_for_chroma() {
             assert!(lightest_shade.sum() < darkest_tint.sum());
         }
     }
-    // use Sextant::*;
-    // for sextant in &[
-    //     RedYellow,
-    //     RedMagenta,
-    //     GreenCyan,
-    //     GreenYellow,
-    //     BlueCyan,
-    //     BlueMagenta,
-    // ] {
+    // for sextant in Sextant::SEXTANTS.iter() {
     //     for item in SECOND_VALUES.iter() {
     //         let second = Prop::from(*item);
     //         let hue = Hue::Sextant(SextantHue(*sextant, second));
@@ -909,15 +877,7 @@ fn lightest_darkest_rgb_for_chroma() {
 //             0.0000001.into()
 //         );
 //     }
-//     use Sextant::*;
-//     for sextant in &[
-//         RedYellow,
-//         RedMagenta,
-//         GreenCyan,
-//         GreenYellow,
-//         BlueCyan,
-//         BlueMagenta,
-//     ] {
+//     for sextant in Sextant::SEXTANTS.iter() {
 //         for item in SECOND_VALUES.iter() {
 //             let second = Prop::from(*item);
 //             let hue = Hue::Sextant(SextantHue(*sextant, second));
@@ -1015,15 +975,7 @@ fn secondary_rgb_for_sum_and_chroma() {
 
 #[test]
 fn general_rgb_for_sum_and_chroma() {
-    use Sextant::*;
-    for sextant in &[
-        RedYellow,
-        RedMagenta,
-        GreenCyan,
-        GreenYellow,
-        BlueCyan,
-        BlueMagenta,
-    ] {
+    for sextant in Sextant::SEXTANTS.iter() {
         for second in SECOND_VALUES.iter().map(|a| Prop::from(*a)) {
             let sextant_hue = SextantHue(*sextant, second);
             let hue = Hue::Sextant(sextant_hue);
