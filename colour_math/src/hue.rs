@@ -349,6 +349,26 @@ pub enum RGBHue {
 
 impl RGBHue {
     pub const HUES: [Self; 3] = [RGBHue::Blue, RGBHue::Red, RGBHue::Green];
+
+    fn prop_diff_sextant(&self, sextant_hue: &SextantHue) -> Option<Prop> {
+        match self {
+            RGBHue::Red => match sextant_hue {
+                SextantHue(Sextant::RedYellow, prop) => Some(*prop),
+                SextantHue(Sextant::RedMagenta, prop) => Some(*prop),
+                _ => None,
+            },
+            RGBHue::Green => match sextant_hue {
+                SextantHue(Sextant::GreenYellow, prop) => Some(*prop),
+                SextantHue(Sextant::GreenCyan, prop) => Some(*prop),
+                _ => None,
+            },
+            RGBHue::Blue => match sextant_hue {
+                SextantHue(Sextant::BlueCyan, prop) => Some(*prop),
+                SextantHue(Sextant::BlueMagenta, prop) => Some(*prop),
+                _ => None,
+            },
+        }
+    }
 }
 
 impl From<RGBHue> for Hue {
@@ -486,6 +506,26 @@ pub enum CMYHue {
 
 impl CMYHue {
     pub const HUES: [Self; 3] = [CMYHue::Magenta, CMYHue::Yellow, CMYHue::Cyan];
+
+    fn prop_diff_sextant(&self, sextant_hue: &SextantHue) -> Option<Prop> {
+        match self {
+            CMYHue::Cyan => match sextant_hue {
+                SextantHue(Sextant::GreenCyan, prop) => Some(Prop::ONE - *prop),
+                SextantHue(Sextant::BlueCyan, prop) => Some(Prop::ONE - *prop),
+                _ => None,
+            },
+            CMYHue::Magenta => match sextant_hue {
+                SextantHue(Sextant::RedMagenta, prop) => Some(Prop::ONE - *prop),
+                SextantHue(Sextant::BlueMagenta, prop) => Some(Prop::ONE - *prop),
+                _ => None,
+            },
+            CMYHue::Yellow => match sextant_hue {
+                SextantHue(Sextant::RedYellow, prop) => Some(Prop::ONE - *prop),
+                SextantHue(Sextant::GreenYellow, prop) => Some(Prop::ONE - *prop),
+                _ => None,
+            },
+        }
+    }
 }
 
 impl From<CMYHue> for Hue {
@@ -640,10 +680,91 @@ impl From<SextantHue> for Hue {
 
 impl PropDiff for SextantHue {
     fn prop_diff(&self, other: &Self) -> Option<Prop> {
-        if self.0 == other.0 {
-            self.1.prop_diff(&other.1)
-        } else {
-            None
+        match self {
+            SextantHue(Sextant::RedYellow, my_prop) => match other {
+                SextantHue(Sextant::RedYellow, other_prop) => my_prop.prop_diff(other_prop),
+                SextantHue(Sextant::RedMagenta, other_prop) => match *my_prop + *other_prop {
+                    prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                    _ => None,
+                },
+                SextantHue(Sextant::GreenYellow, other_prop) => {
+                    match UFDRNumber::TWO - (*my_prop + *other_prop) {
+                        prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
+            SextantHue(Sextant::GreenYellow, my_prop) => match other {
+                SextantHue(Sextant::GreenYellow, other_prop) => my_prop.prop_diff(other_prop),
+                SextantHue(Sextant::GreenCyan, other_prop) => match *my_prop + *other_prop {
+                    prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                    _ => None,
+                },
+                SextantHue(Sextant::RedYellow, other_prop) => {
+                    match UFDRNumber::TWO - (*my_prop + *other_prop) {
+                        prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
+            SextantHue(Sextant::GreenCyan, my_prop) => match other {
+                SextantHue(Sextant::GreenCyan, other_prop) => my_prop.prop_diff(other_prop),
+                SextantHue(Sextant::GreenYellow, other_prop) => match *my_prop + *other_prop {
+                    prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                    _ => None,
+                },
+                SextantHue(Sextant::BlueCyan, other_prop) => {
+                    match UFDRNumber::TWO - (*my_prop + *other_prop) {
+                        prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
+            SextantHue(Sextant::BlueCyan, my_prop) => match other {
+                SextantHue(Sextant::BlueCyan, other_prop) => my_prop.prop_diff(other_prop),
+                SextantHue(Sextant::BlueMagenta, other_prop) => match *my_prop + *other_prop {
+                    prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                    _ => None,
+                },
+                SextantHue(Sextant::GreenCyan, other_prop) => {
+                    match UFDRNumber::TWO - (*my_prop + *other_prop) {
+                        prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
+            SextantHue(Sextant::BlueMagenta, my_prop) => match other {
+                SextantHue(Sextant::BlueMagenta, other_prop) => my_prop.prop_diff(other_prop),
+                SextantHue(Sextant::BlueCyan, other_prop) => match *my_prop + *other_prop {
+                    prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                    _ => None,
+                },
+                SextantHue(Sextant::RedMagenta, other_prop) => {
+                    match UFDRNumber::TWO - (*my_prop + *other_prop) {
+                        prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
+            SextantHue(Sextant::RedMagenta, my_prop) => match other {
+                SextantHue(Sextant::RedMagenta, other_prop) => my_prop.prop_diff(other_prop),
+                SextantHue(Sextant::RedYellow, other_prop) => match *my_prop + *other_prop {
+                    prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                    _ => None,
+                },
+                SextantHue(Sextant::BlueMagenta, other_prop) => {
+                    match UFDRNumber::TWO - (*my_prop + *other_prop) {
+                        prop if prop <= UFDRNumber::ONE => Some(prop.into_prop()),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
         }
     }
 }
@@ -1304,15 +1425,18 @@ impl PropDiff for Hue {
         match self {
             Self::Primary(self_hue) => match other {
                 Self::Primary(other_hue) => self_hue.prop_diff(other_hue),
+                Self::Sextant(sextant_hue) => self_hue.prop_diff_sextant(sextant_hue),
                 _ => None,
             },
             Self::Secondary(self_hue) => match other {
                 Self::Secondary(other_hue) => self_hue.prop_diff(other_hue),
+                Self::Sextant(sextant_hue) => self_hue.prop_diff_sextant(sextant_hue),
                 _ => None,
             },
             Self::Sextant(self_hue) => match other {
                 Self::Sextant(other_hue) => self_hue.prop_diff(other_hue),
-                _ => None,
+                Self::Primary(primary_hue) => primary_hue.prop_diff_sextant(self_hue),
+                Self::Secondary(secondary_hue) => secondary_hue.prop_diff_sextant(self_hue),
             },
         }
     }
