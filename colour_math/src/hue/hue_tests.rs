@@ -416,6 +416,59 @@ fn darkest_rgb_for_chroma_prop() {
     }
 }
 
+#[test]
+fn lightest_rgb_for_chroma_prop() {
+    for rgb_hue in RGBHue::HUES.iter() {
+        for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|v| Prop::from(*v)).rev() {
+            let max_sum = rgb_hue.max_sum_for_chroma_prop(c_prop).unwrap();
+            let array = rgb_hue.rgb_ordered_triplet(max_sum, c_prop).unwrap();
+            let rgb = RGB::<u64>::from(array);
+            assert_eq!(max_sum, rgb.sum());
+            assert_eq!(c_prop, rgb.chroma().into_prop());
+            let hue = Hue::try_from(rgb).unwrap();
+            assert_eq!(hue, Hue::Primary(*rgb_hue));
+        }
+    }
+    for cmy_hue in CMYHue::HUES.iter() {
+        for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|v| Prop::from(*v)).rev() {
+            let max_sum = cmy_hue.max_sum_for_chroma_prop(c_prop).unwrap();
+            let array = cmy_hue.rgb_ordered_triplet(max_sum, c_prop).unwrap();
+            let rgb = RGB::<u64>::from(array);
+            assert_eq!(max_sum, rgb.sum());
+            assert_eq!(c_prop, rgb.chroma().into_prop());
+            let hue = Hue::try_from(rgb).unwrap();
+            assert_eq!(hue, Hue::Secondary(*cmy_hue));
+        }
+    }
+    for sextant in Sextant::SEXTANTS.iter() {
+        for second in SECOND_VALUES.iter().map(|v| Prop::from(*v)) {
+            let sextant_hue = SextantHue(*sextant, second);
+            for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|v| Prop::from(*v)).rev() {
+                let max_sum = sextant_hue.max_sum_for_chroma_prop(c_prop).unwrap();
+                match sextant_hue
+                    .try_rgb_ordered_triplet(max_sum, c_prop)
+                    .unwrap()
+                {
+                    Ok(array) => {
+                        let rgb = RGB::<u64>::from(array);
+                        assert_eq!(max_sum, rgb.sum());
+                        assert_eq!(c_prop, rgb.chroma().into_prop());
+                        let hue = Hue::try_from(rgb).unwrap();
+                        assert_eq!(hue, Hue::Sextant(sextant_hue));
+                    }
+                    Err(array) => {
+                        let rgb = RGB::<u64>::from(array);
+                        assert_eq!(max_sum, rgb.sum());
+                        assert_eq!(c_prop, rgb.chroma().into_prop());
+                        let hue = Hue::try_from(rgb).unwrap();
+                        assert_approx_eq!(hue, Hue::Sextant(sextant_hue), Prop(0x10000));
+                    }
+                }
+            }
+        }
+    }
+}
+
 // TODO: this test needs to be improved
 #[test]
 fn max_chroma_and_sum_ranges() {
