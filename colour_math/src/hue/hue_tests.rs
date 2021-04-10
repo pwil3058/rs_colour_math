@@ -5,10 +5,9 @@ use super::*;
 
 use num_traits_plus::assert_approx_eq;
 
-use crate::hue::Sextant::GreenYellow;
 use crate::{
     attributes::Chroma,
-    hue::{Hue, Sextant::RedYellow},
+    hue::{Hue, Sextant::*},
     rgb::RGB,
     ColourBasics, RGBConstants,
 };
@@ -97,12 +96,36 @@ fn hue_approx_eq() {
     assert!(!Hue::RED.approx_eq(&Hue::BLUE, None));
     assert!(!Hue::RED.approx_eq(&Hue::BLUE, Some(Prop::ONE)));
 
+    assert!(Hue::CYAN.approx_eq(&Hue::CYAN, None));
+    assert!(!Hue::CYAN.approx_eq(&Hue::MAGENTA, None));
+    assert!(!Hue::CYAN.approx_eq(&Hue::MAGENTA, Some(Prop::ONE)));
+
+    for rgb_hue in Hue::PRIMARIES.iter() {
+        for cmy_hue in Hue::SECONDARIES.iter() {
+            assert!(!rgb_hue.approx_eq(cmy_hue, None));
+            assert!(!rgb_hue.approx_eq(cmy_hue, Some(Prop::ONE)));
+            assert!(!cmy_hue.approx_eq(rgb_hue, None));
+            assert!(!cmy_hue.approx_eq(rgb_hue, Some(Prop::ONE)));
+        }
+    }
+
     assert!(
         !Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
             &Hue::Sextant(SextantHue(GreenYellow, Prop(0x1000000000))),
             None
         )
     );
+
+    assert!(
+        Hue::Sextant(SextantHue(RedYellow, Prop::ALMOST_ONE)).approx_eq(
+            &Hue::Sextant(SextantHue(GreenYellow, Prop::ALMOST_ONE)),
+            None
+        )
+    );
+
+    assert!(Hue::Sextant(SextantHue(RedYellow, Prop(1)))
+        .approx_eq(&Hue::Sextant(SextantHue(RedMagenta, Prop(1))), None));
+
     assert!(
         !Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
             &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffffffff))),
