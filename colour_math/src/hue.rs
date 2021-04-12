@@ -874,6 +874,34 @@ impl OrderedTriplets for SextantHue {
             BlueMagenta => [triplet[1], triplet[2], triplet[0]],
         }
     }
+
+    fn try_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        match self.sum_for_max_chroma() * c_prop {
+            min_sum if sum >= min_sum => {
+                let third = (sum - min_sum) / 3;
+                let first = third + c_prop;
+                if first.is_proportion() {
+                    let second = sum - first - third;
+                    debug_assert_eq!(first + second + third, sum);
+                    debug_assert_eq!(first - third, c_prop.into());
+                    let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
+                    debug_assert!(first > second && second > third);
+                    if Self::calculate_hue_parameter(triplet) == self.1 {
+                        Some(Ok(triplet))
+                    } else {
+                        Some(Err(triplet))
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
 impl ColourModificationHelpers for SextantHue {}
@@ -889,15 +917,11 @@ impl SumChromaCompatibility for SextantHue {
                     first if first.is_proportion() => {
                         let second = sum - first - third;
                         if first > second && second > third {
-                            let array = self.triplet_to_rgb_order(&[
-                                first.to_prop(),
-                                second.to_prop(),
-                                third.to_prop(),
-                            ]);
-                            match Hue::try_from(array) {
-                                Ok(hue) => hue == (*self).into(),
-                                _ => false,
-                            }
+                            Self::calculate_hue_parameter([
+                                first.into_prop(),
+                                second.into_prop(),
+                                third.into_prop(),
+                            ]) == self.1
                         } else {
                             false
                         }
@@ -910,12 +934,8 @@ impl SumChromaCompatibility for SextantHue {
 
     fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
         debug_assert!(chroma.is_valid() && sum.is_valid_sum());
-        let chroma_ok = match sum.cmp(&self.sum_for_max_chroma()) {
-            Ordering::Equal => chroma.is_neither(),
-            Ordering::Less => chroma.is_shade(),
-            Ordering::Greater => chroma.is_tint(),
-        };
-        chroma_ok && self.sum_and_chroma_prop_are_compatible(sum, chroma.into_prop())
+        chroma.is_valid_re((*self).into(), sum)
+            && self.sum_and_chroma_prop_are_compatible(sum, chroma.into_prop())
     }
 }
 
@@ -934,6 +954,29 @@ impl SextantHue {
 
     pub fn prop(&self) -> Prop {
         self.1
+    }
+
+    fn calculate_hue_parameter(triplet: [Prop; 3]) -> Prop {
+        let [first, second, third] = triplet;
+        debug_assert!(first > second && second > third);
+        let mut sum_for_max_chroma = UFDRNumber::ONE + ((second - third) / (first - third));
+        // Handle possible (fatal) rounding error
+        while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
+            && sum_for_max_chroma * (first - third) > first + second + third
+        {
+            sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
+        }
+        while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
+            && (first + second + third - sum_for_max_chroma * (first - third)) / 3 < third.into()
+        {
+            sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
+        }
+        debug_assert!(sum_for_max_chroma > UFDRNumber::ONE && sum_for_max_chroma < UFDRNumber::TWO);
+        debug_assert_eq!(
+            (first + second + third - sum_for_max_chroma * (first - third)) / 3,
+            third.into()
+        );
+        (sum_for_max_chroma - UFDRNumber::ONE).into_prop()
     }
 }
 
@@ -956,26 +999,8 @@ impl<T: LightLevel> From<(Sextant, &RGB<T>)> for SextantHue {
 
 impl From<(Sextant, [Prop; 3])> for SextantHue {
     fn from(arg: (Sextant, [Prop; 3])) -> Self {
-        let [first, second, third] = arg.1;
-        debug_assert!(first > second && second > third);
-        let mut sum_for_max_chroma = UFDRNumber::ONE + ((second - third) / (first - third));
-        // Handle possible (fatal) rounding error
-        while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
-            && sum_for_max_chroma * (first - third) > first + second + third
-        {
-            sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
-        }
-        while sum_for_max_chroma > UFDRNumber::ONE + UFDRNumber(1)
-            && (first + second + third - sum_for_max_chroma * (first - third)) / 3 < third.into()
-        {
-            sum_for_max_chroma = sum_for_max_chroma - UFDRNumber(1);
-        }
-        debug_assert!(sum_for_max_chroma > UFDRNumber::ONE && sum_for_max_chroma < UFDRNumber::TWO);
-        debug_assert_eq!(
-            (first + second + third - sum_for_max_chroma * (first - third)) / 3,
-            third.into()
-        );
-        Self(arg.0, (sum_for_max_chroma - UFDRNumber::ONE).into())
+        let hue_param = Self::calculate_hue_parameter(arg.1);
+        Self(arg.0, hue_param)
     }
 }
 

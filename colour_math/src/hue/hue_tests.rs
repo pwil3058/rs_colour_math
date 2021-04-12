@@ -792,41 +792,79 @@ fn lightest_darkest_rgb_for_chroma() {
             assert!(lightest_shade.sum() < darkest_tint.sum());
         }
     }
-    // for sextant in Sextant::SEXTANTS.iter() {
-    //     for item in SECOND_VALUES.iter() {
-    //         let second = Prop::from(*item);
-    //         let hue = Hue::Sextant(SextantHue(*sextant, second));
-    //         assert_eq!(hue.darkest_rgb_for_chroma::<u64>(Chroma::ZERO), None);
-    //         assert_eq!(hue.lightest_rgb_for_chroma::<u64>(Chroma::ZERO), None);
-    //         assert_eq!(
-    //             hue.darkest_rgb_for_chroma::<u64>(Chroma::ONE),
-    //             Some(hue.max_chroma_rgb::<u64>())
-    //         );
-    //         assert_eq!(
-    //             hue.lightest_rgb_for_chroma::<u64>(Chroma::ONE),
-    //             Some(hue.max_chroma_rgb::<u64>())
-    //         );
-    //         for prop in _SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
-    //             let shade_chroma = Chroma::Shade(prop);
-    //             let darkest_shade = hue.darkest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
-    //             assert_eq!(darkest_shade.hue(), Some(hue));
-    //             assert_eq!(darkest_shade.chroma(), shade_chroma);
-    //             let lightest_shade = hue.lightest_rgb_for_chroma::<u64>(shade_chroma).unwrap();
-    //             assert_eq!(lightest_shade.hue(), Some(hue));
-    //             assert_eq!(lightest_shade.chroma(), shade_chroma);
-    //             assert!(darkest_shade.sum() < lightest_shade.sum());
-    //             let tint_chroma = Chroma::Tint(prop);
-    //             let darkest_tint = hue.darkest_rgb_for_chroma::<u64>(tint_chroma).unwrap();
-    //             assert_eq!(darkest_tint.hue(), Some(hue));
-    //             assert_eq!(darkest_tint.chroma(), tint_chroma);
-    //             let lightest_tint = hue.lightest_rgb_for_chroma::<u64>(tint_chroma).unwrap();
-    //             assert_eq!(lightest_tint.hue(), Some(hue));
-    //             assert_eq!(lightest_tint.chroma(), tint_chroma);
-    //             assert!(darkest_tint.sum() < lightest_tint.sum());
-    //             assert!(lightest_shade.sum() < darkest_tint.sum());
-    //         }
-    //     }
-    // }
+    for sextant in Sextant::SEXTANTS.iter() {
+        for item in SECOND_VALUES.iter() {
+            let second = Prop::from(*item);
+            let hue = Hue::Sextant(SextantHue(*sextant, second));
+            assert_eq!(hue.darkest_rgb_for_chroma::<u64>(Chroma::ZERO), None);
+            assert_eq!(hue.lightest_rgb_for_chroma::<u64>(Chroma::ZERO), None);
+            assert_eq!(
+                hue.darkest_rgb_for_chroma::<u64>(Chroma::ONE),
+                Some(Ok(hue.max_chroma_rgb::<u64>()))
+            );
+            assert_eq!(
+                hue.lightest_rgb_for_chroma::<u64>(Chroma::ONE),
+                Some(Ok(hue.max_chroma_rgb::<u64>()))
+            );
+            for prop in _SHADE_TINT_CHROMA_PROPS.iter().map(|f| Prop::from(*f)) {
+                let shade_chroma = Chroma::Shade(prop);
+                let darkest_shade = match hue.darkest_rgb_for_chroma::<u64>(shade_chroma).unwrap() {
+                    Ok(darkest_shade) => {
+                        assert_eq!(darkest_shade.hue(), Some(hue));
+                        darkest_shade
+                    }
+                    Err(darkest_shade) => {
+                        assert_approx_eq!(darkest_shade.hue().unwrap(), hue, Prop(0xF0000));
+                        darkest_shade
+                    }
+                };
+                assert_eq!(darkest_shade.chroma(), shade_chroma);
+                let lightest_shade = match hue.lightest_rgb_for_chroma::<u64>(shade_chroma).unwrap()
+                {
+                    Ok(lightest_shade) => {
+                        assert_eq!(lightest_shade.hue(), Some(hue));
+                        assert_eq!(lightest_shade.chroma(), shade_chroma);
+                        lightest_shade
+                    }
+                    Err(lightest_shade) => {
+                        assert_approx_eq!(lightest_shade.hue().unwrap(), hue, Prop(0xF0000));
+                        assert_eq!(
+                            lightest_shade.chroma().into_prop(),
+                            shade_chroma.into_prop()
+                        );
+                        lightest_shade
+                    }
+                };
+                assert!(darkest_shade.sum() < lightest_shade.sum());
+                let tint_chroma = Chroma::Tint(prop);
+                let darkest_tint = match hue.darkest_rgb_for_chroma::<u64>(tint_chroma).unwrap() {
+                    Ok(darkest_tint) => {
+                        assert_eq!(darkest_tint.hue(), Some(hue));
+                        assert_eq!(darkest_tint.chroma(), tint_chroma);
+                        darkest_tint
+                    }
+                    Err(darkest_tint) => {
+                        assert_approx_eq!(darkest_tint.hue().unwrap(), hue, Prop(0xF0000));
+                        assert_eq!(darkest_tint.chroma().into_prop(), tint_chroma.into_prop());
+                        darkest_tint
+                    }
+                };
+                let lightest_tint = match hue.lightest_rgb_for_chroma::<u64>(tint_chroma).unwrap() {
+                    Ok(lightest_tint) => {
+                        assert_eq!(lightest_tint.hue(), Some(hue));
+                        lightest_tint
+                    }
+                    Err(lightest_tint) => {
+                        assert_approx_eq!(lightest_tint.hue().unwrap(), hue, Prop(0xF0000));
+                        lightest_tint
+                    }
+                };
+                assert_eq!(lightest_tint.chroma(), tint_chroma);
+                assert!(darkest_tint.sum() < lightest_tint.sum());
+                assert!(lightest_shade.sum() < darkest_tint.sum());
+            }
+        }
+    }
 }
 
 // //#[test]
