@@ -124,32 +124,7 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
         &self,
         sum: UFDRNumber,
         c_prop: Prop,
-    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
-        match self.sum_for_max_chroma() * c_prop {
-            min_sum if sum >= min_sum => {
-                let third = (sum - min_sum) / 3;
-                let first = third + c_prop;
-                if first.is_proportion() {
-                    let second = sum - first - third;
-                    debug_assert_eq!(first + second + third, sum);
-                    debug_assert_eq!(first - third, c_prop.into());
-                    let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
-                    debug_assert!(
-                        first > second && second >= third || first == second && second > third
-                    );
-                    if Hue::try_from(self.triplet_to_rgb_order(&triplet)).unwrap() == (*self).into()
-                    {
-                        Some(Ok(triplet))
-                    } else {
-                        Some(Err(triplet))
-                    }
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>>;
 
     fn ordered_triplet_to_hcv(&self, triplet: &[Prop; 3]) -> HCV {
         debug_assert!(self.has_valid_value_order(triplet));
@@ -241,6 +216,18 @@ pub(crate) trait HueIfce:
         debug_assert!(chroma.is_valid());
         let sum = self.max_sum_for_chroma(chroma)?;
         match self.try_rgb_ordered_triplet(sum, chroma.into_prop())? {
+            Ok(triplet) => Some(Ok(RGB::<T>::from(triplet))),
+            Err(triplet) => Some(Err(RGB::<T>::from(triplet))),
+        }
+    }
+
+    fn try_rgb_for_sum_and_chroma_prop<T: LightLevel>(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<RGB<T>, RGB<T>>> {
+        debug_assert!(sum.is_valid_sum());
+        match self.try_rgb_ordered_triplet(sum, c_prop)? {
             Ok(triplet) => Some(Ok(RGB::<T>::from(triplet))),
             Err(triplet) => Some(Err(RGB::<T>::from(triplet))),
         }
@@ -480,6 +467,48 @@ impl OrderedTriplets for RGBHue {
             Blue => [triplet[2], triplet[1], triplet[0]],
         }
     }
+
+    fn try_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        debug_assert!(sum.is_valid_sum());
+        match c_prop {
+            Prop::ZERO => None,
+            min_sum if sum >= min_sum.into() => {
+                let third = (sum - min_sum) / 3;
+                match third + c_prop {
+                    first if first > UFDRNumber::ONE => None,
+                    first => {
+                        let second = sum - first - third;
+                        match second.cmp(&third) {
+                            Ordering::Equal => Some(Ok([
+                                first.into_prop(),
+                                second.into_prop(),
+                                third.into_prop(),
+                            ])),
+                            Ordering::Greater => {
+                                debug_assert!(first > second);
+                                Some(Err([
+                                    first.into_prop(),
+                                    second.into_prop(),
+                                    third.into_prop(),
+                                ]))
+                            }
+                            //TODO: sort out hard one for RGBHue -> RGB
+                            Ordering::Less => Some(Err([
+                                first.into_prop(),
+                                second.into_prop(),
+                                third.into_prop(),
+                            ])),
+                        }
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
 impl ColourModificationHelpers for RGBHue {}
@@ -625,12 +654,61 @@ impl OrderedTriplets for CMYHue {
     }
 
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
-        debug_assert!(self.has_valid_value_order(&triplet));
+        //debug_assert!(self.has_valid_value_order(&triplet));
         use CMYHue::*;
         match self {
             Cyan => [triplet[2], triplet[0], triplet[1]],
             Magenta => [triplet[0], triplet[2], triplet[1]],
             Yellow => *triplet,
+        }
+    }
+
+    fn try_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        debug_assert!(sum.is_valid_sum());
+        match c_prop * 2 {
+            UFDRNumber::ZERO => None,
+            min_sum if sum >= min_sum => {
+                let third = (sum - min_sum) / 3;
+                match third + c_prop {
+                    first if first > UFDRNumber::ONE => None,
+                    first => match sum - first - third {
+                        second if second > UFDRNumber::ONE => None,
+                        second => match second.cmp(&first) {
+                            Ordering::Equal => {
+                                debug_assert!(second > third);
+                                Some(Ok([first.to_prop(), second.to_prop(), third.to_prop()]))
+                            }
+                            Ordering::Less => {
+                                debug_assert!(second > third);
+                                Some(Err([first.to_prop(), second.to_prop(), third.to_prop()]))
+                            }
+                            Ordering::Greater => {
+                                // NB: this is harder (and may need more special treatment)
+                                debug_assert!(first > third);
+                                let diff = second - first;
+                                debug_assert!(diff < UFDRNumber(3));
+                                if diff == UFDRNumber(1) {
+                                    let first = first - UFDRNumber(1);
+                                    let third = third + UFDRNumber(1);
+                                    debug_assert!(second > third && first > third);
+                                    Some(Err([second.to_prop(), first.to_prop(), third.to_prop()]))
+                                } else {
+                                    let first = first + UFDRNumber(1);
+                                    let third = third + UFDRNumber(1);
+                                    let second = second - UFDRNumber(2);
+                                    debug_assert!(second > third);
+                                    Some(Err([first.to_prop(), second.to_prop(), third.to_prop()]))
+                                }
+                            }
+                        },
+                    },
+                }
+            }
+            _ => None,
         }
     }
 }
@@ -1334,11 +1412,35 @@ impl OrderedTriplets for Hue {
         }
     }
 
+    fn try_rgb_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        match self {
+            Self::Primary(primary_hue) => primary_hue.try_rgb_ordered_triplet(sum, c_prop),
+            Self::Secondary(secondary_hue) => secondary_hue.try_rgb_ordered_triplet(sum, c_prop),
+            Self::Sextant(sextant_hue) => sextant_hue.try_rgb_ordered_triplet(sum, c_prop),
+        }
+    }
+
     fn ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
         match self {
             Self::Primary(primary_hue) => primary_hue.ordered_triplet(sum, c_prop),
             Self::Secondary(secondary_hue) => secondary_hue.ordered_triplet(sum, c_prop),
             Self::Sextant(sextant_hue) => sextant_hue.ordered_triplet(sum, c_prop),
+        }
+    }
+
+    fn try_ordered_triplet(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        match self {
+            Self::Primary(primary_hue) => primary_hue.try_ordered_triplet(sum, c_prop),
+            Self::Secondary(secondary_hue) => secondary_hue.try_ordered_triplet(sum, c_prop),
+            Self::Sextant(sextant_hue) => sextant_hue.try_ordered_triplet(sum, c_prop),
         }
     }
 

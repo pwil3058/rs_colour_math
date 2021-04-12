@@ -14,7 +14,8 @@ use crate::{
 
 const NON_ZERO_CHROMA_PROPS: [f64; 7] = [0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 1.0];
 const _SHADE_TINT_CHROMA_PROPS: [f64; 8] = [0.001, 0.01, 0.025, 0.5, 0.75, 0.9, 0.99, 0.999];
-const VALID_HUE_SUMS: [f64; 20] = [
+const VALID_HUE_SUMS: [f64; 22] = [
+    0.00001,
     0.01,
     0.025,
     0.5,
@@ -35,6 +36,7 @@ const VALID_HUE_SUMS: [f64; 20] = [
     2.75,
     2.9,
     2.99,
+    2.9999,
 ];
 // "second" should never be 0.0 or 1.0
 const SECOND_VALUES: [f64; 12] = [
@@ -938,6 +940,48 @@ fn lightest_darkest_rgb_for_chroma() {
 //         }
 //     }
 // }
+
+#[test]
+fn try_rgb_for_sum_and_chroma_prop() {
+    for hue in Hue::PRIMARIES.iter().chain(Hue::SECONDARIES.iter()) {
+        assert!(hue
+            .try_rgb_for_sum_and_chroma_prop::<u64>(UFDRNumber::ZERO, Prop::ONE)
+            .is_none());
+        assert!(hue
+            .try_rgb_for_sum_and_chroma_prop::<u64>(UFDRNumber::THREE, Prop::ONE)
+            .is_none());
+        assert!(hue
+            .try_rgb_for_sum_and_chroma_prop::<u64>(UFDRNumber::ZERO, Prop::ZERO)
+            .is_none());
+        assert!(hue
+            .try_rgb_for_sum_and_chroma_prop::<u64>(UFDRNumber::THREE, Prop::ZERO)
+            .is_none());
+        for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
+            for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
+                if let Some(result) = hue.try_rgb_for_sum_and_chroma_prop::<u64>(sum, c_prop) {
+                    match result {
+                        Ok(rgb) => {
+                            assert_eq!(rgb.hue(), Some(*hue));
+                            assert_eq!(rgb.chroma().into_prop(), c_prop);
+                            assert_eq!(rgb.sum(), sum);
+                        }
+                        Err(rgb) => {
+                            assert_approx_eq!(rgb.hue().unwrap(), *hue);
+                            assert_eq!(rgb.chroma().into_prop(), c_prop);
+                            assert_eq!(rgb.sum(), sum);
+                        }
+                    }
+                } else {
+                    if let Some(range) = hue.sum_range_for_chroma_prop(c_prop) {
+                        assert!(sum < range.0 || sum > range.1);
+                    } else {
+                        assert!(c_prop == Prop::ZERO || !sum.is_hue_valid());
+                    }
+                }
+            }
+        }
+    }
+}
 
 #[test]
 fn primary_rgb_for_sum_and_chroma() {
