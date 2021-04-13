@@ -482,26 +482,22 @@ impl OrderedTriplets for RGBHue {
                     first if first > UFDRNumber::ONE => None,
                     first => {
                         let second = sum - first - third;
-                        match second.cmp(&third) {
-                            Ordering::Equal => Some(Ok([
+                        debug_assert_eq!(first - third, c_prop.into());
+                        debug_assert_eq!(first + second + third, sum);
+                        if second == third {
+                            debug_assert!(first > second);
+                            Some(Ok([
                                 first.into_prop(),
                                 second.into_prop(),
                                 third.into_prop(),
-                            ])),
-                            Ordering::Greater => {
-                                debug_assert!(first > second);
-                                Some(Err([
-                                    first.into_prop(),
-                                    second.into_prop(),
-                                    third.into_prop(),
-                                ]))
-                            }
-                            //TODO: sort out hard one for RGBHue -> RGB
-                            Ordering::Less => Some(Err([
+                            ]))
+                        } else {
+                            debug_assert!(first > second && second > third);
+                            Some(Err([
                                 first.into_prop(),
                                 second.into_prop(),
                                 third.into_prop(),
-                            ])),
+                            ]))
                         }
                     }
                 }
@@ -676,35 +672,39 @@ impl OrderedTriplets for CMYHue {
                 match third + c_prop {
                     first if first > UFDRNumber::ONE => None,
                     first => match sum - first - third {
-                        second if second > UFDRNumber::ONE => None,
-                        second => match second.cmp(&first) {
-                            Ordering::Equal => {
-                                debug_assert!(second > third);
-                                Some(Ok([first.to_prop(), second.to_prop(), third.to_prop()]))
-                            }
-                            Ordering::Less => {
-                                debug_assert!(second > third);
-                                Some(Err([first.to_prop(), second.to_prop(), third.to_prop()]))
-                            }
-                            Ordering::Greater => {
-                                // NB: this is harder (and may need more special treatment)
-                                debug_assert!(first > third);
-                                let diff = second - first;
-                                debug_assert!(diff < UFDRNumber(3));
-                                if diff == UFDRNumber(1) {
+                        second if second == first => {
+                            debug_assert!(second > third);
+                            Some(Ok([first.to_prop(), second.to_prop(), third.to_prop()]))
+                        }
+                        second => {
+                            debug_assert!(second > first && first > third);
+                            let diff = second - first;
+                            debug_assert!(diff < UFDRNumber(3));
+                            if diff == UFDRNumber(1) {
+                                if second.is_proportion() {
                                     let first = first - UFDRNumber(1);
                                     let third = third + UFDRNumber(1);
                                     debug_assert!(second > third && first > third);
+                                    debug_assert_eq!(second - third, c_prop.into());
+                                    debug_assert_eq!(first + second + third, sum);
                                     Some(Err([second.to_prop(), first.to_prop(), third.to_prop()]))
                                 } else {
-                                    let first = first + UFDRNumber(1);
+                                    None
+                                }
+                            } else {
+                                let first = first + UFDRNumber(1);
+                                if first.is_proportion() {
                                     let third = third + UFDRNumber(1);
                                     let second = second - UFDRNumber(2);
                                     debug_assert!(second > third);
+                                    debug_assert_eq!(first - third, c_prop.into());
+                                    debug_assert_eq!(first + second + third, sum);
                                     Some(Err([first.to_prop(), second.to_prop(), third.to_prop()]))
+                                } else {
+                                    None
                                 }
                             }
-                        },
+                        }
                     },
                 }
             }
@@ -961,20 +961,42 @@ impl OrderedTriplets for SextantHue {
         match self.sum_for_max_chroma() * c_prop {
             min_sum if sum >= min_sum => {
                 let third = (sum - min_sum) / 3;
-                let first = third + c_prop;
-                if first.is_proportion() {
-                    let second = sum - first - third;
-                    debug_assert_eq!(first + second + third, sum);
-                    debug_assert_eq!(first - third, c_prop.into());
-                    let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
-                    debug_assert!(first > second && second > third);
-                    if Self::calculate_hue_parameter(triplet) == self.1 {
-                        Some(Ok(triplet))
-                    } else {
-                        Some(Err(triplet))
+                match third + c_prop {
+                    first if !first.is_proportion() => None,
+                    first => {
+                        let second = sum - first - third;
+                        match second.cmp(&first) {
+                            Ordering::Less => {
+                                debug_assert_eq!(first + second + third, sum);
+                                debug_assert_eq!(first - third, c_prop.into());
+                                let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
+                                debug_assert!(first > second && second > third);
+                                if Self::calculate_hue_parameter(triplet) == self.1 {
+                                    Some(Ok(triplet))
+                                } else {
+                                    Some(Err(triplet))
+                                }
+                            }
+                            Ordering::Equal => {
+                                debug_assert_eq!(first + second + third, sum);
+                                debug_assert_eq!(first - third, c_prop.into());
+                                debug_assert!(second > third);
+                                Some(Err([first.to_prop(), second.to_prop(), third.to_prop()]))
+                            }
+                            Ordering::Greater => {
+                                if second.is_proportion() {
+                                    let first = first - UFDRNumber(1);
+                                    let third = third + UFDRNumber(1);
+                                    debug_assert!(second > third && first > third);
+                                    debug_assert_eq!(second - third, c_prop.into());
+                                    debug_assert_eq!(first + second + third, sum);
+                                    Some(Err([second.to_prop(), first.to_prop(), third.to_prop()]))
+                                } else {
+                                    None
+                                }
+                            }
+                        }
                     }
-                } else {
-                    None
                 }
             }
             _ => None,
