@@ -965,11 +965,13 @@ fn try_rgb_for_sum_and_chroma_prop() {
                             assert_eq!(rgb.hue(), Some(*hue));
                             assert_eq!(rgb.chroma_prop(), c_prop);
                             assert_eq!(rgb.sum(), sum);
+                            assert_eq!(rgb, RGB::from(HCV::from(rgb)));
                         }
                         Err(rgb) => {
                             assert_approx_eq!(rgb.hue().unwrap(), *hue);
                             assert_eq!(rgb.chroma_prop(), c_prop);
                             assert_eq!(rgb.sum(), sum);
+                            assert_eq!(rgb, RGB::from(HCV::from(rgb)));
                         }
                     }
                 } else {
@@ -996,11 +998,13 @@ fn try_rgb_for_sum_and_chroma_prop() {
                                 assert_eq!(rgb.hue(), Some(hue));
                                 assert_eq!(rgb.chroma_prop(), c_prop);
                                 assert_eq!(rgb.sum(), sum);
+                                assert_eq!(rgb, RGB::from(HCV::from(rgb)));
                             }
                             Err(rgb) => {
                                 assert_approx_eq!(rgb.hue().unwrap(), hue, Prop(0x100000));
                                 assert_eq!(rgb.chroma_prop(), c_prop);
                                 assert_eq!(rgb.sum(), sum);
+                                assert_eq!(rgb, RGB::from(HCV::from(rgb)));
                             }
                         }
                     } else {
