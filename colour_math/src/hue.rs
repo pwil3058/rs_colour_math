@@ -958,7 +958,9 @@ impl OrderedTriplets for SextantHue {
         sum: UFDRNumber,
         c_prop: Prop,
     ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
+        debug_assert!(sum.is_valid_sum());
         match self.sum_for_max_chroma() * c_prop {
+            UFDRNumber::ZERO => None,
             min_sum if sum >= min_sum => {
                 let third = (sum - min_sum) / 3;
                 match third + c_prop {
