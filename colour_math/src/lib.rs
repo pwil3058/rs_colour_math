@@ -164,6 +164,7 @@ pub trait ColourBasics {
     }
 
     fn chroma(&self) -> Chroma;
+    fn chroma_prop(&self) -> Prop;
     fn value(&self) -> Value;
 
     fn greyness(&self) -> Greyness {

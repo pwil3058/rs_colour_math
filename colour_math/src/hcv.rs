@@ -357,6 +357,10 @@ impl ColourBasics for HCV {
         self.chroma
     }
 
+    fn chroma_prop(&self) -> Prop {
+        self.chroma.into_prop()
+    }
+
     fn value(&self) -> Value {
         (self.sum / 3).into()
     }

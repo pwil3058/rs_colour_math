@@ -60,6 +60,10 @@ pub fn colour_interface_derive(input: TokenStream) -> TokenStream {
                 self.#colour.chroma()
             }
 
+            fn chroma_prop(&self) -> colour_math::Prop {
+                self.#colour.chroma_prop()
+            }
+
             fn value(&self) -> colour_math::Value {
                 self.#colour.value()
             }
