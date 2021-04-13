@@ -76,6 +76,31 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
         }
     }
 
+    pub fn chroma_prop(&self) -> Prop {
+        let [red, green, blue] = <[Prop; 3]>::from(*self);
+        match red.cmp(&green) {
+            Ordering::Greater => match green.cmp(&blue) {
+                Ordering::Greater | Ordering::Equal => red - blue,
+                Ordering::Less => match red.cmp(&blue) {
+                    Ordering::Greater | Ordering::Equal => red - green,
+                    Ordering::Less => blue - green,
+                },
+            },
+            Ordering::Equal => match green.cmp(&blue) {
+                Ordering::Equal => Prop::ZERO,
+                Ordering::Less => blue - green,
+                Ordering::Greater => green - blue,
+            },
+            Ordering::Less => match red.cmp(&blue) {
+                Ordering::Equal | Ordering::Greater => green - blue,
+                Ordering::Less => match green.cmp(&blue) {
+                    Ordering::Greater | Ordering::Equal => green - red,
+                    Ordering::Less => blue - red,
+                },
+            },
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.0.iter()
     }
