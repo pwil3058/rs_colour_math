@@ -1,7 +1,6 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 use crate::{
-    attributes::Chroma,
-    fdrn::{IntoProp, Prop, UFDRNumber},
+    fdrn::{Prop, UFDRNumber},
     hcv::HCV,
     hue::Hue,
     hue::{angle::Angle, ColourModificationHelpers, HueBasics, HueIfce, SumChromaCompatibility},
@@ -68,17 +67,17 @@ impl ColourManipulator {
         self.rotation_policy = rotation_policy
     }
 
-    pub fn set_chroma(&mut self, new_chroma: Chroma, policy: SetScalar) -> Outcome {
+    pub fn set_chroma(&mut self, new_c_prop: Prop, policy: SetScalar) -> Outcome {
         debug_assert!(self.hcv.is_valid());
-        let cur_chroma = self.hcv.chroma;
+        let cur_c_prop = self.hcv.c_prop;
         if let Some(hue) = self.hcv.hue {
             self.saved_hue = hue; // Just in case we end up grey (which is possible)
-            if hue.sum_and_chroma_are_compatible(self.hcv.sum, new_chroma) {
-                self.hcv = match HCV::try_new(Some((hue, new_chroma.into_prop())), self.hcv.sum) {
+            if hue.sum_and_chroma_prop_are_compatible(self.hcv.sum, new_c_prop) {
+                self.hcv = match HCV::try_new(Some((hue, new_c_prop)), self.hcv.sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 };
-                if cur_chroma == self.hcv.chroma {
+                if cur_c_prop == self.hcv.c_prop {
                     Outcome::NoChange
                 } else {
                     Outcome::Ok
@@ -86,22 +85,21 @@ impl ColourManipulator {
             } else {
                 match policy {
                     SetScalar::Clamp => {
-                        if let Some(max_chroma) = hue.max_chroma_for_sum(self.hcv.sum) {
-                            let clamped_new_chroma =
-                                if new_chroma.into_prop() < max_chroma.into_prop() {
-                                    new_chroma
-                                } else if self.hcv.chroma.into_prop() < max_chroma.into_prop() {
-                                    max_chroma
-                                } else {
-                                    return Outcome::NoChange;
-                                };
-                            self.hcv = if let Some((chroma, sum)) =
-                                hue.adjusted_favouring_sum(self.hcv.sum, clamped_new_chroma)
+                        if let Some(max_c_prop) = hue.max_chroma_prop_for_sum(self.hcv.sum) {
+                            let clamped_new_c_prop = if new_c_prop < max_c_prop {
+                                new_c_prop
+                            } else if self.hcv.c_prop < max_c_prop {
+                                max_c_prop
+                            } else {
+                                return Outcome::NoChange;
+                            };
+                            self.hcv = if let Some((c_prop, sum)) =
+                                hue.adjusted_favouring_sum(self.hcv.sum, clamped_new_c_prop)
                             {
-                                if chroma == Chroma::ZERO {
+                                if c_prop == Prop::ZERO {
                                     HCV::new_grey((sum / 3).into())
                                 } else {
-                                    match HCV::try_new(Some((hue, chroma.into_prop())), sum) {
+                                    match HCV::try_new(Some((hue, c_prop)), sum) {
                                         Ok(hcv) => hcv,
                                         Err(hcv) => hcv,
                                     }
@@ -109,7 +107,7 @@ impl ColourManipulator {
                             } else {
                                 HCV::new_grey((self.hcv.sum / 3).into())
                             };
-                            if cur_chroma == self.hcv.chroma {
+                            if cur_c_prop == self.hcv.c_prop {
                                 Outcome::NoChange
                             } else {
                                 Outcome::Clamped
@@ -119,14 +117,13 @@ impl ColourManipulator {
                         }
                     }
                     SetScalar::Accommodate => {
-                        if let Some((chroma, sum)) =
-                            hue.adjusted_favouring_chroma(self.hcv.sum, new_chroma)
+                        if let Some((c_prop, sum)) =
+                            hue.adjusted_favouring_chroma(self.hcv.sum, new_c_prop)
                         {
-                            if chroma == Chroma::ZERO {
+                            if c_prop == Prop::ZERO {
                                 self.hcv = HCV::new_grey((self.hcv.sum / 3).into());
                             } else {
-                                self.hcv = match HCV::try_new(Some((hue, chroma.into_prop())), sum)
-                                {
+                                self.hcv = match HCV::try_new(Some((hue, c_prop)), sum) {
                                     Ok(hcv) => hcv,
                                     Err(hcv) => hcv,
                                 };
@@ -134,7 +131,7 @@ impl ColourManipulator {
                         } else {
                             self.hcv = HCV::new_grey((self.hcv.sum / 3).into())
                         }
-                        if cur_chroma == self.hcv.chroma {
+                        if cur_c_prop == self.hcv.c_prop {
                             Outcome::NoChange
                         } else {
                             Outcome::Accommodated
@@ -143,21 +140,18 @@ impl ColourManipulator {
                     SetScalar::Reject => Outcome::Rejected,
                 }
             }
-        } else if new_chroma == Chroma::ZERO {
+        } else if new_c_prop == Prop::ZERO {
             Outcome::NoChange
         } else {
             if self
                 .saved_hue
-                .sum_and_chroma_are_compatible(self.hcv.sum, new_chroma)
+                .sum_and_chroma_prop_are_compatible(self.hcv.sum, new_c_prop)
             {
-                self.hcv = match HCV::try_new(
-                    Some((self.saved_hue, new_chroma.into_prop())),
-                    self.hcv.sum,
-                ) {
+                self.hcv = match HCV::try_new(Some((self.saved_hue, new_c_prop)), self.hcv.sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 };
-                if cur_chroma == self.hcv.chroma {
+                if cur_c_prop == self.hcv.c_prop {
                     Outcome::NoChange
                 } else {
                     Outcome::Ok
@@ -165,28 +159,28 @@ impl ColourManipulator {
             } else {
                 match policy {
                     SetScalar::Clamp => {
-                        if let Some(max_chroma) = self.saved_hue.max_chroma_for_sum(self.hcv.sum) {
-                            let clamped_new_chroma =
-                                if new_chroma.into_prop() < max_chroma.into_prop() {
-                                    new_chroma
-                                } else if self.hcv.chroma.into_prop() < max_chroma.into_prop() {
-                                    max_chroma
-                                } else {
-                                    return Outcome::NoChange;
-                                };
-                            self.hcv = if let Some((chroma, sum)) = self
+                        if let Some(max_c_prop) =
+                            self.saved_hue.max_chroma_prop_for_sum(self.hcv.sum)
+                        {
+                            let clamped_new_c_prop = if new_c_prop < max_c_prop {
+                                new_c_prop
+                            } else if self.hcv.c_prop < max_c_prop {
+                                max_c_prop
+                            } else {
+                                return Outcome::NoChange;
+                            };
+                            self.hcv = if let Some((c_prop, sum)) = self
                                 .saved_hue
-                                .adjusted_favouring_sum(self.hcv.sum, clamped_new_chroma)
+                                .adjusted_favouring_sum(self.hcv.sum, clamped_new_c_prop)
                             {
-                                match HCV::try_new(Some((self.saved_hue, chroma.into_prop())), sum)
-                                {
+                                match HCV::try_new(Some((self.saved_hue, c_prop)), sum) {
                                     Ok(hcv) => hcv,
                                     Err(hcv) => hcv,
                                 }
                             } else {
                                 self.hcv
                             };
-                            if cur_chroma == self.hcv.chroma {
+                            if cur_c_prop == self.hcv.c_prop {
                                 Outcome::NoChange
                             } else {
                                 Outcome::Clamped
@@ -196,20 +190,18 @@ impl ColourManipulator {
                         }
                     }
                     SetScalar::Accommodate => {
-                        if let Some((chroma, sum)) = self
+                        if let Some((c_prop, sum)) = self
                             .saved_hue
-                            .adjusted_favouring_chroma(self.hcv.sum, new_chroma)
+                            .adjusted_favouring_chroma(self.hcv.sum, new_c_prop)
                         {
-                            self.hcv =
-                                match HCV::try_new(Some((self.saved_hue, chroma.into_prop())), sum)
-                                {
-                                    Ok(hcv) => hcv,
-                                    Err(hcv) => hcv,
-                                };
+                            self.hcv = match HCV::try_new(Some((self.saved_hue, c_prop)), sum) {
+                                Ok(hcv) => hcv,
+                                Err(hcv) => hcv,
+                            };
                         } else {
                             self.hcv = HCV::new_grey((self.hcv.sum / 3).into())
                         }
-                        if cur_chroma == self.hcv.chroma {
+                        if cur_c_prop == self.hcv.c_prop {
                             Outcome::NoChange
                         } else {
                             Outcome::Accommodated
@@ -223,24 +215,20 @@ impl ColourManipulator {
 
     pub fn decr_chroma(&mut self, delta: Prop) -> bool {
         debug_assert!(self.hcv.is_valid());
-        match self.hcv.chroma.into_prop() {
+        match self.hcv.c_prop {
             Prop::ZERO => false,
             c_prop => {
-                let new_chroma = if c_prop > delta {
-                    match self.hcv.chroma {
-                        Chroma::Shade(c_prop) => Chroma::Shade(c_prop - delta),
-                        Chroma::Tint(c_prop) => Chroma::Tint(c_prop - delta),
-                        Chroma::Neither(c_prop) => Chroma::Neither(c_prop - delta),
-                    }
+                let new_c_prop = if c_prop > delta {
+                    c_prop - delta
                 } else {
-                    Chroma::ZERO
+                    Prop::ZERO
                 };
                 let policy = if self.clamped {
                     SetScalar::Clamp
                 } else {
                     SetScalar::Accommodate
                 };
-                match self.set_chroma(new_chroma, policy) {
+                match self.set_chroma(new_c_prop, policy) {
                     Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => {
                         debug_assert!(self.hcv.is_valid());
                         true
@@ -258,33 +246,22 @@ impl ColourManipulator {
         } else {
             SetScalar::Accommodate
         };
-        match self.hcv.chroma.into_prop() {
+        match self.hcv.c_prop {
             Prop::ONE => false,
-            Prop::ZERO => {
-                let new_chroma = match self.hcv.chroma {
-                    Chroma::Shade(_) => Chroma::Shade(delta),
-                    Chroma::Tint(_) => Chroma::Tint(delta),
-                    Chroma::Neither(_) => Chroma::Neither(delta),
-                };
-                match self.set_chroma(new_chroma, policy) {
-                    Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => {
-                        debug_assert!(self.hcv.is_valid());
-                        true
-                    }
-                    _ => false,
+            Prop::ZERO => match self.set_chroma(delta, policy) {
+                Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => {
+                    debug_assert!(self.hcv.is_valid());
+                    true
                 }
-            }
+                _ => false,
+            },
             c_prop => {
-                let new_chroma = if c_prop < Prop::ONE - delta {
-                    match self.hcv.chroma {
-                        Chroma::Shade(c_prop) => Chroma::Shade((c_prop + delta).into()),
-                        Chroma::Tint(c_prop) => Chroma::Tint((c_prop + delta).into()),
-                        Chroma::Neither(c_prop) => Chroma::Neither((c_prop + delta).into()),
-                    }
+                let new_c_prop = if c_prop < Prop::ONE - delta {
+                    (c_prop + delta).into()
                 } else {
-                    Chroma::ONE
+                    Prop::ONE
                 };
-                match self.set_chroma(new_chroma, policy) {
+                match self.set_chroma(new_c_prop, policy) {
                     Outcome::Ok | Outcome::Clamped | Outcome::Accommodated => {
                         debug_assert!(self.hcv.is_valid());
                         true
@@ -301,8 +278,8 @@ impl ColourManipulator {
         let cur_sum = self.hcv.sum;
         if let Some(hue) = self.hcv.hue {
             self.saved_hue = hue;
-            if hue.sum_and_chroma_are_compatible(new_sum, self.hcv.chroma) {
-                self.hcv = match HCV::try_new(Some((hue, self.hcv.chroma.into_prop())), new_sum) {
+            if hue.sum_and_chroma_prop_are_compatible(new_sum, self.hcv.c_prop) {
+                self.hcv = match HCV::try_new(Some((hue, self.hcv.c_prop)), new_sum) {
                     Ok(hcv) => hcv,
                     Err(hcv) => hcv,
                 };
@@ -314,10 +291,10 @@ impl ColourManipulator {
             } else {
                 match policy {
                     SetScalar::Clamp => {
-                        if let Some((chroma, sum)) =
-                            hue.adjusted_favouring_chroma(new_sum, self.hcv.chroma)
+                        if let Some((c_prop, sum)) =
+                            hue.adjusted_favouring_chroma(new_sum, self.hcv.c_prop)
                         {
-                            self.hcv = match HCV::try_new(Some((hue, chroma.into_prop())), sum) {
+                            self.hcv = match HCV::try_new(Some((hue, c_prop)), sum) {
                                 Ok(hcv) => hcv,
                                 Err(hcv) => hcv,
                             };
@@ -331,10 +308,10 @@ impl ColourManipulator {
                         }
                     }
                     SetScalar::Accommodate => {
-                        if let Some((chroma, sum)) =
-                            hue.adjusted_favouring_sum(new_sum, self.hcv.chroma)
+                        if let Some((c_prop, sum)) =
+                            hue.adjusted_favouring_sum(new_sum, self.hcv.c_prop)
                         {
-                            self.hcv = match HCV::try_new(Some((hue, chroma.into_prop())), sum) {
+                            self.hcv = match HCV::try_new(Some((hue, c_prop)), sum) {
                                 Ok(hcv) => hcv,
                                 Err(hcv) => hcv,
                             };
@@ -413,45 +390,44 @@ impl ColourManipulator {
     pub fn set_hue(&mut self, new_hue: Hue, policy: SetHue) {
         // TODO: change argument to Option<Hue>
         debug_assert!(self.hcv.is_valid());
-        match self.hcv.chroma {
-            Chroma::ZERO => self.saved_hue = new_hue,
-            Chroma::ONE => match policy {
+        match self.hcv.c_prop {
+            Prop::ZERO => self.saved_hue = new_hue,
+            Prop::ONE => match policy {
                 SetHue::FavourChroma => self.hcv = new_hue.max_chroma_hcv(),
                 SetHue::FavourValue => {
-                    let chroma = new_hue.max_chroma_for_sum(self.hcv.sum).unwrap();
-                    let (chroma, sum) = new_hue
-                        .adjusted_favouring_sum(self.hcv.sum, chroma)
+                    let c_prop = new_hue.max_chroma_prop_for_sum(self.hcv.sum).unwrap();
+                    let (c_prop, sum) = new_hue
+                        .adjusted_favouring_sum(self.hcv.sum, c_prop)
                         .unwrap();
-                    self.hcv = match HCV::try_new(Some((new_hue, chroma.into_prop())), sum) {
+                    self.hcv = match HCV::try_new(Some((new_hue, c_prop)), sum) {
                         Ok(hcv) => hcv,
                         Err(hcv) => hcv,
                     };
                 }
             },
-            chroma => {
-                if new_hue.sum_and_chroma_are_compatible(self.hcv.sum, chroma) {
-                    self.hcv = match HCV::try_new(Some((new_hue, chroma.into_prop())), self.hcv.sum)
-                    {
+            c_prop => {
+                if new_hue.sum_and_chroma_prop_are_compatible(self.hcv.sum, c_prop) {
+                    self.hcv = match HCV::try_new(Some((new_hue, c_prop)), self.hcv.sum) {
                         Ok(hcv) => hcv,
                         Err(hcv) => hcv,
                     };
                 } else {
                     self.hcv = match policy {
                         SetHue::FavourChroma => {
-                            if let Some((chroma, sum)) = if let Some((min_sum, max_sum)) =
-                                new_hue.sum_range_for_chroma(chroma)
+                            if let Some((c_prop, sum)) = if let Some((min_sum, max_sum)) =
+                                new_hue.sum_range_for_chroma_prop(c_prop)
                             {
                                 if self.hcv.sum < min_sum {
-                                    new_hue.trim_overs(min_sum + UFDRNumber(2), chroma.into_prop())
+                                    new_hue.trim_overs(min_sum + UFDRNumber(2), c_prop)
                                 } else if self.hcv.sum > max_sum {
-                                    new_hue.trim_overs(max_sum, chroma.into_prop())
+                                    new_hue.trim_overs(max_sum, c_prop)
                                 } else {
-                                    new_hue.trim_overs(self.hcv.sum, chroma.into_prop())
+                                    new_hue.trim_overs(self.hcv.sum, c_prop)
                                 }
                             } else {
-                                new_hue.trim_overs(self.hcv.sum, chroma.into_prop())
+                                new_hue.trim_overs(self.hcv.sum, c_prop)
                             } {
-                                match HCV::try_new(Some((new_hue, chroma.into_prop())), sum) {
+                                match HCV::try_new(Some((new_hue, c_prop)), sum) {
                                     Ok(hcv) => hcv,
                                     Err(hcv) => hcv,
                                 }
@@ -461,18 +437,18 @@ impl ColourManipulator {
                             }
                         }
                         SetHue::FavourValue => {
-                            let max_chroma = new_hue
-                                .max_chroma_for_sum(self.hcv.sum)
+                            let max_c_prop = new_hue
+                                .max_chroma_prop_for_sum(self.hcv.sum)
                                 .expect("0.0 < sum < 3.0");
-                            let chroma = if self.hcv.chroma < max_chroma {
-                                self.hcv.chroma
+                            let c_prop = if self.hcv.c_prop < max_c_prop {
+                                self.hcv.c_prop
                             } else {
-                                max_chroma
+                                max_c_prop
                             };
-                            let (chroma, sum) = new_hue
-                                .adjusted_favouring_sum(self.hcv.sum, chroma)
+                            let (c_prop, sum) = new_hue
+                                .adjusted_favouring_sum(self.hcv.sum, c_prop)
                                 .unwrap();
-                            match HCV::try_new(Some((new_hue, chroma.into_prop())), sum) {
+                            match HCV::try_new(Some((new_hue, c_prop)), sum) {
                                 Ok(hcv) => hcv,
                                 Err(hcv) => hcv,
                             }
