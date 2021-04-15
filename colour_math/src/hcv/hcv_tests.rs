@@ -3,7 +3,7 @@ use std::convert::From;
 
 use num_traits_plus::assert_approx_eq;
 
-use crate::{attributes::Warmth, hcv::*};
+use crate::{attributes::Warmth, hcv::*, ColourBasics, HueConstants, Prop, RGBConstants, RGB};
 
 #[test]
 fn default_hcv_is_black() {
