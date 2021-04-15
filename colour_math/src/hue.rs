@@ -224,6 +224,18 @@ pub(crate) trait HueIfce:
         }
     }
 
+    fn try_hcv_for_sum_and_chroma_prop(
+        &self,
+        sum: UFDRNumber,
+        c_prop: Prop,
+    ) -> Option<Result<HCV, HCV>> {
+        debug_assert!(sum.is_valid_sum());
+        match self.try_rgb_ordered_triplet(sum, c_prop)? {
+            Ok(triplet) => Some(Ok(HCV::from(triplet))),
+            Err(triplet) => Some(Err(HCV::from(triplet))),
+        }
+    }
+
     fn try_rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,

@@ -1021,6 +1021,88 @@ fn try_rgb_for_sum_and_chroma_prop() {
 }
 
 #[test]
+fn try_hcv_for_sum_and_chroma_prop() {
+    for hue in Hue::PRIMARIES
+        .iter()
+        .chain(Hue::SECONDARIES.iter())
+        .chain(Hue::IN_BETWEENS.iter())
+    {
+        assert!(hue
+            .try_hcv_for_sum_and_chroma_prop(UFDRNumber::ZERO, Prop::ONE)
+            .is_none());
+        assert!(hue
+            .try_hcv_for_sum_and_chroma_prop(UFDRNumber::THREE, Prop::ONE)
+            .is_none());
+        assert!(hue
+            .try_hcv_for_sum_and_chroma_prop(UFDRNumber::ZERO, Prop::ZERO)
+            .is_none());
+        assert!(hue
+            .try_hcv_for_sum_and_chroma_prop(UFDRNumber::THREE, Prop::ZERO)
+            .is_none());
+        for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
+            for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
+                if let Some(result) = hue.try_hcv_for_sum_and_chroma_prop(sum, c_prop) {
+                    match result {
+                        Ok(hcv) => {
+                            assert_eq!(hcv.hue(), Some(*hue));
+                            assert_eq!(hcv.chroma_prop(), c_prop);
+                            assert_eq!(hcv.sum, sum);
+                            assert_eq!(hcv, HCV::from(RGB::<u64>::from(hcv)));
+                        }
+                        Err(hcv) => {
+                            assert_approx_eq!(hcv.hue().unwrap(), *hue);
+                            assert_eq!(hcv.chroma_prop(), c_prop);
+                            assert_eq!(hcv.sum, sum);
+                            assert_eq!(hcv, HCV::from(RGB::<u64>::from(hcv)));
+                        }
+                    }
+                } else {
+                    if let Some(range) = hue.sum_range_for_chroma_prop(c_prop) {
+                        assert!(sum < range.0 || sum > range.1);
+                    } else {
+                        assert!(c_prop == Prop::ZERO || !sum.is_hue_valid());
+                    }
+                }
+            }
+        }
+    }
+    // Now give sextant hues a good work over
+    for sextant in Sextant::SEXTANTS.iter() {
+        for hue in SECOND_VALUES
+            .iter()
+            .map(|i| Hue::Sextant(SextantHue(*sextant, Prop::from(*i))))
+        {
+            for c_prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
+                for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
+                    if let Some(result) = hue.try_hcv_for_sum_and_chroma_prop(sum, c_prop) {
+                        match result {
+                            Ok(hcv) => {
+                                assert_eq!(hcv.hue(), Some(hue));
+                                assert_eq!(hcv.chroma_prop(), c_prop);
+                                assert_eq!(hcv.sum, sum);
+                                assert_eq!(hcv, HCV::from(RGB::<u64>::from(hcv)));
+                            }
+                            Err(hcv) => {
+                                assert_approx_eq!(hcv.hue().unwrap(), hue, Prop(0x100000));
+                                assert_eq!(hcv.chroma_prop(), c_prop);
+                                assert_eq!(hcv.sum, sum);
+                                assert_eq!(hcv, HCV::from(RGB::<u64>::from(hcv)));
+                            }
+                        }
+                    } else {
+                        if let Some(range) = hue.sum_range_for_chroma_prop(c_prop) {
+                            assert!(sum < range.0 || sum > range.1);
+                        } else {
+                            assert!(c_prop == Prop::ZERO || !sum.is_hue_valid());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn primary_rgb_for_sum_and_chroma() {
     for hue in &Hue::PRIMARIES {
         assert!(hue
