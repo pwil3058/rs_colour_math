@@ -206,10 +206,7 @@ pub(crate) trait HueIfce:
     ) -> Option<Result<RGB<T>, RGB<T>>> {
         debug_assert!(chroma.is_valid());
         let sum = self.min_sum_for_chroma(chroma)?;
-        match self.try_rgb_ordered_triplet(sum, chroma.into_prop())? {
-            Ok(triplet) => Some(Ok(RGB::<T>::from(triplet))),
-            Err(triplet) => Some(Err(RGB::<T>::from(triplet))),
-        }
+        self.try_rgb_for_sum_and_chroma_prop(sum, chroma.into_prop())
     }
 
     fn lightest_rgb_for_chroma<T: LightLevel>(
@@ -218,10 +215,7 @@ pub(crate) trait HueIfce:
     ) -> Option<Result<RGB<T>, RGB<T>>> {
         debug_assert!(chroma.is_valid());
         let sum = self.max_sum_for_chroma(chroma)?;
-        match self.try_rgb_ordered_triplet(sum, chroma.into_prop())? {
-            Ok(triplet) => Some(Ok(RGB::<T>::from(triplet))),
-            Err(triplet) => Some(Err(RGB::<T>::from(triplet))),
-        }
+        self.try_rgb_for_sum_and_chroma_prop(sum, chroma.into_prop())
     }
 
     fn try_hcv_for_sum_and_chroma_prop(
@@ -248,23 +242,18 @@ pub(crate) trait HueIfce:
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn try_rgb_for_sum_and_chroma<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
-    ) -> Option<RGB<T>> {
+    ) -> Option<Result<RGB<T>, RGB<T>>> {
         debug_assert!(chroma.is_valid() && sum.is_valid_sum());
         let (min_sum, max_sum) = self.sum_range_for_chroma(chroma)?;
         match sum {
             sum if sum < min_sum || sum > max_sum => None,
             sum => match chroma.into_prop() {
                 Prop::ZERO => None,
-                c_prop => {
-                    // TODO: Do we need this
-                    let (c_prop, sum) = self.trim_overs(sum, c_prop)?;
-                    let triplet = self.rgb_ordered_triplet(sum, c_prop)?;
-                    Some(RGB::<T>::from(triplet))
-                }
+                c_prop => self.try_rgb_for_sum_and_chroma_prop(sum, c_prop),
             },
         }
     }
@@ -1573,15 +1562,15 @@ impl HueIfce for Hue {
         }
     }
 
-    fn rgb_for_sum_and_chroma<T: LightLevel>(
+    fn try_rgb_for_sum_and_chroma<T: LightLevel>(
         &self,
         sum: UFDRNumber,
         chroma: Chroma,
-    ) -> Option<RGB<T>> {
+    ) -> Option<Result<RGB<T>, RGB<T>>> {
         match self {
-            Self::Primary(rgb_hue) => rgb_hue.rgb_for_sum_and_chroma(sum, chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.rgb_for_sum_and_chroma(sum, chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.rgb_for_sum_and_chroma(sum, chroma),
+            Self::Primary(rgb_hue) => rgb_hue.try_rgb_for_sum_and_chroma(sum, chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.try_rgb_for_sum_and_chroma(sum, chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.try_rgb_for_sum_and_chroma(sum, chroma),
         }
     }
 }

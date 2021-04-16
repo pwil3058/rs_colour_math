@@ -1103,33 +1103,43 @@ fn try_hcv_for_sum_and_chroma_prop() {
 }
 
 #[test]
-fn primary_rgb_for_sum_and_chroma() {
+fn primary_try_rgb_for_sum_and_chroma() {
     for hue in &Hue::PRIMARIES {
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ONE)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ONE)
             .is_none());
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ONE)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ONE)
             .is_none());
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ZERO)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ZERO)
             .is_none());
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
             .is_none());
         for prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
             for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
                 let chroma = Chroma::from((prop, *hue, sum));
-                if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
-                    // NB: expect rounding error due to divide by 3 in the maths
-                    assert_approx_eq!(rgb.sum(), sum, 0x0000000000005000);
-                    // NB: near the swapover point sum errors can cause a shift in Chroma variant
-                    if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
-                        assert_eq!(rgb.chroma_prop(), chroma.into_prop());
-                    } else {
-                        assert_eq!(rgb.chroma(), chroma);
+                if let Some(result) = hue.try_rgb_for_sum_and_chroma::<u64>(sum, chroma) {
+                    match result {
+                        Ok(rgb) => {
+                            assert_eq!(rgb.hue(), Some(*hue));
+                            assert_eq!(rgb.sum(), sum);
+                            assert_eq!(rgb.chroma(), chroma);
+                            assert_eq!(rgb, RGB::from(HCV::from(rgb)));
+                        }
+                        Err(rgb) => {
+                            assert_approx_eq!(rgb.hue().unwrap(), *hue);
+                            assert_eq!(rgb.sum(), sum);
+                            // NB: near the swap over point sum errors can cause a shift in Chroma variant
+                            if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                                assert_eq!(rgb.chroma_prop(), chroma.into_prop());
+                            } else {
+                                assert_eq!(rgb.chroma(), chroma);
+                            }
+                            assert_eq!(rgb, RGB::from(HCV::from(rgb)));
+                        }
                     }
-                    assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
                     let range = hue.sum_range_for_chroma(chroma).unwrap();
                     assert!(sum < range.0 || sum > range.1);
@@ -1140,34 +1150,46 @@ fn primary_rgb_for_sum_and_chroma() {
 }
 
 #[test]
-fn secondary_rgb_for_sum_and_chroma() {
+fn secondary_try_rgb_for_sum_and_chroma() {
     for hue in &Hue::SECONDARIES {
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ONE)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ONE)
             .is_none());
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ONE)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ONE)
             .is_none());
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ZERO)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ZERO)
             .is_none());
         assert!(hue
-            .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
+            .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
             .is_none());
         for prop in NON_ZERO_CHROMA_PROPS.iter().map(|item| Prop::from(*item)) {
             for sum in VALID_HUE_SUMS.iter().map(|item| UFDRNumber::from(*item)) {
                 let chroma = Chroma::from((prop, *hue, sum));
-                if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
-                    assert_approx_eq!(rgb.sum(), sum);
-                    if rgb.sum() == sum {
-                        // NB: sum was fiddled to make it compatible with chroma
-                        assert_approx_eq!(rgb.chroma(), chroma, Prop(0x100));
-                    } else {
-                        assert_approx_eq!(rgb.chroma_prop(), chroma.into_prop(), 0x100);
+                if let Some(result) = hue.try_rgb_for_sum_and_chroma::<u64>(sum, chroma) {
+                    match result {
+                        Ok(rgb) => {
+                            assert_eq!(rgb.hue(), Some(*hue));
+                            assert_eq!(rgb.sum(), sum);
+                            assert_eq!(rgb.chroma(), chroma);
+                            assert_eq!(rgb, RGB::from(HCV::from(rgb)));
+                        }
+                        Err(rgb) => {
+                            assert_approx_eq!(rgb.hue().unwrap(), *hue);
+                            assert_eq!(rgb.sum(), sum);
+                            // NB: near the swap over point sum errors can cause a shift in Chroma variant
+                            if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                                assert_eq!(rgb.chroma_prop(), chroma.into_prop());
+                            } else {
+                                assert_eq!(rgb.chroma(), chroma);
+                            }
+                            assert_eq!(rgb, RGB::from(HCV::from(rgb)));
+                        }
                     }
-                    assert_eq!(Hue::try_from(&rgb).unwrap(), *hue);
                 } else {
-                    assert!(!hue.sum_and_chroma_are_compatible(sum, chroma));
+                    let range = hue.sum_range_for_chroma(chroma).unwrap();
+                    assert!(sum < range.0 || sum > range.1);
                 }
             }
         }
@@ -1175,33 +1197,45 @@ fn secondary_rgb_for_sum_and_chroma() {
 }
 
 #[test]
-fn general_rgb_for_sum_and_chroma() {
+fn general_try_rgb_for_sum_and_chroma() {
     for sextant in Sextant::SEXTANTS.iter() {
         for second in SECOND_VALUES.iter().map(|a| Prop::from(*a)) {
             let sextant_hue = SextantHue(*sextant, second);
             let hue = Hue::Sextant(sextant_hue);
             assert!(hue
-                .rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ONE)
+                .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ONE)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ONE)
+                .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ONE)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ZERO)
+                .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::ZERO, Chroma::ZERO)
                 .is_none());
             assert!(hue
-                .rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
+                .try_rgb_for_sum_and_chroma::<u64>(UFDRNumber::THREE, Chroma::ZERO)
                 .is_none());
             for prop in NON_ZERO_CHROMA_PROPS.iter().map(|a| Prop::from(*a)) {
-                let chroma = Chroma::Neither(prop);
                 for sum in VALID_HUE_SUMS.iter().map(|a| UFDRNumber::from(*a)) {
-                    if let Some(rgb) = hue.rgb_for_sum_and_chroma::<u64>(sum, chroma) {
-                        assert_approx_eq!(rgb.sum(), sum, 0x100);
-                        assert_approx_eq!(Hue::try_from(&rgb).unwrap(), hue, Prop(0x100));
-                        match sum.cmp(&rgb.hue().unwrap().sum_for_max_chroma()) {
-                            Ordering::Less => assert_eq!(rgb.chroma(), Chroma::Shade(prop)),
-                            Ordering::Equal => assert_eq!(rgb.chroma(), Chroma::Neither(prop)),
-                            Ordering::Greater => assert_eq!(rgb.chroma(), Chroma::Tint(prop)),
+                    let chroma = Chroma::from((prop, hue, sum));
+                    if let Some(result) = hue.try_rgb_for_sum_and_chroma::<u64>(sum, chroma) {
+                        match result {
+                            Ok(rgb) => {
+                                assert_eq!(rgb.hue(), Some(hue));
+                                assert_eq!(rgb.sum(), sum);
+                                assert_eq!(rgb.chroma(), chroma);
+                                assert_eq!(rgb, RGB::from(HCV::from(rgb)));
+                            }
+                            Err(rgb) => {
+                                assert_approx_eq!(rgb.hue().unwrap(), hue, Prop(0x100000));
+                                assert_eq!(rgb.sum(), sum);
+                                // NB: near the swap over point sum errors can cause a shift in Chroma variant
+                                if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                                    assert_eq!(rgb.chroma_prop(), chroma.into_prop());
+                                } else {
+                                    assert_eq!(rgb.chroma(), chroma);
+                                }
+                                assert_eq!(rgb, RGB::from(HCV::from(rgb)));
+                            }
                         }
                     } else {
                         let range = hue.sum_range_for_chroma(chroma).unwrap();
