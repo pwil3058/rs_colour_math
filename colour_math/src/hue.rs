@@ -177,28 +177,18 @@ pub(crate) trait HueIfce:
             }
         }
     }
-    //
-    // fn darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
-    //     debug_assert!(chroma.is_valid());
-    //     let sum = self.min_sum_for_chroma(chroma)?;
-    //     debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
-    //     Some(HCV {
-    //         hue: Some((*self).into()),
-    //         chroma,
-    //         sum,
-    //     })
-    // }
-    //
-    // fn lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<HCV> {
-    //     debug_assert!(chroma.is_valid());
-    //     let sum = self.max_sum_for_chroma(chroma)?;
-    //     debug_assert!(self.sum_and_chroma_are_compatible(sum, chroma));
-    //     Some(HCV {
-    //         hue: Some((*self).into()),
-    //         chroma,
-    //         sum,
-    //     })
-    // }
+
+    fn darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
+        debug_assert!(chroma.is_valid());
+        let sum = self.min_sum_for_chroma(chroma)?;
+        self.try_hcv_for_sum_and_chroma_prop(sum, chroma.into_prop())
+    }
+
+    fn lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
+        debug_assert!(chroma.is_valid());
+        let sum = self.max_sum_for_chroma(chroma)?;
+        self.try_hcv_for_sum_and_chroma_prop(sum, chroma.into_prop())
+    }
 
     fn darkest_rgb_for_chroma<T: LightLevel>(
         &self,
@@ -1537,6 +1527,22 @@ impl HueIfce for Hue {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
             Self::Secondary(cmy_hue) => cmy_hue.max_chroma_rgb_for_sum(sum),
             Self::Sextant(sextant_hue) => sextant_hue.max_chroma_rgb_for_sum(sum),
+        }
+    }
+
+    fn darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.darkest_hcv_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.darkest_hcv_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.darkest_hcv_for_chroma(chroma),
+        }
+    }
+
+    fn lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.lightest_hcv_for_chroma(chroma),
+            Self::Secondary(cmy_hue) => cmy_hue.lightest_hcv_for_chroma(chroma),
+            Self::Sextant(sextant_hue) => sextant_hue.lightest_hcv_for_chroma(chroma),
         }
     }
 
