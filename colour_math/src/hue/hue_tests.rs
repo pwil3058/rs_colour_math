@@ -130,14 +130,14 @@ fn hue_approx_eq() {
 
     assert!(
         !Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
-            &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffffffff))),
+            &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffff0000))),
             None
         )
     );
     assert!(
         Hue::Sextant(SextantHue(RedYellow, Prop(0x1000000000))).approx_eq(
-            &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffffffff))),
-            Some(Prop(0x010000000))
+            &Hue::Sextant(SextantHue(RedYellow, Prop(0xfffff0000))),
+            Some(Prop(0x010000))
         )
     );
 }

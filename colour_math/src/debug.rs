@@ -44,12 +44,7 @@ macro_rules! impl_prop_diff_for_unsigned {
     ($unsigned:ty) => {
         impl PropDiff for $unsigned {
             fn prop_diff(&self, other: &Self) -> Option<Prop> {
-                match *self.max(other) as u128 {
-                    0 => Some(Prop::ZERO),
-                    denom => Some(Prop(
-                        (self.abs_diff(other) as u128 * u64::MAX as u128 / denom) as u64,
-                    )),
-                }
+                Some(self.abs_diff(other).into())
             }
         }
     };
@@ -59,19 +54,22 @@ impl_prop_diff_for_unsigned!(u8);
 impl_prop_diff_for_unsigned!(u16);
 impl_prop_diff_for_unsigned!(u32);
 impl_prop_diff_for_unsigned!(u64);
-impl_prop_diff_for_unsigned!(u128);
 
 macro_rules! impl_prop_diff_for_float {
     ($float:ty) => {
         impl PropDiff for $float {
             fn prop_diff(&self, other: &Self) -> Option<Prop> {
-                let denom = self.max(*other);
-                if denom == 0.0 {
-                    Some(Prop::ZERO)
+                if *self >= 0.0 && *self <= 1.0 && *other >= 0.0 && *other < 1.0 {
+                    Some(self.abs_diff(other).into())
                 } else {
-                    Some(Prop(
-                        (self.abs_diff(other) * u64::MAX as $float / denom) as u64,
-                    ))
+                    let denom = self.max(*other);
+                    if denom == 0.0 {
+                        Some(Prop::ZERO)
+                    } else {
+                        Some(Prop(
+                            (self.abs_diff(other) * u64::MAX as $float / denom) as u64,
+                        ))
+                    }
                 }
             }
         }
@@ -105,7 +103,6 @@ impl ApproxEq for u8 {}
 impl ApproxEq for u16 {}
 impl ApproxEq for u32 {}
 impl ApproxEq for u64 {}
-impl ApproxEq for u128 {}
 
 impl ApproxEq for f32 {}
 impl ApproxEq for f64 {}
