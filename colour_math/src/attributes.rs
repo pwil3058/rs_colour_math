@@ -10,7 +10,7 @@ use std::{
 use crate::{impl_prop_to_from_float, impl_to_from_number};
 
 use crate::{
-    debug::{ApproxEq, PropDiff},
+    debug::{AbsDiff, ApproxEq, PropDiff},
     fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
     hue::{Hue, HueBasics},
 };
@@ -243,29 +243,27 @@ impl Ord for Greyness {
     }
 }
 
-#[cfg(test)]
-impl Greyness {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
+impl PropDiff for Greyness {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
         use Greyness::*;
         match self {
-            Shade(proportion) => match other {
-                Shade(other_proportion) | Neither(other_proportion) => {
-                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
-                }
-                Tint(_) => false,
+            Shade(my_prop) => match other {
+                Shade(other_prop) => my_prop.prop_diff(other_prop),
+                _ => None,
             },
-            Tint(proportion) => match other {
-                Shade(_) => false,
-                Tint(other_proportion) | Neither(other_proportion) => {
-                    proportion.approx_eq(other_proportion, acceptable_rounding_error)
-                }
+            Tint(my_prop) => match other {
+                Tint(other_prop) => my_prop.prop_diff(other_prop),
+                _ => None,
             },
-            Neither(proportion) => {
-                proportion.approx_eq(&other.into_prop(), acceptable_rounding_error)
-            }
+            Neither(my_prop) => match other {
+                Neither(other_prop) => my_prop.prop_diff(other_prop),
+                _ => None,
+            },
         }
     }
 }
+
+impl ApproxEq for Greyness {}
 
 impl From<Chroma> for Greyness {
     fn from(chroma: Chroma) -> Self {
@@ -321,14 +319,13 @@ impl Warmth {
     }
 }
 
-#[cfg(test)]
-impl Warmth {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        (*self)
-            .into_prop()
-            .approx_eq(&(*other).into_prop(), acceptable_rounding_error)
+impl PropDiff for Warmth {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
+        Some(self.abs_diff(other).into_prop())
     }
 }
+
+impl ApproxEq for Warmth {}
 
 impl_prop_to_from_float!(f32, Warmth);
 impl_prop_to_from_float!(f64, Warmth);
@@ -368,14 +365,13 @@ impl Value {
     }
 }
 
-#[cfg(test)]
-impl Value {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        (*self)
-            .into_prop()
-            .approx_eq(&(*other).into_prop(), acceptable_rounding_error)
+impl PropDiff for Value {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
+        Some(self.abs_diff(other).into_prop())
     }
 }
+
+impl ApproxEq for Value {}
 
 impl Div<i32> for Value {
     type Output = Value;

@@ -7,7 +7,7 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use crate::debug::PropDiff;
+use crate::debug::{AbsDiff, ApproxEq, PropDiff};
 
 macro_rules! impl_to_from_float {
     ($float:ty, $core:ty, $number:ty) => {
@@ -258,14 +258,6 @@ impl UFDRNumber {
         debug_assert!(self.is_proportion());
         Prop(self.0 as u64)
     }
-
-    pub fn abs_diff(&self, other: &Self) -> UFDRNumber {
-        match self.cmp(other) {
-            Ordering::Greater => UFDRNumber(self.0 - other.0),
-            Ordering::Less => UFDRNumber(other.0 - self.0),
-            Ordering::Equal => UFDRNumber(0),
-        }
-    }
 }
 
 impl Debug for UFDRNumber {
@@ -282,26 +274,24 @@ impl fmt::UpperHex for UFDRNumber {
     }
 }
 
-#[cfg(test)]
-impl UFDRNumber {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        let abs_diff = self.abs_diff(other);
-        let scaled_diff = if self >= other {
-            if self.0 > 0 {
-                (u128::MAX / self.0) * abs_diff.0 / u64::MAX as u128
+impl AbsDiff for UFDRNumber {}
+
+impl PropDiff for UFDRNumber {
+    fn prop_diff(&self, other: &Self) -> Option<Prop> {
+        if self.is_proportion() && other.is_proportion() {
+            Some(self.abs_diff(other).into())
+        } else {
+            let denom = self.max(other);
+            if *denom == UFDRNumber::ZERO {
+                Some(Prop::ZERO)
             } else {
-                abs_diff.0
+                Some(Prop::from(self.abs_diff(other) / *denom))
             }
-        } else {
-            (u128::MAX / other.0) * abs_diff.0 / u64::MAX as u128
-        };
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            scaled_diff < acceptable_rounding_error as u128
-        } else {
-            scaled_diff < u64::MAX as u128 / 1_000_000_000_000_000
         }
     }
 }
+
+impl ApproxEq for UFDRNumber {}
 
 impl From<FDRNumber> for UFDRNumber {
     fn from(signed: FDRNumber) -> Self {
@@ -445,42 +435,17 @@ impl Prop {
     //pub(crate) const ALMOST_ZERO: Self = Self(1);
     pub(crate) const ALMOST_ONE: Self = Self(u64::MAX - 1);
     pub(crate) const HALF: Self = Self(u64::MAX / 2);
-
-    pub fn abs_diff(&self, other: &Self) -> Prop {
-        match self.cmp(other) {
-            Ordering::Greater => Prop(self.0 - other.0),
-            Ordering::Less => Prop(other.0 - self.0),
-            Ordering::Equal => Prop(0),
-        }
-    }
 }
+
+impl AbsDiff for Prop {}
 
 impl PropDiff for Prop {
     fn prop_diff(&self, other: &Self) -> Option<Prop> {
-        self.0.prop_diff(&other.0)
+        Some(self.abs_diff(other))
     }
 }
 
-#[cfg(test)]
-impl Prop {
-    pub fn approx_eq(&self, other: &Self, acceptable_rounding_error: Option<u64>) -> bool {
-        let abs_diff = self.abs_diff(other);
-        let scaled_diff = if self >= other {
-            if self.0 > 0 {
-                ((u64::MAX / self.0) as u128 * abs_diff.0 as u128 / u64::MAX as u128) as u64
-            } else {
-                abs_diff.0
-            }
-        } else {
-            ((u64::MAX / other.0) as u128 * abs_diff.0 as u128 / u64::MAX as u128) as u64
-        };
-        if let Some(acceptable_rounding_error) = acceptable_rounding_error {
-            scaled_diff < acceptable_rounding_error as u64
-        } else {
-            scaled_diff < u64::MAX / 1_000_000_000_000_000
-        }
-    }
-}
+impl ApproxEq for Prop {}
 
 impl Debug for Prop {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {

@@ -3,7 +3,10 @@ use std::convert::From;
 
 use num_traits_plus::assert_approx_eq;
 
-use crate::{attributes::Warmth, hcv::*, ColourBasics, HueConstants, Prop, RGBConstants, RGB};
+use crate::{
+    attributes::Warmth, debug::ApproxEq, hcv::*, ColourBasics, HueConstants, Prop, RGBConstants,
+    RGB,
+};
 
 #[test]
 fn default_hcv_is_black() {
@@ -145,7 +148,7 @@ fn warmth() {
     assert_approx_eq!(
         RGB::<u8>::from([Prop::ONE, Prop::ONE / 2, Prop::ONE / 2]).warmth(),
         (Prop::ONE * 5 / 12).into(),
-        0x100000000000000
+        Prop(0x100000000000000)
     )
 }
 

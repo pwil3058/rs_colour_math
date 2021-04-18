@@ -640,7 +640,7 @@ fn _other_max_chroma_rgbs() {
                 match Hue::try_from(&rgb).unwrap() {
                     Hue::Sextant(SextantHue(sextant_out, second_out)) => {
                         assert_eq!(sextant_hue.0, sextant_out);
-                        assert_approx_eq!(sextant_hue.1, second_out, 0x153);
+                        assert_approx_eq!(sextant_hue.1, second_out, Prop(0x153));
                     }
                     _ => panic!("it's gone pure"),
                 }
@@ -1204,7 +1204,7 @@ fn primary_try_rgb_for_sum_and_chroma() {
                             assert_approx_eq!(rgb.hue().unwrap(), *hue);
                             assert_eq!(rgb.sum(), sum);
                             // NB: near the swap over point sum errors can cause a shift in Chroma variant
-                            if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                            if sum.approx_eq(&hue.sum_for_max_chroma(), Some(Prop(0x100))) {
                                 assert_eq!(rgb.chroma_prop(), chroma.into_prop());
                             } else {
                                 assert_eq!(rgb.chroma(), chroma);
@@ -1251,7 +1251,7 @@ fn secondary_try_rgb_for_sum_and_chroma() {
                             assert_approx_eq!(rgb.hue().unwrap(), *hue);
                             assert_eq!(rgb.sum(), sum);
                             // NB: near the swap over point sum errors can cause a shift in Chroma variant
-                            if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                            if sum.approx_eq(&hue.sum_for_max_chroma(), Some(Prop(0x100))) {
                                 assert_eq!(rgb.chroma_prop(), chroma.into_prop());
                             } else {
                                 assert_eq!(rgb.chroma(), chroma);
@@ -1301,7 +1301,7 @@ fn general_try_rgb_for_sum_and_chroma() {
                                 assert_approx_eq!(rgb.hue().unwrap(), hue, Prop(0x100000));
                                 assert_eq!(rgb.sum(), sum);
                                 // NB: near the swap over point sum errors can cause a shift in Chroma variant
-                                if sum.approx_eq(&hue.sum_for_max_chroma(), Some(0x100)) {
+                                if sum.approx_eq(&hue.sum_for_max_chroma(), Some(Prop(0x100))) {
                                     assert_eq!(rgb.chroma_prop(), chroma.into_prop());
                                 } else {
                                     assert_eq!(rgb.chroma(), chroma);
