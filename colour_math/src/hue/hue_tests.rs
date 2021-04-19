@@ -529,16 +529,16 @@ fn max_chroma_and_sum_ranges() {
 
 #[test]
 fn primary_max_chroma_rgbs() {
-    for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<f64>::PRIMARIES.iter()) {
+    for (hue, expected_rgb) in Hue::PRIMARIES.iter().zip(RGB::<u64>::PRIMARIES.iter()) {
         assert_eq!(
             hue.max_chroma_rgb_for_sum(UFDRNumber::ONE).unwrap(),
             *expected_rgb
         );
         assert!(hue
-            .max_chroma_rgb_for_sum::<f64>(UFDRNumber::ZERO)
+            .max_chroma_rgb_for_sum::<u64>(UFDRNumber::ZERO)
             .is_none());
         assert!(hue
-            .max_chroma_rgb_for_sum::<f64>(UFDRNumber::THREE)
+            .max_chroma_rgb_for_sum::<u64>(UFDRNumber::THREE)
             .is_none());
         for sum in [
             UFDRNumber::from(0.0001_f64),
@@ -551,10 +551,24 @@ fn primary_max_chroma_rgbs() {
         {
             let mut array = [Prop::ZERO, Prop::ZERO, Prop::ZERO];
             array[hue.indices().0 as usize] = (*sum).into();
-            let expected: RGB<f64> = array.into();
-            assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
+            let expected: RGB<u64> = array.into();
+            match hue.try_max_chroma_rgb_for_sum::<u64>(*sum).unwrap() {
+                Ok(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_eq!(rgb, expected);
+                    assert_eq!(rgb.hue().unwrap(), *hue);
+                }
+                Err(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_eq!(rgb, expected);
+                    assert_eq!(rgb.hue().unwrap(), *hue);
+                }
+            }
         }
         for sum in [
+            UFDRNumber::from(1.0001_f64),
+            UFDRNumber::from(1.5_f64),
+            UFDRNumber::TWO,
             UFDRNumber::from(2.0001_f64),
             UFDRNumber::from(2.25_f64),
             UFDRNumber::from(2.5_f64),
@@ -566,8 +580,19 @@ fn primary_max_chroma_rgbs() {
             let mut array = [Prop::ONE, Prop::ONE, Prop::ONE];
             array[hue.indices().1 as usize] = ((*sum - UFDRNumber::ONE) / 2).into();
             array[hue.indices().2 as usize] = ((*sum - UFDRNumber::ONE) / 2).into();
-            let expected: RGB<f64> = array.into();
-            assert_eq!(hue.max_chroma_rgb_for_sum::<f64>(*sum).unwrap(), expected);
+            let expected: RGB<u64> = array.into();
+            match hue.try_max_chroma_rgb_for_sum::<u64>(*sum).unwrap() {
+                Ok(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_eq!(rgb, expected);
+                    assert_eq!(rgb.hue().unwrap(), *hue);
+                }
+                Err(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_approx_eq!(rgb, expected, Prop(0x10000));
+                    assert_approx_eq!(rgb.hue().unwrap(), *hue, Prop(0x10000));
+                }
+            }
         }
     }
 }
@@ -600,7 +625,18 @@ fn secondary_max_chroma_rgbs() {
             array[hue.indices().0 as usize] = (*sum / 2).into();
             array[hue.indices().1 as usize] = (*sum / 2).into();
             let expected: RGB<u64> = array.into();
-            assert_eq!(hue.max_chroma_rgb_for_sum::<u64>(*sum).unwrap(), expected);
+            match hue.try_max_chroma_rgb_for_sum::<u64>(*sum).unwrap() {
+                Ok(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_eq!(rgb, expected);
+                    assert_eq!(rgb.hue().unwrap(), *hue);
+                }
+                Err(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_approx_eq!(rgb, expected, Prop(0x100000));
+                    assert_approx_eq!(rgb.hue().unwrap(), *hue, Prop(0x10000));
+                }
+            }
         }
         for sum in [
             UFDRNumber::from(2.0001_f64),
@@ -614,35 +650,48 @@ fn secondary_max_chroma_rgbs() {
             let mut array = [Prop::ONE, Prop::ONE, Prop::ONE];
             array[hue.indices().2 as usize] = (*sum - UFDRNumber::TWO).into();
             let expected: RGB<u64> = array.into();
-            assert_approx_eq!(hue.max_chroma_rgb_for_sum::<u64>(*sum).unwrap(), expected);
+            match hue.try_max_chroma_rgb_for_sum::<u64>(*sum).unwrap() {
+                Ok(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_eq!(rgb, expected);
+                    assert_eq!(rgb.hue().unwrap(), *hue);
+                }
+                Err(rgb) => {
+                    assert_eq!(rgb.sum(), *sum);
+                    assert_eq!(rgb, expected);
+                    assert_eq!(rgb.hue().unwrap(), *hue);
+                }
+            }
         }
     }
 }
 
-//#[test]
-fn _other_max_chroma_rgbs() {
+#[test]
+fn other_max_chroma_rgbs() {
     for sextant in Sextant::SEXTANTS.iter() {
         for item in SECOND_VALUES.iter() {
             let second = Prop::from(*item);
             let sextant_hue = SextantHue(*sextant, second);
             let hue = Hue::Sextant(sextant_hue);
             assert!(hue
-                .max_chroma_rgb_for_sum::<f64>(UFDRNumber::ZERO)
+                .max_chroma_rgb_for_sum::<u64>(UFDRNumber::ZERO)
                 .is_none());
             assert!(hue
-                .max_chroma_rgb_for_sum::<f64>(UFDRNumber::THREE)
+                .max_chroma_rgb_for_sum::<u64>(UFDRNumber::THREE)
                 .is_none());
             for item in VALID_HUE_SUMS.iter() {
                 let sum = UFDRNumber::from(*item);
-                let rgb = hue.max_chroma_rgb_for_sum::<u64>(sum).unwrap();
-                assert_approx_eq!(sum, rgb.sum());
-                assert_approx_eq!(rgb.chroma(), hue.max_chroma_for_sum(sum).unwrap());
-                match Hue::try_from(&rgb).unwrap() {
-                    Hue::Sextant(SextantHue(sextant_out, second_out)) => {
-                        assert_eq!(sextant_hue.0, sextant_out);
-                        assert_approx_eq!(sextant_hue.1, second_out, Prop(0x153));
+                match hue.try_max_chroma_rgb_for_sum::<u64>(sum).unwrap() {
+                    Ok(rgb) => {
+                        assert_eq!(sum, rgb.sum());
+                        assert_eq!(rgb.chroma(), hue.max_chroma_for_sum(sum).unwrap());
+                        assert_eq!(rgb.hue().unwrap(), hue);
                     }
-                    _ => panic!("it's gone pure"),
+                    Err(rgb) => {
+                        assert_eq!(sum, rgb.sum());
+                        assert_eq!(rgb.chroma(), hue.max_chroma_for_sum(sum).unwrap());
+                        assert_approx_eq!(rgb.hue().unwrap(), hue, Prop(0x100000));
+                    }
                 }
             }
         }

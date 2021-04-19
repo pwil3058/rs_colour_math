@@ -165,16 +165,48 @@ pub(crate) trait HueIfce:
         }
     }
 
-    fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
+    fn try_max_chroma_rgb_for_sum<L: LightLevel>(
+        &self,
+        sum: UFDRNumber,
+    ) -> Option<Result<RGB<L>, RGB<L>>> {
         debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
         match sum {
             UFDRNumber::ZERO | UFDRNumber::THREE => None,
             sum => {
                 let max_c_prop = self.max_chroma_prop_for_sum(sum)?;
-                let (c_prop, sum) = self.adjusted_favouring_sum(sum, max_c_prop)?;
-                let triplet = self.rgb_ordered_triplet(sum, c_prop)?;
-                Some(RGB::<T>::from(triplet))
+                match self.try_rgb_ordered_triplet(sum, max_c_prop)? {
+                    Ok(triplet) => Some(Ok(RGB::<L>::from(triplet))),
+                    Err(triplet) => Some(Err(RGB::<L>::from(triplet))),
+                }
             }
+        }
+    }
+
+    fn max_chroma_rgb_for_sum<L: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<L>> {
+        match self.try_max_chroma_rgb_for_sum::<L>(sum)? {
+            Ok(rgb) => Some(rgb),
+            Err(rgb) => Some(rgb),
+        }
+    }
+
+    fn try_max_chroma_hcv_for_sum(&self, sum: UFDRNumber) -> Option<Result<HCV, HCV>> {
+        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
+        match sum {
+            UFDRNumber::ZERO | UFDRNumber::THREE => None,
+            sum => {
+                let max_c_prop = self.max_chroma_prop_for_sum(sum)?;
+                match self.try_rgb_ordered_triplet(sum, max_c_prop)? {
+                    Ok(triplet) => Some(Ok(HCV::from(triplet))),
+                    Err(triplet) => Some(Err(HCV::from(triplet))),
+                }
+            }
+        }
+    }
+
+    fn max_chroma_hcv_for_sum(&self, sum: UFDRNumber) -> Option<HCV> {
+        match self.try_max_chroma_hcv_for_sum(sum)? {
+            Ok(hcv) => Some(hcv),
+            Err(hcv) => Some(hcv),
         }
     }
 
@@ -888,7 +920,11 @@ impl HueBasics for SextantHue {
             match sum.cmp(&(UFDRNumber::ONE + self.1)) {
                 Ordering::Equal => Some(Chroma::ONE),
                 Ordering::Less => {
-                    let temp = sum / (UFDRNumber::ONE + self.1);
+                    let mut temp = sum / (UFDRNumber::ONE + self.1);
+                    // NB: check for and fix rounding error
+                    while sum < (UFDRNumber::ONE + self.1) * temp {
+                        temp = temp - UFDRNumber(1);
+                    }
                     Some(Chroma::Shade(temp.into_prop()))
                 }
                 Ordering::Greater => {
@@ -1264,7 +1300,7 @@ impl From<Angle> for Hue {
             _ => {
                 fn f(angle: Angle) -> Prop {
                     (angle.sin() / (Angle::GREEN - angle).sin()).into()
-                };
+                }
                 if angle >= Angle::RED {
                     if angle < Angle::YELLOW {
                         Hue::Sextant(SextantHue(Sextant::RedYellow, f(angle)))
