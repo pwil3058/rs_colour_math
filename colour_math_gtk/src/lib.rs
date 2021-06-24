@@ -173,7 +173,7 @@ pub mod attributes {
             let vbox = gtk::Box::new(gtk::Orientation::Vertical, 1);
             let mut cads = vec![];
             let hue_cad: Rc<dyn DynColourAttributeDisplay> = HueCAD::new();
-            vbox.pack_start(&hue_cad.pwo(), true, true, 0);
+            vbox.pack_start(hue_cad.pwo(), true, true, 0);
             cads.push(hue_cad);
             for scalar_attribute in self.attributes.iter() {
                 let cad: Rc<dyn DynColourAttributeDisplay> = match scalar_attribute {
@@ -182,7 +182,7 @@ pub mod attributes {
                     ScalarAttribute::Warmth => WarmthCAD::new(),
                     ScalarAttribute::Greyness => GreynessCAD::new(),
                 };
-                vbox.pack_start(&cad.pwo(), true, true, 0);
+                vbox.pack_start(cad.pwo(), true, true, 0);
                 cads.push(cad);
             }
             Rc::new(ColourAttributeDisplayStack { vbox, cads })

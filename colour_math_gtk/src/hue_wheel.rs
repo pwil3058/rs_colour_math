@@ -189,7 +189,7 @@ impl GtkHueWheelBuilder {
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         hbox.pack_start(&gtk::Label::new(Some("Attribute: ")), false, false, 0);
-        hbox.pack_start(&gtk_hue_wheel.attribute_selector.pwo(), true, true, 0);
+        hbox.pack_start(gtk_hue_wheel.attribute_selector.pwo(), true, true, 0);
 
         gtk_hue_wheel.vbox.pack_start(&hbox, false, false, 0);
         gtk_hue_wheel

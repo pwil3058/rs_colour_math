@@ -117,13 +117,13 @@ impl ColourEditorBuilder {
 
         colour_editor
             .vbox
-            .pack_start(&colour_editor.cads.pwo(), false, false, 0);
+            .pack_start(colour_editor.cads.pwo(), false, false, 0);
         colour_editor
             .vbox
-            .pack_start(&colour_editor.rgb_entry.pwo(), false, false, 0);
+            .pack_start(colour_editor.rgb_entry.pwo(), false, false, 0);
         colour_editor
             .vbox
-            .pack_start(&colour_editor.colour_manipulator.pwo(), true, true, 0);
+            .pack_start(colour_editor.colour_manipulator.pwo(), true, true, 0);
 
         colour_editor.vbox.show_all();
 

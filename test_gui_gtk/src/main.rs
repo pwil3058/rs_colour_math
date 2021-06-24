@@ -91,7 +91,7 @@ fn main() {
         .build();
     cads.set_colour(Some(&RGB::from([0.1, 0.4, 0.7])));
     cads.set_target_colour(Some(&RGB::from([0.7, 0.4, 0.7])));
-    vbox.pack_start(&cads.pwo(), true, true, 0);
+    vbox.pack_start(cads.pwo(), true, true, 0);
     //
     // let rgb_hex_entry = RGBHexEntryBuilder::<u16>::new()
     //     .initial_colour(&RGB::from([0.1, 0.4, 0.7]))
@@ -112,7 +112,7 @@ fn main() {
         .attributes(&attributes)
         .menu_item_specs(&[("add", ("Add", None, Some("Add something")).into(), 0)])
         .build();
-    vbox.pack_start(&gtk_hue_wheel.pwo(), true, true, 0);
+    vbox.pack_start(gtk_hue_wheel.pwo(), true, true, 0);
     gtk_hue_wheel.add_item(ColouredShape::new(
         &HCV::RED,
         "Red",
@@ -137,7 +137,7 @@ fn main() {
         .build::<u16>();
     let cads_c = Rc::clone(&cads);
     colour_editor.connect_changed(move |c| cads_c.set_colour(Some(c)));
-    vbox.pack_start(&colour_editor.pwo(), true, true, 0);
+    vbox.pack_start(colour_editor.pwo(), true, true, 0);
 
     vbox.show_all();
     win.add(&vbox);
