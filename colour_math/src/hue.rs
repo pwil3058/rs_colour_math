@@ -79,13 +79,13 @@ pub(crate) trait SumChromaCompatibility: HueBasics {
 }
 
 pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
-    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool;
+    fn has_valid_value_order(triplet: &[Prop; 3]) -> bool;
     fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool;
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3];
 
     fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
         let triplet = self.ordered_triplet(sum, c_prop)?;
-        debug_assert!(self.has_valid_value_order(&triplet));
+        debug_assert!(Self::has_valid_value_order(&triplet));
         Some(self.triplet_to_rgb_order(&triplet))
     }
 
@@ -96,7 +96,7 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
     ) -> Option<Result<[Prop; 3], [Prop; 3]>> {
         match self.try_ordered_triplet(sum, c_prop)? {
             Ok(triplet) => {
-                debug_assert!(self.has_valid_value_order(&triplet));
+                debug_assert!(Self::has_valid_value_order(&triplet));
                 Some(Ok(self.triplet_to_rgb_order(&triplet)))
             }
             Err(triplet) => Some(Err(self.triplet_to_rgb_order(&triplet))),
@@ -114,7 +114,7 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
                     debug_assert_eq!(first + second + third, sum);
                     debug_assert_eq!(first - third, c_prop.into());
                     let triplet = [first.to_prop(), second.to_prop(), third.to_prop()];
-                    debug_assert!(self.has_valid_value_order(&triplet));
+                    debug_assert!(Self::has_valid_value_order(&triplet));
                     debug_assert_eq!(
                         Hue::try_from(self.triplet_to_rgb_order(&triplet)).unwrap(),
                         (*self).into()
@@ -135,7 +135,7 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
     ) -> Option<Result<[Prop; 3], [Prop; 3]>>;
 
     fn ordered_triplet_to_hcv(&self, triplet: &[Prop; 3]) -> HCV {
-        debug_assert!(self.has_valid_value_order(triplet));
+        debug_assert!(Self::has_valid_value_order(triplet));
         let sum = triplet[0] + triplet[1] + triplet[2];
         let c_prop = triplet[0] - triplet[2];
         HCV {
@@ -460,7 +460,7 @@ impl HueBasics for RGBHue {
 }
 
 impl OrderedTriplets for RGBHue {
-    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(triplet: &[Prop; 3]) -> bool {
         triplet[0] > triplet[1] && triplet[1] == triplet[2]
     }
 
@@ -650,7 +650,7 @@ impl HueBasics for CMYHue {
 }
 
 impl OrderedTriplets for CMYHue {
-    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(triplet: &[Prop; 3]) -> bool {
         triplet[0] == triplet[1] && triplet[1] > triplet[2]
     }
 
@@ -942,7 +942,7 @@ impl HueBasics for SextantHue {
 }
 
 impl OrderedTriplets for SextantHue {
-    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
+    fn has_valid_value_order(triplet: &[Prop; 3]) -> bool {
         triplet[0] > triplet[1] && triplet[1] > triplet[2]
     }
 
@@ -959,7 +959,7 @@ impl OrderedTriplets for SextantHue {
     }
 
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
-        debug_assert!(self.has_valid_value_order(&triplet));
+        debug_assert!(Self::has_valid_value_order(&triplet));
         use Sextant::*;
         match self.0 {
             RedMagenta => [triplet[0], triplet[2], triplet[1]],
@@ -1422,11 +1422,11 @@ impl SumChromaCompatibility for Hue {
 }
 
 impl OrderedTriplets for Hue {
-    fn has_valid_value_order(&self, triplet: &[Prop; 3]) -> bool {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.has_valid_value_order(triplet),
-            Self::Secondary(cmy_hue) => cmy_hue.has_valid_value_order(triplet),
-            Self::Sextant(sextant_hue) => sextant_hue.has_valid_value_order(triplet),
+    fn has_valid_value_order(triplet: &[Prop; 3]) -> bool {
+        match triplet[0].cmp(&triplet[1]) {
+            Ordering::Equal => triplet[1] > triplet[2],
+            Ordering::Less => false,
+            Ordering::Greater => triplet[1] >= triplet[2],
         }
     }
 
