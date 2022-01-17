@@ -128,7 +128,7 @@ fn main() {
     gtk_hue_wheel.add_item(ColouredShape::new(
         &HCV::new_grey(Value::ONE / 2),
         "Grey",
-        "Midle Grey",
+        "Middle Grey",
         Shape::Circle,
     ));
 
