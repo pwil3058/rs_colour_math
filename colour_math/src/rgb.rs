@@ -338,7 +338,7 @@ pub enum RGBError {
 impl std::fmt::Display for RGBError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RGBError::MalformedText(string) => write!(f, "Malformed text: {}", string),
+            RGBError::MalformedText(string) => write!(f, "Malformed text: {string}"),
         }
     }
 }
@@ -347,7 +347,7 @@ impl std::error::Error for RGBError {}
 
 impl From<std::num::ParseIntError> for RGBError {
     fn from(error: std::num::ParseIntError) -> Self {
-        RGBError::MalformedText(format!("{}", error))
+        RGBError::MalformedText(format!("{error}"))
     }
 }
 
@@ -379,9 +379,9 @@ impl FromStr for RGB<u16> {
             let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 16)?;
             Ok([red, green, blue].into())
         } else if let Some(captures) = RGB16_BASE_10_RE.captures(string) {
-            let red = u16::from_str_radix(captures.name("red").unwrap().as_str(), 10)?;
-            let green = u16::from_str_radix(captures.name("green").unwrap().as_str(), 10)?;
-            let blue = u16::from_str_radix(captures.name("blue").unwrap().as_str(), 10)?;
+            let red = captures.name("red").unwrap().as_str().parse::<u16>()?;
+            let green = captures.name("green").unwrap().as_str().parse::<u16>()?;
+            let blue = captures.name("blue").unwrap().as_str().parse::<u16>()?;
             Ok([red, green, blue].into())
         } else {
             Err(RGBError::MalformedText(string.to_string()))
