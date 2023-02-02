@@ -20,7 +20,7 @@ const DEFAULT_CONFIG_DIR_PATH: &str = "~/.config/test_gui_gtk";
 const DCDP_OVERRIDE_ENVAR: &str = "COLOUR_MATH_NG_TEST_GUI_GTK_CONFIG_DIR";
 
 fn abs_default_config_dir_path() -> PathBuf {
-    expand_home_dir_or_mine(&Path::new(DEFAULT_CONFIG_DIR_PATH))
+    expand_home_dir_or_mine(Path::new(DEFAULT_CONFIG_DIR_PATH))
 }
 
 pub fn config_dir_path() -> PathBuf {
@@ -29,7 +29,7 @@ pub fn config_dir_path() -> PathBuf {
             if dir_path.is_empty() {
                 abs_default_config_dir_path()
             } else if dir_path.starts_with('~') {
-                expand_home_dir_or_mine(&Path::new(&dir_path))
+                expand_home_dir_or_mine(Path::new(&dir_path))
             } else {
                 dir_path.into()
             }
@@ -57,7 +57,7 @@ use colour_math_gtk::{
 
 fn main() {
     gtk::init().expect("nowhere to go if Gtk++ initialization fails");
-    recollections::init(&recollection_file_path());
+    recollections::init(recollection_file_path());
     let win = gtk::Window::new(gtk::WindowType::Toplevel);
     win.set_geometry_from_recollections("main_window", (600, 400));
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -68,7 +68,7 @@ fn main() {
         let win_c = win.clone();
         btn.connect_clicked(move |_| {
             if let Err(err) = sample::take_screen_sample() {
-                let msg = format!("Failure: {:?}", err);
+                let msg = format!("Failure: {err:?}");
                 let dialog = MessageDialogBuilder::new()
                     .parent(&win_c)
                     .text(&msg)
