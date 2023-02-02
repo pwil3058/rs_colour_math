@@ -42,7 +42,7 @@ impl HCV {
                     Ok(Self {
                         hue: None,
                         c_prop: Prop::ZERO,
-                        sum: sum,
+                        sum,
                     })
                 }
             }
@@ -75,17 +75,9 @@ impl HCV {
 
     pub(crate) fn is_valid(&self) -> bool {
         if let Some(hue) = self.hue {
-            if hue.sum_and_chroma_prop_are_compatible(self.sum, self.c_prop) {
-                true
-            } else {
-                false
-            }
+            hue.sum_and_chroma_prop_are_compatible(self.sum, self.c_prop)
         } else {
-            if self.c_prop == Prop::ZERO && self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0 {
-                true
-            } else {
-                false
-            }
+            self.c_prop == Prop::ZERO && self.sum <= UFDRNumber::THREE && self.sum.0 % 3 == 0
         }
     }
 
@@ -323,11 +315,7 @@ impl ColourBasics for HCV {
     }
 
     fn hue_angle(&self) -> Option<Angle> {
-        if let Some(hue) = self.hue {
-            Some(hue.angle())
-        } else {
-            None
-        }
+        self.hue.map(|hue| hue.angle())
     }
 
     fn is_grey(&self) -> bool {
