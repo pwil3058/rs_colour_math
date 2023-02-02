@@ -120,7 +120,7 @@ impl HueCAD {
         (HCV::YELLOW, Prop(u64::MAX / 12 * 4)),
         (HCV::GREEN_YELLOW, Prop(u64::MAX / 12 * 3)),
         (HCV::GREEN, Prop(u64::MAX / 12 * 2)),
-        (HCV::GREEN_CYAN, Prop(u64::MAX / 12 * 1)),
+        (HCV::GREEN_CYAN, Prop(u64::MAX / 12)),
         (HCV::CYAN, Prop::ZERO),
     ];
 
@@ -310,11 +310,7 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
     }
 
     fn attr_value(&self) -> Option<Prop> {
-        if let Some(chroma) = self.chroma {
-            Some(chroma.into_prop())
-        } else {
-            None
-        }
+        self.chroma.map(|chroma| chroma.into_prop())
     }
 
     fn attr_value_fg_colour(&self) -> HCV {
@@ -343,11 +339,7 @@ impl ColourAttributeDisplayIfce for ChromaCAD {
     }
 
     fn attr_target_value(&self) -> Option<Prop> {
-        if let Some(chroma) = self.target_chroma {
-            Some(chroma.into_prop())
-        } else {
-            None
-        }
+        self.target_chroma.map(|chroma| chroma.into_prop())
     }
 
     fn attr_target_value_fg_colour(&self) -> HCV {
@@ -489,11 +481,7 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
     }
 
     fn attr_value(&self) -> Option<Prop> {
-        if let Some(greyness) = self.greyness {
-            Some(greyness.into_prop())
-        } else {
-            None
-        }
+        self.greyness.map(|greyness| greyness.into_prop())
     }
 
     fn attr_value_fg_colour(&self) -> HCV {
@@ -522,11 +510,7 @@ impl ColourAttributeDisplayIfce for GreynessCAD {
     }
 
     fn attr_target_value(&self) -> Option<Prop> {
-        if let Some(greyness) = self.target_greyness {
-            Some(greyness.into_prop())
-        } else {
-            None
-        }
+        self.target_greyness.map(|greyness| greyness.into_prop())
     }
 
     fn attr_target_value_fg_colour(&self) -> HCV {
@@ -573,11 +557,7 @@ impl ColourAttributeDisplayIfce for WarmthCAD {
     }
 
     fn attr_value(&self) -> Option<Prop> {
-        if let Some(warmth) = self.warmth {
-            Some(warmth.into())
-        } else {
-            None
-        }
+        self.warmth.map(|warmth| warmth.into())
     }
 
     fn attr_value_fg_colour(&self) -> HCV {
@@ -595,11 +575,7 @@ impl ColourAttributeDisplayIfce for WarmthCAD {
     }
 
     fn attr_target_value(&self) -> Option<Prop> {
-        if let Some(target_warmth) = self.target_warmth {
-            Some(target_warmth.into())
-        } else {
-            None
-        }
+        self.target_warmth.map(|target_warmth| target_warmth.into())
     }
 
     fn attr_target_value_fg_colour(&self) -> HCV {
