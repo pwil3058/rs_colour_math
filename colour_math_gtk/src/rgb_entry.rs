@@ -105,7 +105,7 @@ impl<U: Hexable> RGBHexEntryBuilder<U> {
         {
             let entry = HexEntryBuilder::new()
                 .editable(self.editable)
-                .initial_value(self.initial_rgb[index.into()])
+                .initial_value(self.initial_rgb[index])
                 .build();
             let label = gtk::Label::new(Some(label));
             label.set_widget_colour(rgb);
