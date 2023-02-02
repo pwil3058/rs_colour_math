@@ -43,7 +43,7 @@ impl GtkHueWheel {
             self.drawing_area.get_allocated_width() as f64,
             self.drawing_area.get_allocated_height() as f64,
         );
-        ctm.translate(origin_offset.x.into(), origin_offset.y.into());
+        ctm.translate(origin_offset.x, origin_offset.y);
         ctm
     }
 
@@ -179,7 +179,7 @@ impl GtkHueWheelBuilder {
             let name_c = (*name).to_string();
             gtk_hue_wheel
                 .popup_menu
-                .append_item(*name, &menu_item_spec, *condns)
+                .append_item(name, menu_item_spec, *condns)
                 .connect_activate(move |_| gtk_hue_wheel_c.menu_item_selected(&name_c));
             gtk_hue_wheel
                 .callbacks
@@ -215,7 +215,7 @@ impl GtkHueWheelBuilder {
                     .hue_wheel
                     .borrow()
                     .draw(gtk_hue_wheel_c.attribute_selector.attribute(), &cartesian);
-                gtk::Inhibit(false)
+                Inhibit(false)
             });
 
         // ZOOM
@@ -229,18 +229,18 @@ impl GtkHueWheelBuilder {
                             gdk::ScrollDirection::Up => {
                                 gtk_hue_wheel_c.hue_wheel.borrow_mut().decr_zoom();
                                 da.queue_draw();
-                                return gtk::Inhibit(true);
+                                return Inhibit(true);
                             }
                             gdk::ScrollDirection::Down => {
                                 gtk_hue_wheel_c.hue_wheel.borrow_mut().incr_zoom();
                                 da.queue_draw();
-                                return gtk::Inhibit(true);
+                                return Inhibit(true);
                             }
                             _ => (),
                         }
                     }
                 };
-                gtk::Inhibit(false)
+                Inhibit(false)
             });
 
         // COMMENCE MOVE ORIGIN OR POPUP MENU
@@ -249,14 +249,14 @@ impl GtkHueWheelBuilder {
             .drawing_area
             .connect_button_press_event(move |_, event| {
                 if event.get_event_type() != gdk::EventType::ButtonPress {
-                    return gtk::Inhibit(false);
+                    return Inhibit(false);
                 };
                 match event.get_button() {
                     1 => {
                         gtk_hue_wheel_c
                             .last_xy
                             .set(Some(event.get_position().into()));
-                        gtk::Inhibit(true)
+                        Inhibit(true)
                     }
                     3 => {
                         let device_point: Point = event.get_position().into();
@@ -273,9 +273,9 @@ impl GtkHueWheelBuilder {
                             gtk_hue_wheel_c.popup_menu.update_hover_condns(false);
                         };
                         gtk_hue_wheel_c.popup_menu.popup_at_event(event);
-                        gtk::Inhibit(true)
+                        Inhibit(true)
                     }
-                    _ => gtk::Inhibit(false),
+                    _ => Inhibit(false),
                 }
             });
 
@@ -290,9 +290,9 @@ impl GtkHueWheelBuilder {
                     gtk_hue_wheel_c.last_xy.set(Some(this_xy));
                     gtk_hue_wheel_c.shift_origin_offset(delta_xy);
                     da.queue_draw();
-                    gtk::Inhibit(true)
+                    Inhibit(true)
                 } else {
-                    gtk::Inhibit(false)
+                    Inhibit(false)
                 }
             });
         let gtk_hue_wheel_c = Rc::clone(&gtk_hue_wheel);
@@ -302,9 +302,9 @@ impl GtkHueWheelBuilder {
                 debug_assert_eq!(event.get_event_type(), gdk::EventType::ButtonRelease);
                 if event.get_button() == 1 {
                     gtk_hue_wheel_c.last_xy.set(None);
-                    gtk::Inhibit(true)
+                    Inhibit(true)
                 } else {
-                    gtk::Inhibit(false)
+                    Inhibit(false)
                 }
             });
         let gtk_hue_wheel_c = Rc::clone(&gtk_hue_wheel);
@@ -312,7 +312,7 @@ impl GtkHueWheelBuilder {
             .drawing_area
             .connect_leave_notify_event(move |_, _| {
                 gtk_hue_wheel_c.last_xy.set(None);
-                gtk::Inhibit(false)
+                Inhibit(false)
             });
 
         // TOOLTIP
