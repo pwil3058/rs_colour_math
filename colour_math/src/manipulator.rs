@@ -15,8 +15,9 @@ pub enum SetScalar {
     Reject,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum SetHue {
+    #[default]
     FavourChroma,
     FavourValue,
 }
@@ -142,73 +143,69 @@ impl ColourManipulator {
             }
         } else if new_c_prop == Prop::ZERO {
             Outcome::NoChange
-        } else {
-            if self
-                .saved_hue
-                .sum_and_chroma_prop_are_compatible(self.hcv.sum, new_c_prop)
-            {
-                self.hcv = match HCV::try_new(Some((self.saved_hue, new_c_prop)), self.hcv.sum) {
-                    Ok(hcv) => hcv,
-                    Err(hcv) => hcv,
-                };
-                if cur_c_prop == self.hcv.c_prop {
-                    Outcome::NoChange
-                } else {
-                    Outcome::Ok
-                }
+        } else if self
+            .saved_hue
+            .sum_and_chroma_prop_are_compatible(self.hcv.sum, new_c_prop)
+        {
+            self.hcv = match HCV::try_new(Some((self.saved_hue, new_c_prop)), self.hcv.sum) {
+                Ok(hcv) => hcv,
+                Err(hcv) => hcv,
+            };
+            if cur_c_prop == self.hcv.c_prop {
+                Outcome::NoChange
             } else {
-                match policy {
-                    SetScalar::Clamp => {
-                        if let Some(max_c_prop) =
-                            self.saved_hue.max_chroma_prop_for_sum(self.hcv.sum)
-                        {
-                            let clamped_new_c_prop = if new_c_prop < max_c_prop {
-                                new_c_prop
-                            } else if self.hcv.c_prop < max_c_prop {
-                                max_c_prop
-                            } else {
-                                return Outcome::NoChange;
-                            };
-                            self.hcv = if let Some((c_prop, sum)) = self
-                                .saved_hue
-                                .adjusted_favouring_sum(self.hcv.sum, clamped_new_c_prop)
-                            {
-                                match HCV::try_new(Some((self.saved_hue, c_prop)), sum) {
-                                    Ok(hcv) => hcv,
-                                    Err(hcv) => hcv,
-                                }
-                            } else {
-                                self.hcv
-                            };
-                            if cur_c_prop == self.hcv.c_prop {
-                                Outcome::NoChange
-                            } else {
-                                Outcome::Clamped
-                            }
+                Outcome::Ok
+            }
+        } else {
+            match policy {
+                SetScalar::Clamp => {
+                    if let Some(max_c_prop) = self.saved_hue.max_chroma_prop_for_sum(self.hcv.sum) {
+                        let clamped_new_c_prop = if new_c_prop < max_c_prop {
+                            new_c_prop
+                        } else if self.hcv.c_prop < max_c_prop {
+                            max_c_prop
                         } else {
-                            Outcome::NoChange
-                        }
-                    }
-                    SetScalar::Accommodate => {
-                        if let Some((c_prop, sum)) = self
+                            return Outcome::NoChange;
+                        };
+                        self.hcv = if let Some((c_prop, sum)) = self
                             .saved_hue
-                            .adjusted_favouring_chroma(self.hcv.sum, new_c_prop)
+                            .adjusted_favouring_sum(self.hcv.sum, clamped_new_c_prop)
                         {
-                            self.hcv = match HCV::try_new(Some((self.saved_hue, c_prop)), sum) {
+                            match HCV::try_new(Some((self.saved_hue, c_prop)), sum) {
                                 Ok(hcv) => hcv,
                                 Err(hcv) => hcv,
-                            };
+                            }
                         } else {
-                            self.hcv = HCV::new_grey((self.hcv.sum / 3).into())
-                        }
+                            self.hcv
+                        };
                         if cur_c_prop == self.hcv.c_prop {
                             Outcome::NoChange
                         } else {
-                            Outcome::Accommodated
+                            Outcome::Clamped
                         }
+                    } else {
+                        Outcome::NoChange
                     }
-                    SetScalar::Reject => Outcome::Rejected,
                 }
+                SetScalar::Accommodate => {
+                    if let Some((c_prop, sum)) = self
+                        .saved_hue
+                        .adjusted_favouring_chroma(self.hcv.sum, new_c_prop)
+                    {
+                        self.hcv = match HCV::try_new(Some((self.saved_hue, c_prop)), sum) {
+                            Ok(hcv) => hcv,
+                            Err(hcv) => hcv,
+                        };
+                    } else {
+                        self.hcv = HCV::new_grey((self.hcv.sum / 3).into())
+                    }
+                    if cur_c_prop == self.hcv.c_prop {
+                        Outcome::NoChange
+                    } else {
+                        Outcome::Accommodated
+                    }
+                }
+                SetScalar::Reject => Outcome::Rejected,
             }
         }
     }
@@ -480,7 +477,7 @@ impl ColourManipulator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ColourManipulatorBuilder {
     init_hcv: Option<HCV>,
     clamped: bool,
