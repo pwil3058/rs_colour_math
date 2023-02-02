@@ -48,7 +48,7 @@ pub mod coloured {
     use crate::colour::*;
 
     #[allow(deprecated)]
-    pub trait Colourable: gtk::WidgetExt {
+    pub trait Colourable: WidgetExt {
         fn set_widget_colour(&self, colour: &impl GdkColour) {
             let bg_gdk_rgba = colour.gdk_rgba();
             let fg_gdk_rgba = colour.best_foreground().gdk_rgba();
@@ -123,7 +123,7 @@ pub mod attributes {
     #[derive(PWO, Wrapper)]
     pub struct ColourAttributeDisplayStack {
         vbox: gtk::Box,
-        cads: Vec<Rc<dyn DynColourAttributeDisplay>>,
+        cads: Vec<Rc<dyn DynColourAttributeDisplay<PWT = gtk::DrawingArea>>>,
     }
 
     impl ColourAttributeDisplayStack {
@@ -148,15 +148,10 @@ pub mod attributes {
         }
     }
 
+    #[derive(Default)]
     pub struct ColourAttributeDisplayStackBuilder {
         // TODO: add orientation as an option for CAD stacks
         attributes: Vec<ScalarAttribute>,
-    }
-
-    impl Default for ColourAttributeDisplayStackBuilder {
-        fn default() -> Self {
-            Self { attributes: vec![] }
-        }
     }
 
     impl ColourAttributeDisplayStackBuilder {
@@ -172,16 +167,17 @@ pub mod attributes {
         pub fn build(&self) -> Rc<ColourAttributeDisplayStack> {
             let vbox = gtk::Box::new(gtk::Orientation::Vertical, 1);
             let mut cads = vec![];
-            let hue_cad: Rc<dyn DynColourAttributeDisplay> = HueCAD::new();
+            let hue_cad: Rc<dyn DynColourAttributeDisplay<PWT = gtk::DrawingArea>> = HueCAD::new();
             vbox.pack_start(hue_cad.pwo(), true, true, 0);
             cads.push(hue_cad);
             for scalar_attribute in self.attributes.iter() {
-                let cad: Rc<dyn DynColourAttributeDisplay> = match scalar_attribute {
-                    ScalarAttribute::Value => ValueCAD::new(),
-                    ScalarAttribute::Chroma => ChromaCAD::new(),
-                    ScalarAttribute::Warmth => WarmthCAD::new(),
-                    ScalarAttribute::Greyness => GreynessCAD::new(),
-                };
+                let cad: Rc<dyn DynColourAttributeDisplay<PWT = gtk::DrawingArea>> =
+                    match scalar_attribute {
+                        ScalarAttribute::Value => ValueCAD::new(),
+                        ScalarAttribute::Chroma => ChromaCAD::new(),
+                        ScalarAttribute::Warmth => WarmthCAD::new(),
+                        ScalarAttribute::Greyness => GreynessCAD::new(),
+                    };
                 vbox.pack_start(cad.pwo(), true, true, 0);
                 cads.push(cad);
             }
