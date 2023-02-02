@@ -160,7 +160,7 @@ impl ColourManipulatorGUI {
                 for row_num in 0..n_rows {
                     let row_start = row_num * rs;
                     let row_end = row_start + width * nc;
-                    for chunk in (&data[row_start..row_end]).chunks(nc) {
+                    for chunk in (data[row_start..row_end]).chunks(nc) {
                         red += chunk[0] as u64;
                         green += chunk[1] as u64;
                         blue += chunk[2] as u64;
@@ -337,7 +337,7 @@ impl ColourManipulatorGUIBuilder {
             } else if key == gdk::keys::constants::Shift_R {
                 rgbm_gui_c.delta_size.set(DeltaSize::Small);
             };
-            gtk::Inhibit(false)
+            Inhibit(false)
         });
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui.vbox.connect_key_release_event(move |_, event| {
@@ -345,18 +345,18 @@ impl ColourManipulatorGUIBuilder {
             if key == gdk::keys::constants::Shift_L || key == gdk::keys::constants::Shift_R {
                 rgbm_gui_c.delta_size.set(DeltaSize::Normal);
             };
-            gtk::Inhibit(false)
+            Inhibit(false)
         });
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui.vbox.connect_enter_notify_event(move |_, _| {
             rgbm_gui_c.delta_size.set(DeltaSize::Normal);
-            gtk::Inhibit(false)
+            Inhibit(false)
         });
 
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui.drawing_area.connect_draw(move |_, cctx| {
             rgbm_gui_c.draw(cctx);
-            gtk::Inhibit(true)
+            Inhibit(true)
         });
 
         connect_button!(rgbm_gui, incr_value_btn, for_value, incr_value);
