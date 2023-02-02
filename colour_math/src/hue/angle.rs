@@ -12,7 +12,7 @@ pub struct Angle(i64);
 
 impl Angle {
     pub const MSEC: Self = Self(i64::MAX / (180 * 60 * 60 * 1000));
-    pub const SECOND: Self = Self(Self::MSEC.0 * 100);
+    pub const SECOND: Self = Self(Self::MSEC.0 * 1000);
     pub const MINUTE: Self = Self(Self::SECOND.0 * 60);
     pub const DEGREE: Self = Self(Self::MINUTE.0 * 60);
 
@@ -61,7 +61,7 @@ impl Debug for Angle {
 }
 
 impl HueConstants for Angle {
-    const RED: Self = Self(Self::DEGREE.0 * 0);
+    const RED: Self = Self(0); // Self(Self::DEGREE.0 * 0)
     const GREEN: Self = Self(Self::DEGREE.0 * 120);
     const BLUE: Self = Self(Self::DEGREE.0 * -120);
 
@@ -166,7 +166,7 @@ impl From<(u8, u8, u8, u16)> for Angle {
 
 impl From<f64> for Angle {
     fn from(float: f64) -> Self {
-        debug_assert!(float >= -180.0 && float <= 180.0);
+        debug_assert!((-180.0..=180.0).contains(&float));
         let ws: i128 = (float * Self::DEGREE.0 as f64) as i128;
         if ws >= Self::MAX.0 as i128 {
             Self((ws - Self::MAX.0 as i128 * 2) as i64)
