@@ -49,24 +49,30 @@ pub enum Shape {
     BackSight,
 }
 
-#[derive(Debug, PartialEq, Eq, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Proximity {
     Enclosed(UFDRNumber),
     NotEnclosed(UFDRNumber),
 }
 
-impl std::cmp::PartialOrd for Proximity {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+impl PartialOrd for Proximity {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self {
             Self::Enclosed(mine) => match other {
                 Self::Enclosed(other) => mine.partial_cmp(other),
-                Self::NotEnclosed(_) => Some(std::cmp::Ordering::Less),
+                Self::NotEnclosed(_) => Some(Ordering::Less),
             },
             Self::NotEnclosed(mine) => match other {
-                Self::Enclosed(_) => Some(std::cmp::Ordering::Greater),
+                Self::Enclosed(_) => Some(Ordering::Greater),
                 Self::NotEnclosed(other) => mine.partial_cmp(other),
             },
         }
+    }
+}
+
+impl Ord for Proximity {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).expect("should never get None")
     }
 }
 
@@ -215,7 +221,7 @@ pub trait MakeColouredShape {
 impl<L: LightLevel> From<&RGB<L>> for ColouredShape {
     fn from(rgb: &RGB<L>) -> Self {
         let id = format!("ID: {}", rgb.pango_string());
-        let tooltip_text = format!("RGB: {}", id);
+        let tooltip_text = format!("RGB: {id}");
         ColouredShape::new(rgb, &id, &tooltip_text, Shape::Circle)
     }
 }
@@ -273,20 +279,11 @@ pub trait Graticule {
     }
 }
 
+#[derive(Default)]
 pub struct HueWheel {
     shapes: Vec<ColouredShape>,
     target: Option<ColouredShape>,
     zoom: Zoom,
-}
-
-impl Default for HueWheel {
-    fn default() -> Self {
-        Self {
-            shapes: vec![],
-            target: None,
-            zoom: Zoom::default(),
-        }
-    }
 }
 
 impl Graticule for HueWheel {}
@@ -338,12 +335,11 @@ impl HueWheel {
         point: Point,
         scalar_attribute: ScalarAttribute,
     ) -> Option<&ColouredShape> {
-        if let Some((shape, proximity)) = self.nearest_to(point, scalar_attribute) {
-            if let Proximity::Enclosed(_) = proximity {
-                return Some(shape);
-            }
-        };
-        None
+        if let Some((shape, Proximity::Enclosed(_))) = self.nearest_to(point, scalar_attribute) {
+            Some(shape)
+        } else {
+            None
+        }
     }
 
     pub fn tooltip_for_point(
