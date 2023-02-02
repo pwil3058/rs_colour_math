@@ -31,24 +31,15 @@ impl Chroma {
     }
 
     pub fn is_shade(self) -> bool {
-        match self {
-            Chroma::Shade(_) => true,
-            _ => false,
-        }
+        matches!(self, Chroma::Shade(_))
     }
 
     pub fn is_tint(self) -> bool {
-        match self {
-            Chroma::Tint(_) => true,
-            _ => false,
-        }
+        matches!(self, Chroma::Tint(_))
     }
 
     pub fn is_neither(self) -> bool {
-        match self {
-            Chroma::Neither(_) => true,
-            _ => false,
-        }
+        matches!(self, Chroma::Neither(_))
     }
 
     pub fn is_valid(self) -> bool {
@@ -114,16 +105,16 @@ impl PartialOrd for Chroma {
         use Chroma::*;
         match self {
             Shade(proportion) => match rhs {
-                Shade(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Shade(other_proportion) => proportion.partial_cmp(other_proportion),
                 _ => Some(Ordering::Less),
             },
             Tint(proportion) => match rhs {
-                Tint(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Tint(other_proportion) => proportion.partial_cmp(other_proportion),
                 Shade(_) => Some(Ordering::Greater),
                 Neither(_) => Some(Ordering::Less),
             },
             Neither(proportion) => match rhs {
-                Neither(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Neither(other_proportion) => proportion.partial_cmp(other_proportion),
                 _ => Some(Ordering::Greater),
             },
         }
@@ -170,24 +161,15 @@ impl Greyness {
     pub const ONE: Self = Self::Neither(Prop::ONE);
 
     pub fn is_shade(self) -> bool {
-        match self {
-            Greyness::Shade(_) => true,
-            _ => false,
-        }
+        matches!(self, Greyness::Shade(_))
     }
 
     pub fn is_tint(self) -> bool {
-        match self {
-            Greyness::Tint(_) => true,
-            _ => false,
-        }
+        matches!(self, Greyness::Tint(_))
     }
 
     pub fn is_neither(self) -> bool {
-        match self {
-            Greyness::Neither(_) => true,
-            _ => false,
-        }
+        matches!(self, Greyness::Neither(_))
     }
 
     pub fn is_zero(&self) -> bool {
@@ -221,16 +203,16 @@ impl PartialOrd for Greyness {
         use Greyness::*;
         match self {
             Shade(proportion) => match rhs {
-                Shade(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Shade(other_proportion) => proportion.partial_cmp(other_proportion),
                 _ => Some(Ordering::Less),
             },
             Tint(proportion) => match rhs {
-                Tint(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Tint(other_proportion) => proportion.partial_cmp(other_proportion),
                 Shade(_) => Some(Ordering::Greater),
                 Neither(_) => Some(Ordering::Less),
             },
             Neither(proportion) => match rhs {
-                Neither(other_proportion) => proportion.partial_cmp(&other_proportion),
+                Neither(other_proportion) => proportion.partial_cmp(other_proportion),
                 _ => Some(Ordering::Greater),
             },
         }
