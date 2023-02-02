@@ -122,7 +122,7 @@ pub trait CairoSetColour {
     fn set_source_colour_rgb(&self, rgb: &RGB<f64>);
 }
 
-impl CairoSetColour for pw_gix::cairo::Context {
+impl CairoSetColour for cairo::Context {
     fn set_source_colour_rgb(&self, rgb: &RGB<f64>) {
         self.set_source_rgb(rgb[0], rgb[1], rgb[2]);
     }
@@ -217,7 +217,7 @@ impl<'a> Draw for Drawer<'a> {
             return;
         }
         self.cairo_context.set_font_size(font_size.into());
-        let te = self.cairo_context.text_extents(&text);
+        let te = self.cairo_context.text_extents(text);
         match TextPosn::from(posn) {
             TextPosn::Centre(x, y) => {
                 self.cairo_context
@@ -238,7 +238,7 @@ impl<'a> Draw for Drawer<'a> {
         }
         self.cairo_context
             .set_source_colour_rgb(&self.text_colour.get());
-        self.cairo_context.show_text(&text);
+        self.cairo_context.show_text(text);
     }
 
     fn paint_linear_gradient(
