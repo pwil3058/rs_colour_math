@@ -169,7 +169,7 @@ pub(crate) trait HueIfce:
         &self,
         sum: UFDRNumber,
     ) -> Option<Result<RGB<L>, RGB<L>>> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
+        debug_assert!(sum.is_valid_sum(), "sum: {sum:?}");
         match sum {
             UFDRNumber::ZERO | UFDRNumber::THREE => None,
             sum => {
@@ -190,7 +190,7 @@ pub(crate) trait HueIfce:
     }
 
     fn try_max_chroma_hcv_for_sum(&self, sum: UFDRNumber) -> Option<Result<HCV, HCV>> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
+        debug_assert!(sum.is_valid_sum(), "sum: {sum:?}");
         match sum {
             UFDRNumber::ZERO | UFDRNumber::THREE => None,
             sum => {
@@ -439,7 +439,7 @@ impl HueBasics for RGBHue {
     }
 
     fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
+        debug_assert!(sum.is_valid_sum(), "sum: {sum:?}");
         if sum.is_hue_valid() {
             match sum.cmp(&self.sum_for_max_chroma()) {
                 Ordering::Equal => Some(Chroma::ONE),
@@ -635,7 +635,7 @@ impl HueBasics for CMYHue {
     }
 
     fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
+        debug_assert!(sum.is_valid_sum(), "sum: {sum:?}");
         if sum.is_hue_valid() {
             match sum.cmp(&UFDRNumber::TWO) {
                 Ordering::Equal => Some(Chroma::ONE),
@@ -915,7 +915,7 @@ impl HueBasics for SextantHue {
     }
 
     fn max_chroma_for_sum(&self, sum: UFDRNumber) -> Option<Chroma> {
-        debug_assert!(sum.is_valid_sum(), "sum: {:?}", sum);
+        debug_assert!(sum.is_valid_sum(), "sum: {sum:?}");
         if sum.is_hue_valid() {
             match sum.cmp(&(UFDRNumber::ONE + self.1)) {
                 Ordering::Equal => Some(Chroma::ONE),
@@ -959,7 +959,7 @@ impl OrderedTriplets for SextantHue {
     }
 
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
-        debug_assert!(Self::has_valid_value_order(&triplet));
+        debug_assert!(Self::has_valid_value_order(triplet));
         use Sextant::*;
         match self.0 {
             RedMagenta => [triplet[0], triplet[2], triplet[1]],
