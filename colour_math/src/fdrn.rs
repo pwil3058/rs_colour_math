@@ -74,7 +74,7 @@ impl Debug for FDRNumber {
 }
 
 impl fmt::UpperHex for FDRNumber {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         fmt::UpperHex::fmt(&self.0, formatter)
     }
 }
@@ -264,12 +264,12 @@ impl Debug for UFDRNumber {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         let int = self.0 / u64::MAX as u128;
         let frac = self.0 % u64::MAX as u128;
-        formatter.write_fmt(format_args!("UFDRNumber({:X}.{:016X})", int, frac))
+        formatter.write_fmt(format_args!("UFDRNumber({int:X}.{frac:016X})"))
     }
 }
 
 impl fmt::UpperHex for UFDRNumber {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         fmt::UpperHex::fmt(&self.0, formatter)
     }
 }
@@ -451,14 +451,12 @@ impl Debug for Prop {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         let int = self.0 / u64::MAX;
         let frac = self.0 % u64::MAX;
-        formatter.write_fmt(format_args!("Prop({:X}.{:016X})", int, frac))
-        //formatter.write_fmt(format_args!("Prop(0.{:016X})", self))
-        //formatter.write_fmt(format_args!("Prop({:?})", f64::from(*self)))
+        formatter.write_fmt(format_args!("Prop({int:X}.{frac:016X})"))
     }
 }
 
 impl fmt::UpperHex for Prop {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         fmt::UpperHex::fmt(&self.0, formatter)
     }
 }
@@ -481,7 +479,7 @@ macro_rules! impl_prop_to_from_float {
     ($float:ty, $number:ty) => {
         impl From<$float> for $number {
             fn from(arg: $float) -> Self {
-                debug_assert!(0.0 <= arg && arg <= 1.0);
+                debug_assert!((0.0..=1.0).contains(&arg));
                 // NB: watch out for floating point not being proper reals
                 Self((arg * u64::MAX as $float) as u64)
             }
