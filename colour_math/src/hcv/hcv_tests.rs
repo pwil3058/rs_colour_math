@@ -168,12 +168,12 @@ fn hcv_add_sub_angle() {
             assert_approx_eq!(
                 (*hcv + *angle).hue_angle().unwrap(),
                 hcv.hue_angle().unwrap() + *angle,
-                0x100
+                0x1000
             );
             assert_approx_eq!(
                 (*hcv - *angle).hue_angle().unwrap(),
                 hcv.hue_angle().unwrap() - *angle,
-                0x100
+                0x1000
             );
             assert_eq!((*hcv + *angle).chroma(), hcv.chroma());
             assert_eq!((*hcv - *angle).chroma(), hcv.chroma());

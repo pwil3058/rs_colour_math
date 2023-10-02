@@ -1,5 +1,7 @@
 [workspace]
 
+resolver = "2"
+
 members = [
     "colour_math",
     "colour_math_cairo",

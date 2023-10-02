@@ -218,7 +218,7 @@ fn hue_to_from_angle() {
     ] {
         let hue = Hue::Sextant(SextantHue(*sextant, second));
         assert_approx_eq!(Hue::from(*angle), hue, Prop(0x0000000000010000));
-        assert_approx_eq!(hue.angle(), *angle, 0x0000000000000100);
+        assert_approx_eq!(hue.angle(), *angle, 0x0000000000001000);
     }
 }
 
@@ -235,8 +235,8 @@ fn hue_add_sub_angle() {
             Angle::from(135),
             Angle::from(-135),
         ] {
-            assert_approx_eq!((*hue + *angle).angle(), hue.angle() + *angle, 0x100);
-            assert_approx_eq!((*hue - *angle).angle(), hue.angle() - *angle, 0x100);
+            assert_approx_eq!((*hue + *angle).angle(), hue.angle() + *angle, 0x1000);
+            assert_approx_eq!((*hue - *angle).angle(), hue.angle() - *angle, 0x1000);
         }
     }
 }

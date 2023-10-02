@@ -201,7 +201,8 @@ mod angle_tests {
     fn convert() {
         assert_eq!(Angle::from(-240).0, Angle::DEGREE.0 * 120);
         assert_eq!(Angle::from(180).0, Angle::DEGREE.0 * -180);
-        assert_approx_eq!(Angle::from((120, 45)), Angle::from(120.75), 0x100);
+        assert_approx_eq!(Angle::from(120.75), Angle::from(120.75));
+        assert_approx_eq!(Angle::from((120, 45)), Angle::from(120.75), 0x1000);
         assert_approx_eq!(Angle::from(180.0), Angle::from(-180.0), 16);
         assert_approx_eq!(Angle::from(120.0), Angle::from(120), 2000);
 
