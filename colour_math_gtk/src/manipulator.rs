@@ -7,9 +7,10 @@ use std::{
 use pw_gix::{
     cairo, gdk, gdk_pixbuf,
     gtk::{self, DrawingAreaBuilder, prelude::*},
-    gtkx::menu_ng::{MenuItemSpec, WrappedMenu, WrappedMenuBuilder},
+    gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
     wrapper::*,
 };
+use pw_gix::sav_state::{MaskedCondns, SAV_NEXT_CONDN};
 
 use colour_math::{
     fdrn::Prop,
@@ -38,6 +39,10 @@ macro_rules! connect_button {
         });
     };
 }
+
+pub const CAN_PASTE: u64 = SAV_NEXT_CONDN;
+pub const CAN_REMOVE: u64 = SAV_NEXT_CONDN << 1;
+pub const COMBINED_MASK: u64 = CAN_PASTE | CAN_REMOVE;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum DeltaSize {
@@ -98,7 +103,7 @@ pub struct ColourManipulatorGUI {
     samples: RefCell<Vec<Sample>>,
     auto_match_btn: gtk::Button,
     auto_match_on_paste_btn: gtk::CheckButton,
-    popup_menu: WrappedMenu,
+    popup_menu: ManagedMenu,
     popup_menu_posn: Cell<Point>,
     change_callbacks: RefCell<Vec<ChangeCallback>>,
 }
@@ -274,7 +279,7 @@ impl ColourManipulatorGUIBuilder {
             samples: RefCell::new(vec![]),
             auto_match_btn: gtk::Button::with_label("Auto Match"),
             auto_match_on_paste_btn: gtk::CheckButton::with_label("On Paste?"),
-            popup_menu: WrappedMenuBuilder::new().build(),
+            popup_menu: ManagedMenuBuilder::new().build(),
             popup_menu_posn: Cell::new((0.0, 0.0).into()),
             change_callbacks: RefCell::new(Vec::new()),
         });
@@ -377,7 +382,7 @@ impl ColourManipulatorGUIBuilder {
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui
             .popup_menu
-            .append_item("paste", &menu_item_spec)
+            .append_item("paste", &menu_item_spec, CAN_PASTE)
             .connect_activate(move |_| {
                 let cbd = gtk::Clipboard::get(&gdk::SELECTION_CLIPBOARD);
                 if let Some(pixbuf) = cbd.wait_for_image() {
@@ -404,7 +409,7 @@ impl ColourManipulatorGUIBuilder {
         let rgbm_gui_c = Rc::clone(&rgbm_gui);
         rgbm_gui
             .popup_menu
-            .append_item("remove", &menu_item_spec)
+            .append_item("remove", &menu_item_spec, CAN_REMOVE)
             .connect_activate(move |_| {
                 rgbm_gui_c.samples.borrow_mut().clear();
                 rgbm_gui_c.drawing_area.queue_draw();
@@ -419,12 +424,18 @@ impl ColourManipulatorGUIBuilder {
                     let position = Point::from(event.get_position());
                     let n_samples = rgbm_gui_c.samples.borrow().len();
                     let cbd = gtk::Clipboard::get(&gdk::SELECTION_CLIPBOARD);
-                    rgbm_gui_c
-                        .popup_menu
-                        .set_sensitivities(cbd.wait_is_image_available(), &["paste"]);
-                    rgbm_gui_c
-                        .popup_menu
-                        .set_sensitivities(n_samples > 0, &["remove"]);
+                    let mut condns = if cbd.wait_is_image_available() {
+                        CAN_PASTE
+                    } else {
+                        0
+                    };
+                    if n_samples > 0 {
+                        condns |= CAN_REMOVE
+                    };
+                    rgbm_gui_c.popup_menu.update_condns(MaskedCondns {
+                        condns,
+                        mask: COMBINED_MASK,
+                    });
                     rgbm_gui_c.popup_menu_posn.set(position);
                     rgbm_gui_c.popup_menu.popup_at_event(event);
                     return Inhibit(true);
