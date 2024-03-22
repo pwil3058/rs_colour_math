@@ -6,9 +6,11 @@ use pw_gix::{
     wrapper::*,
 };
 
+use colour_math::{hcv::HCV, LightLevel, RGB, ScalarAttribute, Value};
+
 use crate::{
     attributes::{ColourAttributeDisplayStack, ColourAttributeDisplayStackBuilder},
-    colour::{GdkColour, LightLevel, ManipGdkColour, ScalarAttribute, Value, HCV, RGB},
+    colour::{GdkColour, ManipGdkColour},
     manipulator::{ChromaLabel, ColourManipulatorGUI, ColourManipulatorGUIBuilder},
     rgb_entry::{Hexable, RGBHexEntry, RGBHexEntryBuilder},
 };

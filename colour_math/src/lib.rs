@@ -7,6 +7,17 @@ use std::fmt::{Debug, LowerExp, LowerHex, UpperExp, UpperHex};
 use num_traits::{Signed, Unsigned};
 use num_traits_plus::float_plus::*;
 
+use hue::HueIfce;
+
+pub use crate::{
+    attributes::{Chroma, Greyness, Value, Warmth},
+    beigui::{attr_display, hue_wheel},
+    fdrn::{IntoProp, Prop, UFDRNumber},
+    hcv::HCV,
+    hue::{angle::Angle, Hue},
+    rgb::RGB,
+};
+
 pub mod attributes;
 pub mod beigui;
 pub mod debug;
@@ -16,15 +27,6 @@ pub mod hue;
 pub mod manipulator;
 pub mod mixing;
 pub mod rgb;
-
-pub use crate::{
-    attributes::{Chroma, Greyness, Value, Warmth},
-    fdrn::{IntoProp, Prop, UFDRNumber},
-    hcv::HCV,
-    hue::{angle::Angle, Hue},
-    rgb::RGB,
-};
-use hue::HueIfce;
 
 pub trait Float: FloatPlus + std::iter::Sum + FloatApproxEq<Self> {}
 

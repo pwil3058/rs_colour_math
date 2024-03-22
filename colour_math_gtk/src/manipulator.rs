@@ -6,20 +6,22 @@ use std::{
 
 use pw_gix::{
     cairo, gdk, gdk_pixbuf,
-    gtk::{self, prelude::*, DrawingAreaBuilder},
+    gtk::{self, DrawingAreaBuilder, prelude::*},
     gtkx::menu_ng::{MenuItemSpec, WrappedMenu, WrappedMenuBuilder},
     wrapper::*,
 };
 
+use colour_math::{
+    fdrn::Prop,
+    hcv::HCV,
+    hue::angle::Angle,
+    LightLevel,
+    manipulator::{ColourManipulator, ColourManipulatorBuilder}, RGB, Value,
+};
 use colour_math_cairo::Point;
 
-use crate::{
-    colour::{
-        Angle, ColourManipulator, ColourManipulatorBuilder, LightLevel, ManipGdkColour, Prop,
-        Value, HCV, RGB,
-    },
-    coloured::Colourable,
-};
+use crate::colour::ManipGdkColour;
+use crate::coloured::Colourable;
 
 macro_rules! connect_button {
     ( $ed:ident, $btn:ident, $delta:ident, $apply:ident ) => {
@@ -203,17 +205,12 @@ impl ColourManipulatorGUI {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum ChromaLabel {
+    #[default]
     Chroma,
     Greyness,
     Both,
-}
-
-impl Default for ChromaLabel {
-    fn default() -> ChromaLabel {
-        ChromaLabel::Chroma
-    }
 }
 
 #[derive(Default)]

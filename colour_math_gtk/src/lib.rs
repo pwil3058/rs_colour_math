@@ -5,21 +5,10 @@ pub mod hue_wheel;
 pub mod manipulator;
 pub mod rgb_entry;
 
-pub use colour_math_cairo;
-
 pub mod colour {
-    use colour_math::ManipulatedColour;
-    pub use colour_math::{
-        beigui::{
-            self, attr_display,
-            hue_wheel::{ColouredShape, HueWheel},
-            Point,
-        },
-        manipulator::{ColourManipulator, ColourManipulatorBuilder},
-        Angle, HueConstants, LightLevel, Prop, RGBConstants, ScalarAttribute, UnsignedLightLevel,
-        Value, HCV, RGB,
-    };
     use pw_gix::gdk;
+
+    use colour_math::{HCV, LightLevel, ManipulatedColour, RGB};
 
     pub trait GdkColour: colour_math::ColourIfce {
         fn gdk_rgba(&self) -> gdk::RGBA {
@@ -105,9 +94,10 @@ pub mod attributes {
         wrapper::*,
     };
 
+    use colour_math::{attr_display, RGB, ScalarAttribute};
     use colour_math_cairo::{Drawer, Size};
 
-    use crate::colour::{attr_display, GdkColour, ScalarAttribute, RGB};
+    use crate::colour::GdkColour;
 
     pub type ChromaCAD = ColourAttributeDisplay<attr_display::ChromaCAD>;
     pub type GreynessCAD = ColourAttributeDisplay<attr_display::GreynessCAD>;

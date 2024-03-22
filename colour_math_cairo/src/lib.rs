@@ -4,10 +4,9 @@ use std::{cell::Cell, ops::Add, ops::Sub};
 
 use pw_gix::cairo;
 
-use colour_math::beigui::DrawShapes;
 use colour_math::{
-    beigui::{self, Draw, DrawIsosceles},
-    ColourBasics, Prop, RGBConstants, UFDRNumber, HCV, RGB,
+    beigui::{self, Draw, DrawIsosceles, DrawShapes},
+    ColourBasics, HCV, Prop, RGB, RGBConstants, UFDRNumber,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

@@ -3,19 +3,17 @@
 use std::{cell::RefCell, rc::Rc};
 
 use num_traits::Num;
-
+use num_traits_plus::NumberConstants;
 use pw_gix::{
     gtk::{self, prelude::*},
     gtkx::entry::{HexEntry, HexEntryBuilder},
     wrapper::*,
 };
 
-use num_traits_plus::NumberConstants;
+use colour_math::{HCV, HueConstants, RGB, UnsignedLightLevel};
 
-use crate::{
-    colour::{GdkColour, HueConstants, UnsignedLightLevel, HCV, RGB},
-    coloured::Colourable,
-};
+use crate::colour::GdkColour;
+use crate::coloured::Colourable;
 
 pub trait Hexable:
     UnsignedLightLevel + NumberConstants + Num + std::ops::Shr<u8, Output = Self> + 'static

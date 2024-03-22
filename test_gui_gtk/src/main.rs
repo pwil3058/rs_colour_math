@@ -6,13 +6,21 @@ use std::{
     rc::Rc,
 };
 
-use pw_pathux::expand_home_dir_or_mine;
-
 use pw_gix::{
-    gtk::{self, prelude::*, MessageDialogBuilder},
+    gtk::{self, MessageDialogBuilder, prelude::*},
     gtkx::window::RememberGeometry,
     recollections, sample,
-    wrapper::*,
+    wrapper::PackableWidgetObject,
+};
+use pw_pathux::expand_home_dir_or_mine;
+
+use colour_math::{
+    beigui::hue_wheel::{ColouredShape, Shape},
+    HCV, HueConstants, RGB, ScalarAttribute, Value,
+};
+use colour_math_gtk::{
+    attributes::ColourAttributeDisplayStackBuilder, colour_edit::ColourEditorBuilder,
+    hue_wheel::GtkHueWheelBuilder,
 };
 
 const DEFAULT_CONFIG_DIR_PATH: &str = "~/.config/test_gui_gtk";
@@ -45,15 +53,6 @@ pub fn gui_config_dir_path() -> PathBuf {
 pub fn recollection_file_path() -> PathBuf {
     gui_config_dir_path().join("recollections")
 }
-
-use colour_math_gtk::{
-    attributes::ColourAttributeDisplayStackBuilder,
-    colour::{
-        beigui::hue_wheel::Shape, ColouredShape, HueConstants, ScalarAttribute, Value, HCV, RGB,
-    },
-    colour_edit::ColourEditorBuilder,
-    hue_wheel::GtkHueWheelBuilder,
-};
 
 fn main() {
     gtk::init().expect("nowhere to go if Gtk++ initialization fails");
@@ -148,8 +147,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use colour_math::*;
     use colour_math_derive::*;
 
