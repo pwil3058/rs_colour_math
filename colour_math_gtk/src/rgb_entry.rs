@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use num_traits::Num;
 use num_traits_plus::NumberConstants;
-use pw_gix::{
+use pw_gtk_ext::{
     gtk::{self, prelude::*},
     gtkx::entry::{HexEntry, HexEntryBuilder},
     wrapper::*,

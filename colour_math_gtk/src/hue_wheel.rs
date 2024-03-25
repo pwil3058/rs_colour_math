@@ -6,10 +6,10 @@ use std::{
     rc::Rc,
 };
 
-use pw_gix::{
+use pw_gtk_ext::{
     cairo, gdk,
     gtk::{self, prelude::*},
-    gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
+    gtkx::menu::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
     sav_state::MaskedCondns,
     wrapper::*,
 };
@@ -184,6 +184,7 @@ impl GtkHueWheelBuilder {
             gtk_hue_wheel
                 .popup_menu
                 .append_item(name, menu_item_spec, *condns)
+                .expect("duplicate menu item: {name:?}")
                 .connect_activate(move |_| gtk_hue_wheel_c.menu_item_selected(&name_c));
             gtk_hue_wheel
                 .callbacks

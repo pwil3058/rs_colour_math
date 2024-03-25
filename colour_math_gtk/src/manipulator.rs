@@ -4,20 +4,20 @@ use std::{
     rc::Rc,
 };
 
-use pw_gix::{
+use pw_gtk_ext::{
     cairo, gdk, gdk_pixbuf,
-    gtk::{self, DrawingAreaBuilder, prelude::*},
-    gtkx::menu_ng::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
+    gtk::{self, prelude::*, DrawingAreaBuilder},
+    gtkx::menu::{ManagedMenu, ManagedMenuBuilder, MenuItemSpec},
+    sav_state::{MaskedCondns, SAV_NEXT_CONDN},
     wrapper::*,
 };
-use pw_gix::sav_state::{MaskedCondns, SAV_NEXT_CONDN};
 
 use colour_math::{
     fdrn::Prop,
     hcv::HCV,
     hue::angle::Angle,
-    LightLevel,
-    manipulator::{ColourManipulator, ColourManipulatorBuilder}, RGB, Value,
+    manipulator::{ColourManipulator, ColourManipulatorBuilder},
+    LightLevel, Value, RGB,
 };
 use colour_math_cairo::Point;
 
@@ -383,6 +383,7 @@ impl ColourManipulatorGUIBuilder {
         rgbm_gui
             .popup_menu
             .append_item("paste", &menu_item_spec, CAN_PASTE)
+            .expect("Duplicate menu item: paste")
             .connect_activate(move |_| {
                 let cbd = gtk::Clipboard::get(&gdk::SELECTION_CLIPBOARD);
                 if let Some(pixbuf) = cbd.wait_for_image() {
@@ -410,6 +411,7 @@ impl ColourManipulatorGUIBuilder {
         rgbm_gui
             .popup_menu
             .append_item("remove", &menu_item_spec, CAN_REMOVE)
+            .expect("Duplicate menu item: remove")
             .connect_activate(move |_| {
                 rgbm_gui_c.samples.borrow_mut().clear();
                 rgbm_gui_c.drawing_area.queue_draw();

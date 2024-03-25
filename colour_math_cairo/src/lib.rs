@@ -2,11 +2,11 @@
 
 use std::{cell::Cell, ops::Add, ops::Sub};
 
-use pw_gix::cairo;
+use pw_gtk_ext::cairo;
 
 use colour_math::{
     beigui::{self, Draw, DrawIsosceles, DrawShapes},
-    ColourBasics, HCV, Prop, RGB, RGBConstants, UFDRNumber,
+    ColourBasics, Prop, RGBConstants, UFDRNumber, HCV, RGB,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

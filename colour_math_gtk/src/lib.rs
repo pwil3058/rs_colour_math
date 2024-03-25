@@ -6,7 +6,7 @@ pub mod manipulator;
 pub mod rgb_entry;
 
 pub mod colour {
-    use pw_gix::gdk;
+    use pw_gtk_ext::gdk;
 
     use colour_math::{HCV, LightLevel, ManipulatedColour, RGB};
 
@@ -32,7 +32,7 @@ pub mod colour {
 }
 
 pub mod coloured {
-    use pw_gix::gtk::{self, prelude::*};
+    use pw_gtk_ext::gtk::{self, prelude::*};
 
     use crate::colour::*;
 
@@ -89,7 +89,7 @@ pub mod attributes {
         rc::Rc,
     };
 
-    use pw_gix::{
+    use pw_gtk_ext::{
         gtk::{self, BoxExt, RadioButtonExt, ToggleButtonExt, WidgetExt},
         wrapper::*,
     };

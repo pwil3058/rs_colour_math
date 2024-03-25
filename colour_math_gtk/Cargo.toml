@@ -9,7 +9,9 @@ edition = "2021"
 [dependencies]
 num-traits = "0.2.14"
 
-pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+#pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+pw_gtk_ext = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+#pw_gtk_ext = { path = "../../rs_pw_gix/pw_gtk_ext" }
 num_traits_plus = { git = "https://github.com/pwil3058/rs_num_traits_plus.git" }
 
 colour_math = { path = "../colour_math" }

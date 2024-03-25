@@ -6,7 +6,7 @@ use std::{
     rc::Rc,
 };
 
-use pw_gix::{
+use pw_gtk_ext::{
     gtk::{self, MessageDialogBuilder, prelude::*},
     gtkx::window::RememberGeometry,
     recollections, sample,

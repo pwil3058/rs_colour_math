@@ -7,7 +7,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+#pw_gix = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+pw_gtk_ext = { git = "https://github.com/pwil3058/rs_pw_gix.git" }
+#pw_gtk_ext = { path = "../../rs_pw_gix/pw_gtk_ext" }
 pw_pathux = { git = "https://github.com/pwil3058/rs_pw_pathux" }
 
 colour_math = { path = "../colour_math" }
