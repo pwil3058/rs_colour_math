@@ -212,7 +212,7 @@ macro_rules! impl_to_from_signed {
     ($signed:ty) => {
         impl From<$signed> for FDRNumber {
             fn from(signed: $signed) -> Self {
-                Self(signed as i128 * u64::max as i128)
+                Self(signed as i128 * u64::max as *const () as i128)
             }
         }
 
@@ -327,7 +327,7 @@ macro_rules! impl_to_from_unsigned {
     ($unsigned:ty) => {
         impl From<$unsigned> for UFDRNumber {
             fn from(unsigned: $unsigned) -> Self {
-                Self(unsigned as u128 * u64::max as u128)
+                Self(unsigned as u128 * u64::max as *const () as u128)
             }
         }
 
