@@ -351,11 +351,7 @@ impl ColourBasics for HCV {
     }
 
     fn warmth(&self) -> Warmth {
-        if let Some(hue) = self.hue {
-            hue.warmth_for_chroma(self.chroma())
-        } else {
-            Warmth::calculate_monochrome_fm_sum(self.sum)
-        }
+        self.rgb::<u64>().warmth()
     }
 
     fn rgb<L: LightLevel>(&self) -> RGB<L> {

@@ -84,7 +84,7 @@ impl<T: LightLevel + Into<Prop>> RGB<T> {
 impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
     fn hue(&self) -> Option<Hue> {
         match self.try_into() {
-            Ok(rgb) => Some(rgb),
+            Ok(hue) => Some(hue),
             Err(_) => None,
         }
     }
@@ -145,6 +145,11 @@ impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
 
     fn value(&self) -> Value {
         (self.sum() / 3).into()
+    }
+
+    fn warmth(&self) -> Warmth {
+        let [red, green, blue] = Into::<[Prop; 3]>::into(self);
+        (Prop::HALF + red / 2 - green / 4 - blue / 4).into()
     }
 
     fn hcv(&self) -> HCV {
@@ -322,9 +327,9 @@ impl<L: LightLevel + From<Prop>> Add<RGB<L>> for RGB<L> {
         let [red, green, blue] = <[Prop; 3]>::from(self);
         let [rhs_red, rhs_green, rhs_blue] = <[Prop; 3]>::from(rhs);
         let array: [Prop; 3] = [
-            (red + rhs_red).into(),
-            (green + rhs_green).into(),
-            (blue + rhs_blue).into(),
+            (red / 2 + rhs_red / 2).into(),
+            (green / 2 + rhs_green / 2).into(),
+            (blue / 2 + rhs_blue / 2).into(),
         ];
         Self::from(array)
     }

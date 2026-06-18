@@ -173,13 +173,7 @@ pub trait ColourBasics {
         self.chroma().into()
     }
 
-    fn warmth(&self) -> Warmth {
-        if let Some(hue) = self.hue() {
-            hue.warmth_for_chroma(self.chroma())
-        } else {
-            Warmth::calculate_monochrome(self.value())
-        }
-    }
+    fn warmth(&self) -> Warmth;
 
     fn hcv(&self) -> HCV;
     fn rgb<L: LightLevel>(&self) -> RGB<L>;
