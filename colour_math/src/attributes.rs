@@ -284,10 +284,6 @@ impl Warmth {
         }
     }
 
-    pub(crate) fn calculate_monochrome_fm_sum(sum: UFDRNumber) -> Self {
-        ((UFDRNumber::THREE - sum) / 6).into()
-    }
-
     pub fn calculate_monochrome(value: Value) -> Self {
         ((Prop::ONE - Prop::from(value)) / 2).into()
     }

@@ -12,7 +12,7 @@ use num_traits_plus::float_plus::FloatPlus;
 pub mod angle;
 
 use crate::{
-    attributes::{Chroma, Warmth},
+    attributes::Chroma,
     debug::{AbsDiff, ApproxEq, PropDiff},
     fdrn::{FDRNumber, IntoProp, Prop, UFDRNumber},
     hcv::HCV,
@@ -70,17 +70,11 @@ pub(crate) trait SumChromaCompatibility: HueBasics {
             false
         }
     }
-
-    fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
-        debug_assert!(chroma.is_valid());
-        chroma.is_valid_re((*self).into(), sum)
-            && self.sum_and_chroma_prop_are_compatible(sum, chroma.into_prop())
-    }
 }
 
 pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
     fn has_valid_value_order(triplet: &[Prop; 3]) -> bool;
-    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool;
+
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3];
 
     fn rgb_ordered_triplet(&self, sum: UFDRNumber, c_prop: Prop) -> Option<[Prop; 3]> {
@@ -133,25 +127,12 @@ pub(crate) trait OrderedTriplets: HueBasics + SumChromaCompatibility {
         sum: UFDRNumber,
         c_prop: Prop,
     ) -> Option<Result<[Prop; 3], [Prop; 3]>>;
-
-    fn ordered_triplet_to_hcv(&self, triplet: &[Prop; 3]) -> HCV {
-        debug_assert!(Self::has_valid_value_order(triplet));
-        let sum = triplet[0] + triplet[1] + triplet[2];
-        let c_prop = triplet[0] - triplet[2];
-        HCV {
-            hue: Some((*self).into()),
-            c_prop,
-            sum,
-        }
-    }
 }
 
 pub(crate) trait HueIfce:
     HueBasics + OrderedTriplets + ColourModificationHelpers + SumChromaCompatibility
 {
     fn angle(&self) -> Angle;
-
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
         self.max_chroma_hcv().rgb::<T>()
@@ -165,6 +146,7 @@ pub(crate) trait HueIfce:
         }
     }
 
+    #[cfg(test)]
     fn try_max_chroma_rgb_for_sum<L: LightLevel>(
         &self,
         sum: UFDRNumber,
@@ -182,6 +164,7 @@ pub(crate) trait HueIfce:
         }
     }
 
+    #[cfg(test)]
     fn max_chroma_rgb_for_sum<L: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<L>> {
         match self.try_max_chroma_rgb_for_sum::<L>(sum)? {
             Ok(rgb) => Some(rgb),
@@ -189,39 +172,21 @@ pub(crate) trait HueIfce:
         }
     }
 
-    fn try_max_chroma_hcv_for_sum(&self, sum: UFDRNumber) -> Option<Result<HCV, HCV>> {
-        debug_assert!(sum.is_valid_sum(), "sum: {sum:?}");
-        match sum {
-            UFDRNumber::ZERO | UFDRNumber::THREE => None,
-            sum => {
-                let max_c_prop = self.max_chroma_prop_for_sum(sum)?;
-                match self.try_rgb_ordered_triplet(sum, max_c_prop)? {
-                    Ok(triplet) => Some(Ok(HCV::from(triplet))),
-                    Err(triplet) => Some(Err(HCV::from(triplet))),
-                }
-            }
-        }
-    }
-
-    fn max_chroma_hcv_for_sum(&self, sum: UFDRNumber) -> Option<HCV> {
-        match self.try_max_chroma_hcv_for_sum(sum)? {
-            Ok(hcv) => Some(hcv),
-            Err(hcv) => Some(hcv),
-        }
-    }
-
+    #[cfg(test)]
     fn try_darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
         debug_assert!(chroma.is_valid());
         let sum = self.min_sum_for_chroma(chroma)?;
         self.try_hcv_for_sum_and_chroma_prop(sum, chroma.into_prop())
     }
 
+    #[cfg(test)]
     fn try_lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
         debug_assert!(chroma.is_valid());
         let sum = self.max_sum_for_chroma(chroma)?;
         self.try_hcv_for_sum_and_chroma_prop(sum, chroma.into_prop())
     }
 
+    #[cfg(test)]
     fn try_darkest_rgb_for_chroma<T: LightLevel>(
         &self,
         chroma: Chroma,
@@ -231,6 +196,7 @@ pub(crate) trait HueIfce:
         self.try_rgb_for_sum_and_chroma_prop(sum, chroma.into_prop())
     }
 
+    #[cfg(test)]
     fn try_lightest_rgb_for_chroma<T: LightLevel>(
         &self,
         chroma: Chroma,
@@ -240,6 +206,7 @@ pub(crate) trait HueIfce:
         self.try_rgb_for_sum_and_chroma_prop(sum, chroma.into_prop())
     }
 
+    #[cfg(test)]
     fn try_hcv_for_sum_and_chroma_prop(
         &self,
         sum: UFDRNumber,
@@ -252,6 +219,7 @@ pub(crate) trait HueIfce:
         }
     }
 
+    #[cfg(test)]
     fn try_rgb_for_sum_and_chroma_prop<T: LightLevel>(
         &self,
         sum: UFDRNumber,
@@ -264,6 +232,7 @@ pub(crate) trait HueIfce:
         }
     }
 
+    #[cfg(test)]
     fn try_rgb_for_sum_and_chroma<T: LightLevel>(
         &self,
         sum: UFDRNumber,
@@ -464,15 +433,6 @@ impl OrderedTriplets for RGBHue {
         triplet[0] > triplet[1] && triplet[1] == triplet[2]
     }
 
-    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
-        use RGBHue::*;
-        match self {
-            Red => triplet[0] > triplet[1] && triplet[1] == triplet[2],
-            Green => triplet[1] > triplet[0] && triplet[0] == triplet[2],
-            Blue => triplet[2] > triplet[0] && triplet[0] == triplet[1],
-        }
-    }
-
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
         use RGBHue::*;
         match self {
@@ -532,15 +492,6 @@ impl HueIfce for RGBHue {
             RGBHue::Green => Angle::GREEN,
             RGBHue::Blue => Angle::BLUE,
         }
-    }
-
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
-        debug_assert!(chroma.is_valid());
-        let x_dash = match self {
-            RGBHue::Red => ((UFDRNumber::ONE + chroma.into_prop()) / 2).into(),
-            RGBHue::Green | RGBHue::Blue => ((UFDRNumber::TWO - chroma.into_prop()) / 4).into(),
-        };
-        Warmth::calculate(chroma, x_dash)
     }
 }
 
@@ -654,15 +605,6 @@ impl OrderedTriplets for CMYHue {
         triplet[0] == triplet[1] && triplet[1] > triplet[2]
     }
 
-    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
-        use CMYHue::*;
-        match self {
-            Cyan => triplet[1] == triplet[2] && triplet[1] > triplet[0],
-            Magenta => triplet[0] == triplet[2] && triplet[0] > triplet[1],
-            Yellow => triplet[0] == triplet[1] && triplet[0] > triplet[2],
-        }
-    }
-
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
         //debug_assert!(self.has_valid_value_order(&triplet));
         use CMYHue::*;
@@ -738,15 +680,6 @@ impl HueIfce for CMYHue {
             CMYHue::Magenta => Angle::MAGENTA,
             CMYHue::Yellow => Angle::YELLOW,
         }
-    }
-
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
-        debug_assert!(chroma.is_valid());
-        let x_dash = match self {
-            CMYHue::Cyan => (UFDRNumber::ONE - chroma.into_prop()) / 2,
-            CMYHue::Magenta | CMYHue::Yellow => (UFDRNumber::TWO + chroma.into_prop()) / 4,
-        };
-        Warmth::calculate(chroma, x_dash.into())
     }
 }
 
@@ -946,18 +879,6 @@ impl OrderedTriplets for SextantHue {
         triplet[0] > triplet[1] && triplet[1] > triplet[2]
     }
 
-    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
-        use Sextant::*;
-        match self.0 {
-            RedMagenta => triplet[0] > triplet[2] && triplet[2] > triplet[1],
-            RedYellow => triplet[0] > triplet[1] && triplet[1] > triplet[2],
-            GreenYellow => triplet[1] > triplet[0] && triplet[0] > triplet[2],
-            GreenCyan => triplet[1] > triplet[2] && triplet[2] > triplet[0],
-            BlueCyan => triplet[2] > triplet[1] && triplet[1] > triplet[0],
-            BlueMagenta => triplet[2] > triplet[0] && triplet[0] > triplet[1],
-        }
-    }
-
     fn triplet_to_rgb_order(&self, triplet: &[Prop; 3]) -> [Prop; 3] {
         debug_assert!(Self::has_valid_value_order(triplet));
         use Sextant::*;
@@ -1050,12 +971,6 @@ impl SumChromaCompatibility for SextantHue {
                 }
             }
         }
-    }
-
-    fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
-        debug_assert!(chroma.is_valid() && sum.is_valid_sum());
-        chroma.is_valid_re((*self).into(), sum)
-            && self.sum_and_chroma_prop_are_compatible(sum, chroma.into_prop())
     }
 }
 
@@ -1153,24 +1068,6 @@ impl HueIfce for SextantHue {
                 }
             }
         }
-    }
-
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
-        debug_assert!(chroma.is_valid());
-        let kc = chroma.into_prop() * self.1;
-        let x_dash = match self.0 {
-            // TODO: take tint and shade into account
-            Sextant::RedYellow | Sextant::RedMagenta => {
-                (UFDRNumber::TWO + chroma.into_prop() * 2 - kc) / 4
-            }
-            Sextant::GreenYellow | Sextant::BlueMagenta => {
-                (UFDRNumber::TWO + kc * 2 - chroma.into_prop()) / 4
-            }
-            Sextant::GreenCyan | Sextant::BlueCyan => {
-                (UFDRNumber::TWO - kc - chroma.into_prop()) / 4
-            }
-        };
-        Warmth::calculate(chroma, x_dash.into())
     }
 }
 
@@ -1411,14 +1308,6 @@ impl SumChromaCompatibility for Hue {
             }
         }
     }
-
-    fn sum_and_chroma_are_compatible(&self, sum: UFDRNumber, chroma: Chroma) -> bool {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.sum_and_chroma_are_compatible(sum, chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.sum_and_chroma_are_compatible(sum, chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.sum_and_chroma_are_compatible(sum, chroma),
-        }
-    }
 }
 
 impl OrderedTriplets for Hue {
@@ -1427,14 +1316,6 @@ impl OrderedTriplets for Hue {
             Ordering::Equal => triplet[1] > triplet[2],
             Ordering::Less => false,
             Ordering::Greater => triplet[1] >= triplet[2],
-        }
-    }
-
-    fn has_valid_rgb_order(&self, triplet: &[Prop; 3]) -> bool {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.has_valid_rgb_order(triplet),
-            Self::Secondary(cmy_hue) => cmy_hue.has_valid_rgb_order(triplet),
-            Self::Sextant(sextant_hue) => sextant_hue.has_valid_rgb_order(triplet),
         }
     }
 
@@ -1485,14 +1366,6 @@ impl OrderedTriplets for Hue {
             Self::Sextant(sextant_hue) => sextant_hue.try_ordered_triplet(sum, c_prop),
         }
     }
-
-    fn ordered_triplet_to_hcv(&self, triplet: &[Prop; 3]) -> HCV {
-        match self {
-            Self::Primary(primary_hue) => primary_hue.ordered_triplet_to_hcv(triplet),
-            Self::Secondary(secondary_hue) => secondary_hue.ordered_triplet_to_hcv(triplet),
-            Self::Sextant(sextant_hue) => sextant_hue.ordered_triplet_to_hcv(triplet),
-        }
-    }
 }
 
 impl ColourModificationHelpers for Hue {
@@ -1534,14 +1407,6 @@ impl HueIfce for Hue {
         }
     }
 
-    fn warmth_for_chroma(&self, chroma: Chroma) -> Warmth {
-        match self {
-            Self::Primary(rgb_hue) => rgb_hue.warmth_for_chroma(chroma),
-            Self::Secondary(cmy_hue) => cmy_hue.warmth_for_chroma(chroma),
-            Self::Sextant(sextant_hue) => sextant_hue.warmth_for_chroma(chroma),
-        }
-    }
-
     fn max_chroma_rgb<L: LightLevel>(&self) -> RGB<L> {
         match self {
             Self::Primary(primary_hue) => primary_hue.max_chroma_rgb::<L>(),
@@ -1558,6 +1423,7 @@ impl HueIfce for Hue {
         }
     }
 
+    #[cfg(test)]
     fn max_chroma_rgb_for_sum<T: LightLevel>(&self, sum: UFDRNumber) -> Option<RGB<T>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.max_chroma_rgb_for_sum(sum),
@@ -1566,6 +1432,7 @@ impl HueIfce for Hue {
         }
     }
 
+    #[cfg(test)]
     fn try_darkest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.try_darkest_hcv_for_chroma(chroma),
@@ -1574,6 +1441,7 @@ impl HueIfce for Hue {
         }
     }
 
+    #[cfg(test)]
     fn try_lightest_hcv_for_chroma(&self, chroma: Chroma) -> Option<Result<HCV, HCV>> {
         match self {
             Self::Primary(rgb_hue) => rgb_hue.try_lightest_hcv_for_chroma(chroma),
@@ -1582,6 +1450,7 @@ impl HueIfce for Hue {
         }
     }
 
+    #[cfg(test)]
     fn try_darkest_rgb_for_chroma<T: LightLevel>(
         &self,
         chroma: Chroma,
@@ -1593,6 +1462,7 @@ impl HueIfce for Hue {
         }
     }
 
+    #[cfg(test)]
     fn try_lightest_rgb_for_chroma<T: LightLevel>(
         &self,
         chroma: Chroma,
@@ -1604,6 +1474,7 @@ impl HueIfce for Hue {
         }
     }
 
+    #[cfg(test)]
     fn try_rgb_for_sum_and_chroma<T: LightLevel>(
         &self,
         sum: UFDRNumber,
