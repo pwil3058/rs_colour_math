@@ -140,15 +140,16 @@ fn round_trip_from_to_rgb() {
 #[test]
 fn warmth() {
     assert_approx_eq!(HCV::RED.warmth(), Warmth::ONE);
-    assert_approx_eq!(HCV::BLUE.warmth(), (Prop::ONE / 4).into());
-    assert_approx_eq!(HCV::GREEN.warmth(), (Prop::ONE / 4).into());
+    assert_approx_eq!(HCV::BLUE.warmth(), Warmth::ONE_THIRD);
+    assert_approx_eq!(HCV::GREEN.warmth(), Warmth::ONE_THIRD);
     assert_approx_eq!(HCV::CYAN.warmth(), Warmth::ZERO);
-    assert_approx_eq!(HCV::YELLOW.warmth(), (Prop::ONE * 3 / 4).into());
-    assert_approx_eq!(HCV::WHITE.warmth(), Prop::HALF.into());
-    assert_approx_eq!(HCV::BLACK.warmth(), Prop::HALF.into());
+    assert_approx_eq!(HCV::YELLOW.warmth(), Warmth::TWO_THIRDS);
+    assert_approx_eq!(HCV::MAGENTA.warmth(), Warmth::TWO_THIRDS);
+    assert_approx_eq!(HCV::WHITE.warmth(), Warmth::HALF);
+    assert_approx_eq!(HCV::BLACK.warmth(), Warmth::HALF);
     assert_approx_eq!(
         RGB::<u8>::from([Prop::ONE, Prop::ONE / 2, Prop::ONE / 2]).warmth(),
-        (Prop::ONE * 3 / 4).into(),
+        Warmth::ONE,
         Prop(0x100000000000000)
     )
 }

@@ -18,7 +18,7 @@ use crate::{
     hcv::HCV,
     hue::angle::Angle,
     rgb::RGB,
-    ColourBasics, HueConstants, LightLevel,
+    ColourBasics, HueConstants, LightLevel, Warmth,
 };
 
 pub(crate) trait HueBasics: Copy + Debug + Sized + Into<Hue> {
@@ -133,6 +133,8 @@ pub(crate) trait HueIfce:
     HueBasics + OrderedTriplets + ColourModificationHelpers + SumChromaCompatibility
 {
     fn angle(&self) -> Angle;
+
+    fn warmth(&self) -> Warmth;
 
     fn max_chroma_rgb<T: LightLevel>(&self) -> RGB<T> {
         self.max_chroma_hcv().rgb::<T>()
@@ -493,6 +495,14 @@ impl HueIfce for RGBHue {
             RGBHue::Blue => Angle::BLUE,
         }
     }
+
+    fn warmth(&self) -> Warmth {
+        match self {
+            RGBHue::Red => Warmth::RED,
+            RGBHue::Green => Warmth::GREEN,
+            RGBHue::Blue => Warmth::BLUE,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
@@ -679,6 +689,14 @@ impl HueIfce for CMYHue {
             CMYHue::Cyan => Angle::CYAN,
             CMYHue::Magenta => Angle::MAGENTA,
             CMYHue::Yellow => Angle::YELLOW,
+        }
+    }
+
+    fn warmth(&self) -> Warmth {
+        match self {
+            CMYHue::Cyan => Warmth::CYAN,
+            CMYHue::Magenta => Warmth::MAGENTA,
+            CMYHue::Yellow => Warmth::YELLOW,
         }
     }
 }
@@ -1069,6 +1087,31 @@ impl HueIfce for SextantHue {
             }
         }
     }
+
+    fn warmth(&self) -> Warmth {
+        match self {
+            SextantHue(Sextant::BlueCyan, Prop::HALF) => Warmth::BLUE_CYAN,
+            SextantHue(Sextant::BlueMagenta, Prop::HALF) => Warmth::BLUE_MAGENTA,
+            SextantHue(Sextant::RedMagenta, Prop::HALF) => Warmth::RED_MAGENTA,
+            SextantHue(Sextant::RedYellow, Prop::HALF) => Warmth::RED_YELLOW,
+            SextantHue(Sextant::GreenYellow, Prop::HALF) => Warmth::GREEN_YELLOW,
+            SextantHue(Sextant::GreenCyan, Prop::HALF) => Warmth::GREEN_CYAN,
+            _ => {
+                // let second: f64 = self.1.into();
+                // let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
+                // let angle = Angle::asin(FDRNumber::from(sin));
+                let delta_warmth = Warmth::ONE_THIRD * self.1;
+                match self.0 {
+                    Sextant::RedMagenta => Warmth::RED - delta_warmth,
+                    Sextant::RedYellow => Warmth::RED - delta_warmth,
+                    Sextant::GreenYellow => Warmth::GREEN + delta_warmth,
+                    Sextant::GreenCyan => Warmth::GREEN - delta_warmth,
+                    Sextant::BlueCyan => Warmth::BLUE - delta_warmth,
+                    Sextant::BlueMagenta => Warmth::BLUE + delta_warmth,
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -1404,6 +1447,14 @@ impl HueIfce for Hue {
             Self::Primary(rgb_hue) => rgb_hue.angle(),
             Self::Secondary(cmy_hue) => cmy_hue.angle(),
             Self::Sextant(sextant_hue) => sextant_hue.angle(),
+        }
+    }
+
+    fn warmth(&self) -> Warmth {
+        match self {
+            Self::Primary(rgb_hue) => rgb_hue.warmth(),
+            Self::Secondary(cmy_hue) => cmy_hue.warmth(),
+            Self::Sextant(sextant_hue) => sextant_hue.warmth(),
         }
     }
 

@@ -148,8 +148,13 @@ impl<T: LightLevel + Into<Prop>> ColourBasics for RGB<T> {
     }
 
     fn warmth(&self) -> Warmth {
-        let [red, green, blue] = Into::<[Prop; 3]>::into(self);
-        (Prop::HALF + red / 2 - green / 4 - blue / 4).into()
+        // let [red, green, blue] = Into::<[Prop; 3]>::into(self);
+        // (Prop::HALF + red / 2 - green / 4 - blue / 4).into()
+        if let Some(hue) = self.hue() {
+            hue.warmth()
+        } else {
+            Warmth::HALF
+        }
     }
 
     fn hcv(&self) -> HCV {

@@ -1,13 +1,12 @@
 // Copyright 2021 Peter Williams <pwil3058@gmail.com> <pwil3058@bigpond.net.au>
 //use std::cmp::Ordering;
 
+use crate::{impl_prop_to_from_float, impl_to_from_number, HueConstants};
 use std::{
     cmp::Ordering,
     fmt::Debug,
-    ops::{Div, Mul},
+    ops::{Add, Div, Mul, Sub},
 };
-
-use crate::{impl_prop_to_from_float, impl_to_from_number};
 
 use crate::{
     debug::{AbsDiff, ApproxEq, PropDiff},
@@ -264,6 +263,17 @@ pub struct Warmth(pub(crate) u64);
 
 impl Warmth {
     pub const ZERO: Self = Self(0);
+
+    pub const ONE_SIXTH: Self = Self(u64::MAX / 6);
+
+    pub const ONE_THIRD: Self = Self(u64::MAX / 3);
+
+    pub const HALF: Self = Self(u64::MAX / 2);
+
+    pub const TWO_THIRDS: Self = Self(u64::MAX / 3 * 2);
+
+    pub const FIVE_SIXTHS: Self = Self(u64::MAX / 6 * 5);
+
     pub const ONE: Self = Self(u64::MAX);
 
     const K: Prop = Prop(u64::MAX / 3);
@@ -294,6 +304,47 @@ impl Warmth {
             Ordering::Less => Warmth(other.0 - self.0),
             Ordering::Equal => Warmth(0),
         }
+    }
+}
+
+impl HueConstants for Warmth {
+    const RED: Self = Warmth::ONE;
+    const GREEN: Self = Warmth::ONE_THIRD;
+    const BLUE: Self = Warmth::ONE_THIRD;
+    const CYAN: Self = Warmth::ZERO;
+    const YELLOW: Self = Warmth::TWO_THIRDS;
+    const MAGENTA: Self = Warmth::TWO_THIRDS;
+    const RED_MAGENTA: Self = Warmth::FIVE_SIXTHS;
+    const RED_YELLOW: Self = Warmth::FIVE_SIXTHS;
+    const GREEN_YELLOW: Self = Warmth::HALF;
+    const GREEN_CYAN: Self = Warmth::ONE_SIXTH;
+    const BLUE_CYAN: Self = Warmth::ONE_SIXTH;
+    const BLUE_MAGENTA: Self = Warmth::HALF;
+}
+
+impl Mul<Prop> for Warmth {
+    type Output = Self;
+
+    fn mul(self, rhs: Prop) -> Self::Output {
+        Self(((self.0 as u128 * rhs.0 as u128) / u64::MAX as u128) as u64)
+    }
+}
+
+impl Sub for Warmth {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        debug_assert!(rhs <= self);
+        Self(self.0 - rhs.0)
+    }
+}
+
+impl Add for Warmth {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        debug_assert!(Self::ONE.0 - self.0 >= rhs.0);
+        Self(self.0 + rhs.0)
     }
 }
 
