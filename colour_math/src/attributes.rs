@@ -276,23 +276,23 @@ impl Warmth {
 
     pub const ONE: Self = Self(u64::MAX);
 
-    const K: Prop = Prop(u64::MAX / 3);
-    const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
-    const B: UFDRNumber = UFDRNumber(u64::MAX as u128 / 2);
-
-    pub fn calculate(chroma: Chroma, x_dash: Prop) -> Self {
-        debug_assert_ne!(chroma, Chroma::ZERO);
-        let temp = (Self::K + Self::K_COMP * x_dash) * chroma.into_prop();
-        debug_assert!(temp <= UFDRNumber::ONE);
-        match chroma {
-            Chroma::Shade(prop) => {
-                let warmth = Self::B - Self::B * prop + temp;
-                debug_assert!(warmth <= UFDRNumber::ONE);
-                warmth.into()
-            }
-            _ => temp.into(),
-        }
-    }
+    // const K: Prop = Prop(u64::MAX / 3);
+    // const K_COMP: Prop = Prop(u64::MAX - Self::K.0);
+    // const B: UFDRNumber = UFDRNumber(u64::MAX as u128 / 2);
+    //
+    // pub fn calculate(chroma: Chroma, x_dash: Prop) -> Self {
+    //     debug_assert_ne!(chroma, Chroma::ZERO);
+    //     let temp = (Self::K + Self::K_COMP * x_dash) * chroma.into_prop();
+    //     debug_assert!(temp <= UFDRNumber::ONE);
+    //     match chroma {
+    //         Chroma::Shade(prop) => {
+    //             let warmth = Self::B - Self::B * prop + temp;
+    //             debug_assert!(warmth <= UFDRNumber::ONE);
+    //             warmth.into()
+    //         }
+    //         _ => temp.into(),
+    //     }
+    // }
 
     pub fn calculate_monochrome(value: Value) -> Self {
         ((Prop::ONE - Prop::from(value)) / 2).into()

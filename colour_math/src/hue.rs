@@ -1097,9 +1097,6 @@ impl HueIfce for SextantHue {
             SextantHue(Sextant::GreenYellow, Prop::HALF) => Warmth::GREEN_YELLOW,
             SextantHue(Sextant::GreenCyan, Prop::HALF) => Warmth::GREEN_CYAN,
             _ => {
-                // let second: f64 = self.1.into();
-                // let sin = f64::SQRT_3 * second / 2.0 / (1.0 - second + second.powi(2)).sqrt();
-                // let angle = Angle::asin(FDRNumber::from(sin));
                 let delta_warmth = Warmth::ONE_THIRD * self.1;
                 match self.0 {
                     Sextant::RedMagenta => Warmth::RED - delta_warmth,
